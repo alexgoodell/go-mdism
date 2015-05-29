@@ -60,9 +60,18 @@ type TransitionProbability struct {
 	Tp_base float64
 }
 
+type Query struct {
+	State_by_cycle_and_person_and_model [][][]int
+	States_by_cycle_and_person          [][]int
+	Tps_by_from_state                   []int
+	Interactions_by_in_state_and_model  [][]int
+}
+
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
-var CurrentCycle = 0
+var CurrentCycle = 1
+
+var QueryData = Query{}
 
 var Models = []Model{
 	Model{1, "HIV"},
@@ -101,12 +110,20 @@ var TransitionProbabilities = []TransitionProbability{
 var Interactions = []Interaction{Interaction{1, 3, 5, 6, 2, 2}}
 
 var Cycles = []Cycle{
-	Cycle{0, "Pre-initialization"},
-	Cycle{1, "2015"},
-	Cycle{2, "2016"},
-	Cycle{3, "2017"},
-	Cycle{4, "2018"},
-	Cycle{5, "2019"}}
+	Cycle{1, "Pre-initialization"},
+	Cycle{2, "2015"},
+	Cycle{3, "2016"},
+	Cycle{4, "2017"},
+	Cycle{5, "2018"},
+	Cycle{6, "2019"},
+	Cycle{7, "2019"},
+	Cycle{8, "2019"},
+	Cycle{9, "2019"},
+	Cycle{10, "2019"},
+	Cycle{11, "2019"},
+	Cycle{12, "2019"},
+	Cycle{13, "2019"},
+	Cycle{14, "2019"}}
 
 var MasterRecords = []MasterRecord{}
 
@@ -114,7 +131,7 @@ func main() {
 
 	// create people will generate individuals and add their data to the master
 	// records
-	createPeople(100)
+	createPeople(10000)
 
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -193,6 +210,28 @@ func main() {
 
 // ------------------------------------------- functions
 
+// func createQueryData() {
+
+// 	for _, cycle := range Cycles { // foreach cycle
+// 		for _, person := range People { // 	foreach person
+// 			for _, model := range Models { // foreach model
+
+// QueryData.State_by_cycle_and_person_and_model
+
+// type Query struct {
+// 	State_by_cycle_and_person_and_model [][][]int
+// 	States_by_cycle_and_person          [][]int
+// 	Tps_by_from_state                   []int
+// 	Interactions_by_in_state_and_model  [][]int
+// }
+
+// state = state_by_cycle_and_person_and_model[0][person][model]
+// states = states_by_cycle_and_person[0][person]
+// tps_by_from_state[from_state]
+// interactions = interactions_by_in_state_and_model[in_state][model]
+
+// }
+
 // ----------- non-methods
 
 func shuffle(models []Model) []Model {
@@ -216,7 +255,7 @@ func createPeople(number int) {
 			uninitializedState := model.get_uninitialized_state()
 
 			var mr MasterRecord
-			mr.Cycle_id = 0
+			mr.Cycle_id = 1
 			mr.State_id = uninitializedState.Id
 			mr.Model_id = model.Id
 			mr.Person_id = person.Id
@@ -229,15 +268,24 @@ func createPeople(number int) {
 
 // get state by id
 func get_state_by_id(stateId int) State {
-	var state State
-	for _, state := range States {
-		if state.Id == stateId {
-			return state
-		}
+
+	theState := States[stateId-1]
+
+	if theState.Id == stateId {
+		return theState
 	}
+
 	fmt.Println("Cannot find state by id ", stateId)
 	os.Exit(1)
-	return state
+	return theState
+	// var state State
+	// for _, state := range States {
+	// 	if state.Id == stateId {
+	// 		return state
+	// 	}
+	// }
+
+	// return state
 }
 
 // ------------------------------------------- methods
@@ -310,13 +358,37 @@ func pause() {
 func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	thisModelId := thisModel.Id
 	var stateToReturn State
-	for _, masterRecord := range MasterRecords {
-		if masterRecord.Model_id == thisModelId && masterRecord.Cycle_id == CurrentCycle && masterRecord.Person_id == thisPerson.Id {
-			stateToReturn = get_state_by_id(masterRecord.State_id)
-			return stateToReturn
+	var stateToReturnId int
+	var bestGuess MasterRecord
+	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
+	fmt.Println("looking for cycle, person, model", CurrentCycle, thisPerson.Id, thisModelId)
+	// this is tricky; because models are run in a random order, and they place
+	// their results into MasterRecords in the order in which they are run, the
+	// end part of MasterResults is unpredictable. Therefore, we just grab all
+	// the MasterRecords which may fit, and test them. TODO: perhaps design a
+	// system by which add_to_master_record would lay down results in model-order
+	// as opposed to the order in which they are run.
+	bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPerson.Id-1)*len(Models)
+	for i, _ := range Models {
+		if MasterRecords[bestGuessStartingIndex+i].Model_id == thisModelId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle && MasterRecords[bestGuessStartingIndex+i].Person_id == thisPerson.Id {
+			bestGuess = MasterRecords[bestGuessStartingIndex+i]
+
 		}
+		fmt.Println(bestGuessStartingIndex + i)
+		fmt.Printf("%+v\n", bestGuess)
 	}
-	fmt.Println("Cannot find state via get_state_by_model")
+
+	if bestGuess.Model_id == thisModelId && bestGuess.Cycle_id == CurrentCycle && bestGuess.Person_id == thisPerson.Id {
+		stateToReturnId = bestGuess.State_id
+	} else {
+		fmt.Println("Cannot find state via get_state_by_model, error 1")
+		os.Exit(1)
+	}
+	stateToReturn = States[stateToReturnId-1]
+	if stateToReturn.Id == stateToReturnId {
+		return stateToReturn
+	}
+	fmt.Println("Cannot find state via get_state_by_model, error 2")
 	os.Exit(1)
 	return stateToReturn
 }
@@ -324,14 +396,28 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 // get all states this person is in at the current cycle
 func (thisPerson *Person) get_states() []State {
 	thisPersonId := thisPerson.Id
+	var bestGuessIds []int
 	var statesToReturn []State
-	for _, masterRecord := range MasterRecords {
-		if masterRecord.Person_id == thisPersonId && masterRecord.Cycle_id == CurrentCycle {
-			stateToReturn := get_state_by_id(masterRecord.State_id)
-			statesToReturn = append(statesToReturn, stateToReturn)
+	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
+	bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPersonId-1)*len(Models)
+
+	for i, _ := range Models {
+		if MasterRecords[bestGuessStartingIndex+i].Person_id == thisPersonId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle {
+			bestGuessIds = append(bestGuessIds, MasterRecords[bestGuessStartingIndex+i].State_id)
+		} else {
+			fmt.Println("Cannot find master records via get_states")
+			os.Exit(1)
 		}
 	}
 
+	for _, bestGuessId := range bestGuessIds {
+		if States[bestGuessId-1].Id == bestGuessId {
+			statesToReturn = append(statesToReturn, States[bestGuessId-1])
+		} else {
+			fmt.Println("cannot find states via get_states")
+			os.Exit(1)
+		}
+	}
 	if len(statesToReturn) > 0 {
 		return statesToReturn
 	} else {
