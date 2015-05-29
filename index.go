@@ -9,6 +9,7 @@ import (
 	// 	"net/http"
 	// 	"strconv"
 	"encoding/csv"
+	"math"
 	"math/rand"
 	"os"
 	"reflect"
@@ -16,9 +17,10 @@ import (
 )
 
 type State struct {
-	Id       int
-	Model_id int
-	Name     string
+	Id                     int
+	Model_id               int
+	Name                   string
+	Is_uninitialized_state bool
 }
 
 type Model struct {
@@ -43,52 +45,43 @@ type Person struct {
 }
 
 type Interaction struct {
-	Id            int
-	In_state_id   int
-	From_state_id int
-	To_state_id   int
-	Adjustment    float32
+	Id                int
+	In_state_id       int
+	From_state_id     int
+	To_state_id       int
+	Adjustment        float64
+	Effected_model_id int
 }
 
 type TransitionProbability struct {
 	Id      int
 	From_id int
 	To_id   int
-	Tp_base float32
+	Tp_base float64
 }
 
 // these are all global variables, which is why they are Capitalized
-
+// current refers to the current cycle, which is used to calculate the next cycle
 var CurrentCycle = 0
 
 var Models = []Model{
 	Model{1, "HIV"},
 	Model{2, "TB"}}
 
-var People = []Person{
-	Person{1},
-	Person{2},
-	Person{3},
-	Person{4},
-	Person{5},
-	Person{6},
-	Person{7},
-	Person{8},
-	Person{9},
-	Person{10}}
+var People []Person
 
 var States = []State{
-	State{1, 1, "Uninit"},
-	State{2, 1, "HIV-"},
-	State{3, 1, "HIV+"},
-	State{4, 2, "Uninit"},
-	State{5, 2, "TB-"},
-	State{6, 2, "TB+"}}
+	State{1, 1, "Uninit", true},
+	State{2, 1, "HIV-", false},
+	State{3, 1, "HIV+", false},
+	State{4, 2, "Uninit", true},
+	State{5, 2, "TB-", false},
+	State{6, 2, "TB+", false}}
 
 var TransitionProbabilities = []TransitionProbability{
 	TransitionProbability{1, 1, 1, 0},
 	TransitionProbability{2, 1, 2, 0.99},
-	TransitionProbability{3, 1, 3, 0.1},
+	TransitionProbability{3, 1, 3, 0.01},
 	TransitionProbability{4, 2, 1, 0},
 	TransitionProbability{5, 2, 2, 0.95},
 	TransitionProbability{6, 2, 3, 0.05},
@@ -105,7 +98,7 @@ var TransitionProbabilities = []TransitionProbability{
 	TransitionProbability{17, 6, 5, 0},
 	TransitionProbability{18, 6, 6, 1}}
 
-var Interactions = []Interaction{Interaction{1, 3, 5, 6, 2}}
+var Interactions = []Interaction{Interaction{1, 3, 5, 6, 2, 2}}
 
 var Cycles = []Cycle{
 	Cycle{0, "Pre-initialization"},
@@ -115,37 +108,18 @@ var Cycles = []Cycle{
 	Cycle{4, "2018"},
 	Cycle{5, "2019"}}
 
-var MasterRecords = []MasterRecord{
-	MasterRecord{0, 1, 1, 1},
-	MasterRecord{0, 1, 4, 2},
-	MasterRecord{0, 2, 1, 1},
-	MasterRecord{0, 2, 4, 2},
-	MasterRecord{0, 3, 1, 1},
-	MasterRecord{0, 3, 4, 2},
-	MasterRecord{0, 4, 1, 1},
-	MasterRecord{0, 4, 4, 2},
-	MasterRecord{0, 5, 1, 1},
-	MasterRecord{0, 5, 4, 2},
-	MasterRecord{0, 6, 1, 1},
-	MasterRecord{0, 6, 4, 2},
-	MasterRecord{0, 7, 1, 1},
-	MasterRecord{0, 7, 4, 2},
-	MasterRecord{0, 8, 1, 1},
-	MasterRecord{0, 8, 4, 2},
-	MasterRecord{0, 9, 1, 1},
-	MasterRecord{0, 9, 4, 2},
-	MasterRecord{0, 10, 1, 1},
-	MasterRecord{0, 10, 4, 2}}
+var MasterRecords = []MasterRecord{}
 
 func main() {
 
+	// create people will generate individuals and add their data to the master
+	// records
+	createPeople(100)
+
+	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// table tests here
-
-	// population initial cycle
-
-	// current refers to the current cycle, which is used to calculate the next cycel
 
 	for _, cycle := range Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
@@ -156,40 +130,41 @@ func main() {
 
 				fmt.Println(model.Name)
 
-				_ = model
-				_ = person
-				_ = States
-				_ = TransitionProbabilities
-				_ = Interactions
-				_ = cycle
-				_ = MasterRecords
+				// get the current state of the person in this model (should be
+				// the uninitialized state for cycle 0)
+				currentStateInThisModel := person.get_state_by_model(model)
 
-				// get the current state of the person in this model (should be the uninitialized state for cycle 0)
-				current_state_in_this_model := person.get_state_by_model(model)
-
-				fmt.Println("Current state in this model: ", current_state_in_this_model.Id)
+				fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
 
 				// get the transition probabilities from the given state
-				transition_probabilities := current_state_in_this_model.get_destination_probabilites()
-				_ = transition_probabilities
+				transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
+
+				check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 				// get all states this person is in in current cycle
 				states := person.get_states()
 
 				fmt.Println("All states this person is in: ", states)
 
-				// // get any interactions that will effect this model from the persons current states
-				// interactions := model.get_interactions_by_states(states)
+				// get any interactions that will effect the transtion from
+				// the persons current states based on all states that they are
+				// in - it is a method of their current state in this model,
+				// and accepts an array of all currents states they occupy
+				interactions := currentStateInThisModel.get_relevant_interactions(states)
 
-				// if len(interactions) > 0 { // if there are interactions
-				// 	for _, interaction := range interactions { // foreach interaction
-				// 		// apply the interactions to the transition probabilities
-				// 		transition_probability = transition_probability.adjust_transitions(interaction)
-				// 	} // end foreach interaction
-				// } // end if there are interactions
+				if len(interactions) > 0 { // if there are interactions
+
+					for _, interaction := range interactions { // foreach interaction
+						// apply the interactions to the transition probabilities
+						transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
+					} // end foreach interaction
+
+				} // end if there are interactions
+
+				check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 				// using  final transition probabilities, assign new state to person
-				new_state := pickState(transition_probabilities)
+				new_state := pickState(transitionProbabilities)
 				fmt.Println("New state is", new_state.Id)
 
 				// store new state in master object
@@ -216,13 +191,9 @@ func main() {
 
 }
 
-// func pickState(states []State) State {
+// ------------------------------------------- functions
 
-// }
-
-// functions needed
-
-// // non-methods
+// ----------- non-methods
 
 func shuffle(models []Model) []Model {
 	//randomize order of models
@@ -233,9 +204,107 @@ func shuffle(models []Model) []Model {
 	return models
 }
 
-// //methods
+// create people will generate individuals and add their data to the master
+// records
+func createPeople(number int) {
+	for i := 0; i < number; i++ {
+		People = append(People, Person{i + 1})
+	}
 
-// //person
+	for _, person := range People {
+		for _, model := range Models {
+			uninitializedState := model.get_uninitialized_state()
+
+			var mr MasterRecord
+			mr.Cycle_id = 0
+			mr.State_id = uninitializedState.Id
+			mr.Model_id = model.Id
+			mr.Person_id = person.Id
+			MasterRecords = append(MasterRecords, mr)
+
+		}
+	}
+
+}
+
+// get state by id
+func get_state_by_id(stateId int) State {
+	var state State
+	for _, state := range States {
+		if state.Id == stateId {
+			return state
+		}
+	}
+	fmt.Println("Cannot find state by id ", stateId)
+	os.Exit(1)
+	return state
+}
+
+// ------------------------------------------- methods
+
+// --------------- transition probabilities
+
+func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction) []TransitionProbability {
+	// TODO if these ever change to pointerss, you'll need to deference them
+	adjustmentFactor := interaction.Adjustment
+	for i, _ := range theseTPs {
+		tp := &theseTPs[i] // TODO don't really understand why this works
+		originalTpBase := tp.Tp_base
+		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
+			tp.Tp_base = tp.Tp_base * adjustmentFactor
+			if tp.Tp_base == originalTpBase {
+				fmt.Println("error adjusting transition probabilities in adjust_transitions()")
+				os.Exit(1)
+			}
+		}
+	}
+	// now, we need to make sure everything adds to one. to do so, we find what
+	// it currently sums to, and make a new adjustment factor. We can then
+	// adjust every transition probability by that amount.
+	sum := get_sum(theseTPs)
+	newAdjFactor := float64(1) / sum
+
+	for i, _ := range theseTPs {
+		tp := &theseTPs[i] // TODO don't really understand why this works
+		tp.Tp_base = tp.Tp_base * newAdjFactor
+	}
+	return theseTPs
+}
+
+func check_sum(theseTPs []TransitionProbability) {
+	sum := get_sum(theseTPs)
+
+	if !equalFloat(sum, 1.0, 0) {
+		fmt.Println("sum does not equal 1 !")
+		os.Exit(1)
+	}
+}
+
+func get_sum(theseTPs []TransitionProbability) float64 {
+	sum := float64(0.0)
+	for _, tp := range theseTPs {
+		sum += tp.Tp_base
+	}
+	return sum
+}
+
+// EqualFloat() returns true if x and y are approximately equal to the
+// given limit. Pass a limit of -1 to get the greatest accuracy the machine
+// can manage.
+func equalFloat(x float64, y float64, limit float64) bool {
+
+	if limit <= 0.0 {
+		limit = math.SmallestNonzeroFloat64
+	}
+
+	return math.Abs(x-y) <= (limit * math.Min(math.Abs(x), math.Abs(y)))
+}
+
+func pause() {
+	time.Sleep(1000000000)
+}
+
+// --------------- person
 
 // get the current state of the person in this model (should be the uninitialized state for cycle 0)
 func (thisPerson *Person) get_state_by_model(thisModel Model) State {
@@ -250,19 +319,6 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	fmt.Println("Cannot find state via get_state_by_model")
 	os.Exit(1)
 	return stateToReturn
-}
-
-// get state by id
-func get_state_by_id(stateId int) State {
-	var state State
-	for _, state := range States {
-		if state.Id == stateId {
-			return state
-		}
-	}
-	fmt.Println("Cannot find state by id ", stateId)
-	os.Exit(1)
-	return state
 }
 
 // get all states this person is in at the current cycle
@@ -286,7 +342,22 @@ func (thisPerson *Person) get_states() []State {
 
 }
 
-// //model
+//  --------------- model
+
+// gets the uninitialized state for a model (the state individuals start in)
+func (model *Model) get_uninitialized_state() State {
+	modelId := model.Id
+	for _, state := range States {
+		if state.Model_id == modelId && state.Is_uninitialized_state == true {
+			return state
+		}
+	}
+	fmt.Println("cannot find uninitialized state by get_uninitialized_state")
+	os.Exit(1)
+	return State{}
+}
+
+//  --------------- state
 
 // get the transition probabilities *from* the given state. It's called
 // destination because we're finding the chances of moving to each destination
@@ -309,7 +380,22 @@ func (state *State) get_destination_probabilites() []TransitionProbability {
 
 }
 
-// model.get_interactions_by_states(states) // get any interactions that will effect this model from the persons current states
+// get any interactions that will effect the transtion from
+// the persons current states based on all states that they are
+// in - it is a method of their current state in this model,
+// and accepts an array of all currents states they occupy
+func (inState *State) get_relevant_interactions(allStates []State) []Interaction {
+	var relevantInteractions []Interaction
+	for _, alsoInState := range allStates {
+		for _, interaction := range Interactions {
+			// if person is in a state with an interaction that effects current model
+			if interaction.From_state_id == inState.Id && interaction.In_state_id == alsoInState.Id {
+				relevantInteractions = append(relevantInteractions, interaction)
+			}
+		}
+	}
+	return relevantInteractions
+}
 
 // //transition probabilities
 // transition_probability.adjust_transitions(interaction) // apply the interactions to the transition probabilities
@@ -338,7 +424,7 @@ func add_master_record(cycle Cycle, person Person, newState State) bool {
 // Using  the final transition probabilities, pickState assigns a new state to
 // a person. It is given many states and returns one.
 func pickState(tPs []TransitionProbability) State {
-	var probs []float32
+	var probs []float64
 	for _, tP := range tPs {
 		probs = append(probs, tP.Tp_base)
 	}
@@ -359,9 +445,9 @@ func pickState(tPs []TransitionProbability) State {
 
 // iterates over array of potential states and uses a random value to find
 // where new state is. returns new state id.
-func pick(probabilities []float32) int {
-	random := rand.Float32()
-	sum := float32(0.0)
+func pick(probabilities []float64) int {
+	random := rand.Float64()
+	sum := float64(0.0)
 	for i, prob := range probabilities { //for i := 0; i < len(probabilities); i++ {
 		sum += prob
 		if random <= sum {
@@ -374,29 +460,31 @@ func pick(probabilities []float32) int {
 	return 0
 }
 
-// exports sets of int data to CSVs
+// Exports sets of data to CSVs. I particular, it will print any array of structs
+// and automatically uses the struct field names as headers! wow.
+// It takes a filename, as well one copy of the struct, and the array of structs
+// itself.
 func toCsv(filename string, record interface{}, records interface{}) error {
-
-	fmt.Println("Beginning export process to... ", filename)
-	//os.Exit(1)
-
+	fmt.Println("Beginning export process to ", filename)
+	//create or open file
 	os.Create(filename)
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	// New Csv wriier
+	// new Csv wriier
 	writer := csv.NewWriter(file)
-
+	// use the single record to determine the fields of the struct
 	val := reflect.Indirect(reflect.ValueOf(record))
 	numberOfFields := val.Type().NumField()
 	var fieldNames []string
 	for i := 0; i < numberOfFields; i++ {
 		fieldNames = append(fieldNames, val.Type().Field(i).Name)
 	}
+	// print field names of struct
 	err = writer.Write(fieldNames)
-
+	// print the values from the array of structs
 	val2 := reflect.ValueOf(records)
 	for i := 0; i < val2.Len(); i++ {
 		var line []string
@@ -406,17 +494,11 @@ func toCsv(filename string, record interface{}, records interface{}) error {
 		}
 		err = writer.Write(line)
 	}
-
-	//val := reflect.Indirect(reflect.ValueOf(a))
-	//    fmt.Println(val..Type().Name())
-
-	//fmt.Println(nval)
-
 	if err != nil {
 		fmt.Println("error")
+		os.Exit(1)
 	}
+	fmt.Println("Exported to ", filename)
 	writer.Flush()
-
 	return err
-
 }
