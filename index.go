@@ -147,6 +147,10 @@ func main() {
 
 	// table tests here
 
+	runModel()
+}
+
+func runModel() {
 	for _, cycle := range Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
 		for _, person := range People { // 	foreach person
@@ -168,7 +172,6 @@ func main() {
 		//fmt.Println("Debugging stop")
 		//os.Exit(1)
 	} // end foreach cycle
-
 }
 
 func runPersonCycleModel(person Person, cycle Cycle, model Model) {
