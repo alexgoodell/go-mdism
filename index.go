@@ -9,6 +9,7 @@ import (
 	// 	"net/http"
 	// 	"strconv"
 	"encoding/csv"
+	"github.com/davecheney/profile"
 	"math"
 	"math/rand"
 	"os"
@@ -114,24 +115,23 @@ var Cycles = []Cycle{
 	Cycle{2, "2015"},
 	Cycle{3, "2016"},
 	Cycle{4, "2017"},
-	Cycle{5, "2018"},
-	Cycle{6, "2019"},
-	Cycle{7, "2019"},
-	Cycle{8, "2019"},
-	Cycle{9, "2019"},
-	Cycle{10, "2019"},
-	Cycle{11, "2019"},
-	Cycle{12, "2019"},
-	Cycle{13, "2019"},
-	Cycle{14, "2019"}}
+	Cycle{5, "2018"}}
 
 var MasterRecords = []MasterRecord{}
 
 func main() {
 
+	cfg := profile.Config{
+		MemProfile:     true,
+		ProfilePath:    ".",  // store profiles in current directory
+		NoShutdownHook: true, // do not hook SIGINT
+	}
+
+	defer profile.Start(&cfg).Stop()
+
 	// create people will generate individuals and add their data to the master
 	// records
-	createPeople(10000)
+	createPeople(1000)
 
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -145,53 +145,7 @@ func main() {
 			shuffled := shuffle(Models)      // randomize the order of the models
 			for _, model := range shuffled { // foreach model
 
-				fmt.Println(model.Name)
-
-				// get the current state of the person in this model (should be
-				// the uninitialized state for cycle 0)
-				currentStateInThisModel := person.get_state_by_model(model)
-
-				fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
-
-				// get the transition probabilities from the given state
-				transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
-
-				check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
-				// get all states this person is in in current cycle
-				states := person.get_states()
-
-				fmt.Println("All states this person is in: ", states)
-
-				// get any interactions that will effect the transtion from
-				// the persons current states based on all states that they are
-				// in - it is a method of their current state in this model,
-				// and accepts an array of all currents states they occupy
-				interactions := currentStateInThisModel.get_relevant_interactions(states)
-
-				if len(interactions) > 0 { // if there are interactions
-
-					for _, interaction := range interactions { // foreach interaction
-						// apply the interactions to the transition probabilities
-						transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
-					} // end foreach interaction
-
-				} // end if there are interactions
-
-				check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
-				// using  final transition probabilities, assign new state to person
-				new_state := pickState(transitionProbabilities)
-				fmt.Println("New state is", new_state.Id)
-
-				// store new state in master object
-				err := add_master_record(cycle, person, new_state)
-				if err != false {
-					fmt.Println("problem adding master record")
-					os.Exit(1)
-				} else {
-					fmt.Println("master updated")
-				}
+				runPersonCycleModel(person, cycle, model)
 
 			} // end foreach model
 		} // end foreach person
@@ -206,6 +160,57 @@ func main() {
 		//os.Exit(1)
 	} // end foreach cycle
 
+}
+
+func runPersonCycleModel(person Person, cycle Cycle, model Model) {
+
+	fmt.Println(model.Name)
+
+	// get the current state of the person in this model (should be
+	// the uninitialized state for cycle 0)
+	currentStateInThisModel := person.get_state_by_model(model)
+
+	fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
+
+	// get the transition probabilities from the given state
+	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
+
+	check_sum(transitionProbabilities) // will throw error if sum isn't 1
+
+	// get all states this person is in in current cycle
+	states := person.get_states()
+
+	fmt.Println("All states this person is in: ", states)
+
+	// get any interactions that will effect the transtion from
+	// the persons current states based on all states that they are
+	// in - it is a method of their current state in this model,
+	// and accepts an array of all currents states they occupy
+	interactions := currentStateInThisModel.get_relevant_interactions(states)
+
+	if len(interactions) > 0 { // if there are interactions
+
+		for _, interaction := range interactions { // foreach interaction
+			// apply the interactions to the transition probabilities
+			transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
+		} // end foreach interaction
+
+	} // end if there are interactions
+
+	check_sum(transitionProbabilities) // will throw error if sum isn't 1
+
+	// using  final transition probabilities, assign new state to person
+	new_state := pickState(transitionProbabilities)
+	fmt.Println("New state is", new_state.Id)
+
+	// store new state in master object
+	err := add_master_record(cycle, person, new_state)
+	if err != false {
+		fmt.Println("problem adding master record")
+		os.Exit(1)
+	} else {
+		fmt.Println("master updated")
+	}
 }
 
 // ------------------------------------------- functions
