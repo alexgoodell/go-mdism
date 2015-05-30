@@ -1,3 +1,6 @@
+// General to do
+// * int to uint
+
 package main
 
 import (
@@ -14,6 +17,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+
 	"time"
 )
 
@@ -34,6 +38,9 @@ type MasterRecord struct {
 	Person_id int
 	State_id  int
 	Model_id  int
+	// generate a hash key for a map, allows easy access to states
+	// by hashing cycle, person and model.
+	Hash_key string
 }
 
 type Cycle struct {
@@ -62,10 +69,11 @@ type TransitionProbability struct {
 }
 
 type Query struct {
-	State_by_cycle_and_person_and_model [][][]int
-	States_by_cycle_and_person          [][]int
-	Tps_by_from_state                   []int
-	Interactions_by_in_state_and_model  [][]int
+	//State_by_cycle_and_person_and_model
+	State_id_by_cycle_and_person_and_model map[string]int
+	States_ids_by_cycle_and_person         map[string]int
+	Tps_id_by_from_state                   map[string]int
+	Interactions_id_by_in_state_and_model  map[string]int
 }
 
 // these are all global variables, which is why they are Capitalized
@@ -122,9 +130,10 @@ var MasterRecords = []MasterRecord{}
 func main() {
 
 	cfg := profile.Config{
-		MemProfile:     true,
+		MemProfile:     false,
 		ProfilePath:    ".",  // store profiles in current directory
 		NoShutdownHook: true, // do not hook SIGINT
+		CPUProfile:     true,
 	}
 
 	defer profile.Start(&cfg).Stop()
@@ -258,12 +267,14 @@ func createPeople(number int) {
 	for _, person := range People {
 		for _, model := range Models {
 			uninitializedState := model.get_uninitialized_state()
-
 			var mr MasterRecord
 			mr.Cycle_id = 1
 			mr.State_id = uninitializedState.Id
 			mr.Model_id = model.Id
 			mr.Person_id = person.Id
+			// generate a hash key for a map, allows easy access to states
+			// by hashing cycle, person and model.
+			mr.Hash_key = fmt.Sprintf("%010d%010d%010d", mr.Cycle_id, mr.Person_id, mr.Model_id)
 			MasterRecords = append(MasterRecords, mr)
 
 		}
