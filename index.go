@@ -12,7 +12,6 @@ import (
 	// 	"net/http"
 	// 	"strconv"
 	"encoding/csv"
-	"github.com/davecheney/profile"
 	"math"
 	"math/rand"
 	"os"
@@ -128,22 +127,12 @@ var Cycles = []Cycle{
 var MasterRecords = []MasterRecord{}
 
 func main() {
-
-	cfg := profile.Config{
-		MemProfile:     false,
-		ProfilePath:    ".",  // store profiles in current directory
-		NoShutdownHook: true, // do not hook SIGINT
-		CPUProfile:     true,
-	}
-
-	defer profile.Start(&cfg).Stop()
+	// Seed the random function
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	// create people will generate individuals and add their data to the master
 	// records
 	createPeople(1000)
-
-	// Seed the random function
-	rand.Seed(time.Now().UTC().UnixNano())
 
 	// table tests here
 
