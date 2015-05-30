@@ -22,7 +22,7 @@ func init() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("person_count=", person_count)
+	fmt.Println("person_count is", person_count)
 	fmt.Println("Profiling ...")
 }
 
