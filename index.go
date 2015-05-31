@@ -132,7 +132,7 @@ func main() {
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 1000
+	numberOfPeople := 10000
 
 	//set up queryData
 	setUpQueryData(numberOfPeople)
@@ -143,31 +143,55 @@ func main() {
 
 	// table tests here
 
-	runModel()
+	concurrencyBy := "person"
+	runModel(concurrencyBy)
+
 }
 
-func runModel() {
+func runModel(concurrencyBy string) {
+
+	switch concurrencyBy {
+
+	case "person":
+
+		for _, person := range People { // foreach cycle
+			go runModelWithConcurrentPeople(person)
+		} // end foreach cycle
+
+	case "person-within-cycle":
+
+		for _, cycle := range Cycles { // foreach cycle
+			for _, person := range People { // 	foreach person
+				go runModelWithConcurrentPeopleWithinCycle(person, cycle)
+			}
+		}
+
+	} // end case
+
+	//outputs
+	toCsv(output_dir+"/master.csv", MasterRecords[0], MasterRecords)
+	toCsv(output_dir+"/states.csv", States[0], States)
+}
+
+func runModelWithConcurrentPeople(person Person) {
+	fmt.Println("Person:", person.Id)
 	for _, cycle := range Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
-		for _, person := range People { // 	foreach person
-			fmt.Println("Person:", person.Id)
-			shuffled := shuffle(Models)      // randomize the order of the models
-			for _, model := range shuffled { // foreach model
+		shuffled := shuffle(Models)      // randomize the order of the models
+		for _, model := range shuffled { // foreach model
+			runPersonCycleModel(person, cycle, model)
+		} // end foreach model
+	} //end foreach cycle
 
-				runPersonCycleModel(person, cycle, model)
+}
 
-			} // end foreach model
-		} // end foreach person
-
-		fmt.Println(MasterRecords)
-		toCsv(output_dir+"/master.csv", MasterRecords[0], MasterRecords)
-
-		toCsv(output_dir+"/states.csv", States[0], States)
-
-		CurrentCycle++ //move to next cycle in global variable
-		//fmt.Println("Debugging stop")
-		//os.Exit(1)
-	} // end foreach cycle
+func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
+	fmt.Println("Person:", person.Id)
+	fmt.Println("Cycle: ", cycle.Name)
+	shuffled := shuffle(Models)      // randomize the order of the models
+	for _, model := range shuffled { // foreach model
+		runPersonCycleModel(person, cycle, model)
+	} // end foreach model
 }
 
 // generate a hash key for a map, allows easy access to states
@@ -198,6 +222,7 @@ func setUpQueryData(numberOfPeople int) {
 		}
 	}
 
+	//Cycles
 	QueryData.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
 	QueryData.Interactions_id_by_in_state_and_model = make([][]int, 1000000, 1000000)
 	QueryData.Tps_id_by_from_state = make([]int, 1000000, 1000000)
@@ -325,7 +350,7 @@ func createPeople(number int) {
 // get state by id
 func get_state_by_id(stateId int) State {
 
-	theState := States[stateId-1]
+	theState := States[stateId]
 
 	if theState.Id == stateId {
 		return theState
@@ -455,28 +480,31 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 // get all states this person is in at the current cycle
 func (thisPerson *Person) get_states() []State {
 	thisPersonId := thisPerson.Id
-	var bestGuessIds []int
 	var statesToReturn []State
-	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPersonId-1)*len(Models)
 
-	for i, _ := range Models {
-		if MasterRecords[bestGuessStartingIndex+i].Person_id == thisPersonId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle {
-			bestGuessIds = append(bestGuessIds, MasterRecords[bestGuessStartingIndex+i].State_id)
-		} else {
-			fmt.Println("Cannot find master records via get_states")
-			os.Exit(1)
-		}
-	}
+	statesToReturnIds := QueryData.State_id_by_cycle_and_person_and_model[CurrentCycle][thisPersonId]
 
-	for _, bestGuessId := range bestGuessIds {
-		if States[bestGuessId-1].Id == bestGuessId {
-			statesToReturn = append(statesToReturn, States[bestGuessId-1])
+	for _, statesToReturnId := range statesToReturnIds {
+		if States[statesToReturnId].Id == statesToReturnId {
+			statesToReturn = append(statesToReturn, States[statesToReturnId])
 		} else {
 			fmt.Println("cannot find states via get_states")
 			os.Exit(1)
 		}
 	}
+
+	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
+	// bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPersonId-1)*len(Models)
+
+	// for i, _ := range Models {
+	// 	if MasterRecords[bestGuessStartingIndex+i].Person_id == thisPersonId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle {
+	// 		bestGuessIds = append(bestGuessIds, MasterRecords[bestGuessStartingIndex+i].State_id)
+	// 	} else {
+	// 		fmt.Println("Cannot find master records via get_states")
+	// 		os.Exit(1)
+	// 	}
+	// }
+
 	if len(statesToReturn) > 0 {
 		return statesToReturn
 	} else {
