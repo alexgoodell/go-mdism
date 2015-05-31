@@ -12,7 +12,6 @@ import (
 	// 	"net/http"
 	// 	"strconv"
 	"encoding/csv"
-	"github.com/davecheney/profile"
 	"math"
 	"math/rand"
 	"os"
@@ -40,7 +39,7 @@ type MasterRecord struct {
 	Model_id  int
 	// generate a hash key for a map, allows easy access to states
 	// by hashing cycle, person and model.
-	Hash_key string
+	//Hash_key string
 }
 
 type Cycle struct {
@@ -70,85 +69,84 @@ type TransitionProbability struct {
 
 type Query struct {
 	//State_by_cycle_and_person_and_model
-	State_id_by_cycle_and_person_and_model map[string]int
-	States_ids_by_cycle_and_person         map[string]int
-	Tps_id_by_from_state                   map[string]int
-	Interactions_id_by_in_state_and_model  map[string]int
+	State_id_by_cycle_and_person_and_model [][][]int
+	States_ids_by_cycle_and_person         [][]int
+	Tps_id_by_from_state                   []int
+	Interactions_id_by_in_state_and_model  [][]int
 }
 
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
-var CurrentCycle = 1
+var CurrentCycle = 0
 
 var QueryData = Query{}
 
 var output_dir = "tmp"
 
 var Models = []Model{
-	Model{1, "HIV"},
-	Model{2, "TB"}}
+	Model{0, "HIV"},
+	Model{1, "TB"}}
 
 var People []Person
 
 var States = []State{
-	State{1, 1, "Uninit", true},
-	State{2, 1, "HIV-", false},
-	State{3, 1, "HIV+", false},
-	State{4, 2, "Uninit", true},
-	State{5, 2, "TB-", false},
-	State{6, 2, "TB+", false}}
+	State{0, 0, "Uninit", true},
+	State{1, 0, "HIV-", false},
+	State{2, 0, "HIV+", false},
+	State{3, 1, "Uninit", true},
+	State{4, 1, "TB-", false},
+	State{5, 1, "TB+", false}}
 
 var TransitionProbabilities = []TransitionProbability{
-	TransitionProbability{1, 1, 1, 0},
-	TransitionProbability{2, 1, 2, 0.99},
-	TransitionProbability{3, 1, 3, 0.01},
-	TransitionProbability{4, 2, 1, 0},
-	TransitionProbability{5, 2, 2, 0.95},
-	TransitionProbability{6, 2, 3, 0.05},
-	TransitionProbability{7, 3, 1, 0},
-	TransitionProbability{8, 3, 2, 0},
-	TransitionProbability{9, 3, 3, 1},
-	TransitionProbability{10, 4, 4, 0},
-	TransitionProbability{11, 4, 5, 0.8},
-	TransitionProbability{12, 4, 6, 0.2},
-	TransitionProbability{13, 5, 4, 0},
-	TransitionProbability{14, 5, 5, 0.9},
-	TransitionProbability{15, 5, 6, 0.1},
-	TransitionProbability{16, 6, 4, 0},
-	TransitionProbability{17, 6, 5, 0},
-	TransitionProbability{18, 6, 6, 1}}
+	TransitionProbability{0, 0, 0, 0},
+	TransitionProbability{1, 0, 1, 0.99},
+	TransitionProbability{2, 0, 2, 0.01},
+	TransitionProbability{3, 1, 0, 0},
+	TransitionProbability{4, 1, 1, 0.95},
+	TransitionProbability{5, 1, 2, 0.05},
+	TransitionProbability{6, 2, 0, 0},
+	TransitionProbability{7, 2, 1, 0},
+	TransitionProbability{8, 2, 2, 1},
+	TransitionProbability{9, 3, 3, 0},
+	TransitionProbability{10, 3, 4, 0.8},
+	TransitionProbability{11, 3, 5, 0.2},
+	TransitionProbability{12, 4, 3, 0},
+	TransitionProbability{13, 4, 4, 0.9},
+	TransitionProbability{14, 4, 5, 0.1},
+	TransitionProbability{15, 5, 3, 0},
+	TransitionProbability{16, 5, 4, 0},
+	TransitionProbability{17, 5, 5, 1}}
 
-var Interactions = []Interaction{Interaction{1, 3, 5, 6, 2, 2}}
+var Interactions = []Interaction{Interaction{0, 2, 4, 5, 2, 1}}
 
 var Cycles = []Cycle{
-	Cycle{1, "Pre-initialization"},
-	Cycle{2, "2015"},
-	Cycle{3, "2016"},
-	Cycle{4, "2017"},
-	Cycle{5, "2018"}}
+	Cycle{0, "Pre-initialization"},
+	Cycle{1, "2015"},
+	Cycle{2, "2016"},
+	Cycle{3, "2017"},
+	Cycle{4, "2018"}}
 
 var MasterRecords = []MasterRecord{}
 
 func main() {
-
-	cfg := profile.Config{
-		MemProfile:     false,
-		ProfilePath:    ".",  // store profiles in current directory
-		NoShutdownHook: true, // do not hook SIGINT
-		CPUProfile:     true,
-	}
-
-	defer profile.Start(&cfg).Stop()
-
-	// create people will generate individuals and add their data to the master
-	// records
-	createPeople(1000)
-
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	numberOfPeople := 1000
+
+	//set up queryData
+	setUpQueryData(numberOfPeople)
+
+	// create people will generate individuals and add their data to the master
+	// records
+	createPeople(numberOfPeople)
+
 	// table tests here
 
+	runModel()
+}
+
+func runModel() {
 	for _, cycle := range Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
 		for _, person := range People { // 	foreach person
@@ -170,7 +168,39 @@ func main() {
 		//fmt.Println("Debugging stop")
 		//os.Exit(1)
 	} // end foreach cycle
+}
 
+// generate a hash key for a map, allows easy access to states
+// by hashing cycle, person and model.
+// func makeHashByCyclePersonModel(cycle Cycle, person Person, model Model) string {
+// 	Hash_key := fmt.Sprintf("%010d%010d%010d", cycle.Id, person.Id, model.Id)
+// 	return Hash_key
+// }
+
+// func makeHashByCyclePerson(cycle Cycle, person Person) string {
+// 	Hash_key := fmt.Sprintf("%010d%010d", cycle.Id, person.Id)
+// 	return Hash_key
+// }
+
+// func makeHashByTpFromState(state State) string {
+
+// }
+
+func setUpQueryData(numberOfPeople int) {
+	// Need to have lengths to be able to access them
+	//Cycles
+	QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Cycles), len(Cycles))
+	for i, _ := range QueryData.State_id_by_cycle_and_person_and_model {
+		//People
+		QueryData.State_id_by_cycle_and_person_and_model[i] = make([][]int, numberOfPeople, numberOfPeople)
+		for p, _ := range QueryData.State_id_by_cycle_and_person_and_model[i] {
+			QueryData.State_id_by_cycle_and_person_and_model[i][p] = make([]int, len(Models), len(Models))
+		}
+	}
+
+	QueryData.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
+	QueryData.Interactions_id_by_in_state_and_model = make([][]int, 1000000, 1000000)
+	QueryData.Tps_id_by_from_state = make([]int, 1000000, 1000000)
 }
 
 func runPersonCycleModel(person Person, cycle Cycle, model Model) {
@@ -189,6 +219,7 @@ func runPersonCycleModel(person Person, cycle Cycle, model Model) {
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 	// get all states this person is in in current cycle
+	fmt.Println("now get all states")
 	states := person.get_states()
 
 	fmt.Println("All states this person is in: ", states)
@@ -263,21 +294,28 @@ func shuffle(models []Model) []Model {
 // records
 func createPeople(number int) {
 	for i := 0; i < number; i++ {
-		People = append(People, Person{i + 1})
+		People = append(People, Person{i})
 	}
 
 	for _, person := range People {
 		for _, model := range Models {
 			uninitializedState := model.get_uninitialized_state()
 			var mr MasterRecord
-			mr.Cycle_id = 1
+			mr.Cycle_id = 0
 			mr.State_id = uninitializedState.Id
 			mr.Model_id = model.Id
 			mr.Person_id = person.Id
 			// generate a hash key for a map, allows easy access to states
 			// by hashing cycle, person and model.
-			mr.Hash_key = fmt.Sprintf("%010d%010d%010d", mr.Cycle_id, mr.Person_id, mr.Model_id)
+			qd := QueryData.State_id_by_cycle_and_person_and_model
+			fmt.Println("trynging to find", mr.Cycle_id, mr.Person_id, mr.Model_id)
+
+			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
+
 			MasterRecords = append(MasterRecords, mr)
+
+			//State_id_by_cycle_and_person_and_model
+			//States_ids_by_cycle_and_person
 
 		}
 	}
@@ -377,7 +415,7 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	thisModelId := thisModel.Id
 	var stateToReturn State
 	var stateToReturnId int
-	var bestGuess MasterRecord
+	//var bestGuess MasterRecord
 	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
 	fmt.Println("looking for cycle, person, model", CurrentCycle, thisPerson.Id, thisModelId)
 	// this is tricky; because models are run in a random order, and they place
@@ -386,23 +424,26 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	// the MasterRecords which may fit, and test them. TODO: perhaps design a
 	// system by which add_to_master_record would lay down results in model-order
 	// as opposed to the order in which they are run.
-	bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPerson.Id-1)*len(Models)
-	for i, _ := range Models {
-		if MasterRecords[bestGuessStartingIndex+i].Model_id == thisModelId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle && MasterRecords[bestGuessStartingIndex+i].Person_id == thisPerson.Id {
-			bestGuess = MasterRecords[bestGuessStartingIndex+i]
 
-		}
-		fmt.Println(bestGuessStartingIndex + i)
-		fmt.Printf("%+v\n", bestGuess)
-	}
+	stateToReturnId = QueryData.State_id_by_cycle_and_person_and_model[CurrentCycle][thisPerson.Id][thisModelId]
 
-	if bestGuess.Model_id == thisModelId && bestGuess.Cycle_id == CurrentCycle && bestGuess.Person_id == thisPerson.Id {
-		stateToReturnId = bestGuess.State_id
-	} else {
-		fmt.Println("Cannot find state via get_state_by_model, error 1")
-		os.Exit(1)
-	}
-	stateToReturn = States[stateToReturnId-1]
+	// bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPerson.Id-1)*len(Models)
+	// for i, _ := range Models {
+	// 	if MasterRecords[bestGuessStartingIndex+i].Model_id == thisModelId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle && MasterRecords[bestGuessStartingIndex+i].Person_id == thisPerson.Id {
+	// 		bestGuess = MasterRecords[bestGuessStartingIndex+i]
+
+	// 	}
+	// 	fmt.Println(bestGuessStartingIndex + i)
+	// 	fmt.Printf("%+v\n", bestGuess)
+	// }
+
+	// if bestGuess.Model_id == thisModelId && bestGuess.Cycle_id == CurrentCycle && bestGuess.Person_id == thisPerson.Id {
+	// 	stateToReturnId = bestGuess.State_id
+	// } else {
+	// 	fmt.Println("Cannot find state via get_state_by_model, error 1")
+	// 	os.Exit(1)
+	// }
+	stateToReturn = States[stateToReturnId]
 	if stateToReturn.Id == stateToReturnId {
 		return stateToReturn
 	}
