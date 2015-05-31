@@ -12,7 +12,6 @@ import (
 	// 	"net/http"
 	// 	"strconv"
 	"encoding/csv"
-	"github.com/davecheney/profile"
 	"math"
 	"math/rand"
 	"os"
@@ -128,15 +127,8 @@ var Cycles = []Cycle{
 var MasterRecords = []MasterRecord{}
 
 func main() {
-
-	cfg := profile.Config{
-		MemProfile:     false,
-		ProfilePath:    ".",  // store profiles in current directory
-		NoShutdownHook: true, // do not hook SIGINT
-		CPUProfile:     true,
-	}
-
-	defer profile.Start(&cfg).Stop()
+	// Seed the random function
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	numberOfPeople := 1000
 
@@ -147,11 +139,12 @@ func main() {
 	// records
 	createPeople(numberOfPeople)
 
-	// Seed the random function
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	// table tests here
 
+	runModel()
+}
+
+func runModel() {
 	for _, cycle := range Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
 		for _, person := range People { // 	foreach person
@@ -173,7 +166,6 @@ func main() {
 		//fmt.Println("Debugging stop")
 		//os.Exit(1)
 	} // end foreach cycle
-
 }
 
 // generate a hash key for a map, allows easy access to states
