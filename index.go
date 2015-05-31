@@ -81,6 +81,8 @@ var CurrentCycle = 0
 
 var QueryData = Query{}
 
+var output_dir = "tmp"
+
 var Models = []Model{
 	Model{0, "HIV"},
 	Model{1, "TB"}}
@@ -158,9 +160,9 @@ func runModel() {
 		} // end foreach person
 
 		fmt.Println(MasterRecords)
-		toCsv("master.csv", MasterRecords[0], MasterRecords)
+		toCsv(output_dir+"/master.csv", MasterRecords[0], MasterRecords)
 
-		toCsv("states.csv", States[0], States)
+		toCsv(output_dir+"/states.csv", States[0], States)
 
 		CurrentCycle++ //move to next cycle in global variable
 		//fmt.Println("Debugging stop")
