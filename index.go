@@ -16,9 +16,11 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
-
+	//"runtime"
 	"time"
 )
+
+var beginTime = time.Now()
 
 type State struct {
 	Id                     int
@@ -124,15 +126,32 @@ var Cycles = []Cycle{
 	Cycle{1, "2015"},
 	Cycle{2, "2016"},
 	Cycle{3, "2017"},
-	Cycle{4, "2018"}}
+	Cycle{4, "2018"},
+	Cycle{5, "2018"},
+	Cycle{6, "2018"},
+	Cycle{7, "2018"},
+	Cycle{8, "2018"},
+	Cycle{9, "2018"},
+	Cycle{10, "2018"},
+	Cycle{11, "2018"},
+	Cycle{12, "2018"},
+	Cycle{13, "2018"},
+	Cycle{14, "2018"},
+	Cycle{15, "2018"},
+	Cycle{16, "2018"},
+	Cycle{17, "2018"},
+	Cycle{18, "2018"},
+	Cycle{19, "2018"}}
 
 var MasterRecords = []MasterRecord{}
 
 func main() {
+
+	//runtime.GOMAXPROCS(runtime.NumCPU())
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 10000
+	numberOfPeople := 20000
 
 	//set up queryData
 	setUpQueryData(numberOfPeople)
@@ -162,15 +181,18 @@ func runModel(concurrencyBy string) {
 
 		for _, cycle := range Cycles { // foreach cycle
 			for _, person := range People { // 	foreach person
-				go runModelWithConcurrentPeopleWithinCycle(person, cycle)
+				runModelWithConcurrentPeopleWithinCycle(person, cycle)
 			}
 		}
 
 	} // end case
 
+	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
+
 	//outputs
 	toCsv(output_dir+"/master.csv", MasterRecords[0], MasterRecords)
 	toCsv(output_dir+"/states.csv", States[0], States)
+
 }
 
 func runModelWithConcurrentPeople(person Person) {
