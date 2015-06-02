@@ -104,12 +104,12 @@ func main() {
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
 
-	runtime.GOMAXPROCS(1)
+	runtime.GOMAXPROCS(untime.NumCPU())
 
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 60000
+	numberOfPeople := 10000
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
