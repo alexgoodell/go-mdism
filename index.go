@@ -11,7 +11,10 @@ import (
 	// 	"io/ioutil"
 	// 	"net/http"
 	// 	"strconv"
+	"bytes"
 	"encoding/csv"
+	"encoding/gob"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -77,100 +80,113 @@ type Query struct {
 	Interactions_id_by_in_state_and_model  [][]int
 }
 
-type Inputs struct {
+type Input struct {
+	CurrentCycle            int
+	QueryData               Query
+	Models                  []Model
+	People                  []Person
+	States                  []State
+	TransitionProbabilities []TransitionProbability
+	Interactions            []Interaction
+	Cycles                  []Cycle
+	MasterRecords           []MasterRecord
 }
 
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
-var CurrentCycle = 0
 
-var QueryData = Query{}
+var GlobalMasterRecords = []MasterRecord{}
 
 var output_dir = "tmp"
 
-var Models = []Model{
-	Model{0, "HIV"},
-	Model{1, "TB"}}
-
-var People []Person
-
-var States = []State{
-	State{0, 0, "Uninit", true},
-	State{1, 0, "HIV-", false},
-	State{2, 0, "HIV+", false},
-	State{3, 1, "Uninit", true},
-	State{4, 1, "TB-", false},
-	State{5, 1, "TB+", false}}
-
-var TransitionProbabilities = []TransitionProbability{
-	TransitionProbability{0, 0, 0, 0},
-	TransitionProbability{1, 0, 1, 0.99},
-	TransitionProbability{2, 0, 2, 0.01},
-	TransitionProbability{3, 1, 0, 0},
-	TransitionProbability{4, 1, 1, 0.95},
-	TransitionProbability{5, 1, 2, 0.05},
-	TransitionProbability{6, 2, 0, 0},
-	TransitionProbability{7, 2, 1, 0},
-	TransitionProbability{8, 2, 2, 1},
-	TransitionProbability{9, 3, 3, 0},
-	TransitionProbability{10, 3, 4, 0.8},
-	TransitionProbability{11, 3, 5, 0.2},
-	TransitionProbability{12, 4, 3, 0},
-	TransitionProbability{13, 4, 4, 0.9},
-	TransitionProbability{14, 4, 5, 0.1},
-	TransitionProbability{15, 5, 3, 0},
-	TransitionProbability{16, 5, 4, 0},
-	TransitionProbability{17, 5, 5, 1}}
-
-var Interactions = []Interaction{Interaction{0, 2, 4, 5, 2, 1}}
-
-var Cycles = []Cycle{
-	Cycle{0, "Pre-initialization"},
-	Cycle{1, "2015"},
-	Cycle{2, "2016"},
-	Cycle{3, "2017"},
-	Cycle{4, "2018"},
-	Cycle{5, "2018"},
-	Cycle{6, "2018"},
-	Cycle{7, "2018"},
-	Cycle{8, "2018"},
-	Cycle{9, "2018"},
-	Cycle{10, "2018"},
-	Cycle{11, "2018"},
-	Cycle{12, "2018"},
-	Cycle{13, "2018"},
-	Cycle{14, "2018"},
-	Cycle{15, "2018"},
-	Cycle{16, "2018"},
-	Cycle{17, "2018"},
-	Cycle{18, "2018"},
-	Cycle{19, "2018"}}
-
-var MasterRecords = []MasterRecord{}
-
 func main() {
+
+	var Inputs Input
+	Inputs = initializeInputs(Inputs)
 
 	//runtime.GOMAXPROCS(runtime.NumCPU())
 	// Seed the random function
-	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 1
+	numberOfPeople := 1000
 
 	//set up queryData
-	setUpQueryData(numberOfPeople)
+	Inputs = setUpQueryData(Inputs, numberOfPeople)
 
 	// create people will generate individuals and add their data to the master
 	// records
-	createPeople(numberOfPeople)
+	Inputs = createPeople(Inputs, numberOfPeople)
 
 	// table tests here
 
 	concurrencyBy := "person"
-	runModel(concurrencyBy)
+	runModel(Inputs, concurrencyBy)
 
 }
 
-func runModel(concurrencyBy string) {
+func initializeInputs(Inputs Input) Input {
+
+	Inputs.CurrentCycle = 0
+
+	Inputs.Models = []Model{
+		Model{0, "HIV"},
+		Model{1, "TB"}}
+
+	Inputs.States = []State{
+		State{0, 0, "Uninit HIV", true},
+		State{1, 0, "HIV-", false},
+		State{2, 0, "HIV+", false},
+		State{3, 1, "Uninit TB", true},
+		State{4, 1, "TB-", false},
+		State{5, 1, "TB+", false}}
+
+	Inputs.TransitionProbabilities = []TransitionProbability{
+		TransitionProbability{0, 0, 0, 0},
+		TransitionProbability{1, 0, 1, 0.99},
+		TransitionProbability{2, 0, 2, 0.01},
+		TransitionProbability{3, 1, 0, 0},
+		TransitionProbability{4, 1, 1, 0.95},
+		TransitionProbability{5, 1, 2, 0.05},
+		TransitionProbability{6, 2, 0, 0},
+		TransitionProbability{7, 2, 1, 0},
+		TransitionProbability{8, 2, 2, 1},
+		TransitionProbability{9, 3, 3, 0},
+		TransitionProbability{10, 3, 4, 0.8},
+		TransitionProbability{11, 3, 5, 0.2},
+		TransitionProbability{12, 4, 3, 0},
+		TransitionProbability{13, 4, 4, 0.9},
+		TransitionProbability{14, 4, 5, 0.1},
+		TransitionProbability{15, 5, 3, 0},
+		TransitionProbability{16, 5, 4, 0},
+		TransitionProbability{17, 5, 5, 1}}
+
+	Inputs.Interactions = []Interaction{Interaction{0, 2, 4, 5, 2, 1}}
+
+	Inputs.Cycles = []Cycle{
+		Cycle{0, "Pre-initialization"},
+		Cycle{1, "2015"},
+		Cycle{2, "2016"},
+		Cycle{3, "2017"},
+		Cycle{4, "2018"},
+		Cycle{5, "2018"},
+		Cycle{6, "2018"},
+		Cycle{7, "2018"},
+		Cycle{8, "2018"},
+		Cycle{9, "2018"},
+		Cycle{10, "2018"},
+		Cycle{11, "2018"},
+		Cycle{12, "2018"},
+		Cycle{13, "2018"},
+		Cycle{14, "2018"},
+		Cycle{15, "2018"},
+		Cycle{16, "2018"},
+		Cycle{17, "2018"},
+		Cycle{18, "2018"},
+		Cycle{19, "2018"}}
+
+	return Inputs
+}
+
+func runModel(Inputs Input, concurrencyBy string) {
 
 	switch concurrencyBy {
 
@@ -178,73 +194,103 @@ func runModel(concurrencyBy string) {
 
 		masterRecordsToAdd := make(chan []MasterRecord)
 
-		for _, person := range People { // foreach cycle
-			go runModelWithConcurrentPeople(person, masterRecordsToAdd)
+		//create pointer to a new local set of inputs for each independent thread
+		var localInputs Input
+		localInputs = deepCopy(Inputs)
+
+		for _, person := range Inputs.People { // foreach cycle
+			go runModelWithConcurrentPeople(localInputs, person, masterRecordsToAdd)
 		} // end foreach cycle
 
-		for _, person := range People {
+		for _, person := range Inputs.People {
 			mRtoAdd := <-masterRecordsToAdd
-			_ = append(MasterRecords, mRtoAdd...)
+			GlobalMasterRecords = append(GlobalMasterRecords, mRtoAdd...)
 			_ = person
 		}
 
-	case "person-within-cycle":
+		// case "person-within-cycle":
 
-		for _, cycle := range Cycles { // foreach cycle
-			for _, person := range People { // 	foreach person
-				runModelWithConcurrentPeopleWithinCycle(person, cycle)
-			}
-			CurrentCycle++
-		}
+		// 	for _, cycle := range Cycles { // foreach cycle
+		// 		for _, person := range People { // 	foreach person
+		// 			runModelWithConcurrentPeopleWithinCycle(person, cycle)
+		// 		}
+		// 		CurrentCycle++
+		// 	}
 
 	} // end case
 
 	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
 
 	//outputs
-	toCsv(output_dir+"/master.csv", MasterRecords[0], MasterRecords)
-	toCsv(output_dir+"/states.csv", States[0], States)
+	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 }
 
-func runModelWithConcurrentPeople(person Person, masterRecordsToAdd chan []MasterRecord) {
+func deepCopy(Inputs Input) Input {
+
+	var mod bytes.Buffer
+	enc := gob.NewEncoder(&mod)
+	dec := gob.NewDecoder(&mod)
+
+	err := enc.Encode(Inputs)
+	if err != nil {
+		log.Fatal("encode error:", err)
+	}
+
+	var cpy Input
+	err = dec.Decode(&cpy)
+	if err != nil {
+		log.Fatal("decode error:", err)
+	}
+
+	return cpy
+}
+
+func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
+	localInputsPointer := &localInputs
 	var theseMasterRecordsToAdd []MasterRecord
 	fmt.Println("Person:", person.Id)
-	for _, cycle := range Cycles { // foreach cycle
+	for _, cycle := range localInputsPointer.Cycles { // foreach cycle
 		fmt.Println("Cycle: ", cycle.Name)
-		shuffled := shuffle(Models)      // randomize the order of the models
-		for _, model := range shuffled { // foreach model
-
-			fmt.Println(model.Name)
+		//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models //TODO place back in not sure why broken.
+		for _, model := range localInputsPointer.Models { // foreach model
+			//fmt.Println(model.Name)
 
 			// get the current state of the person in this model (should be
 			// the uninitialized state for cycle 0)
-			currentStateInThisModel := person.get_state_by_model(model)
+			currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
+			stateToReturnId := localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][person.Id][model.Id]
 
-			fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
+			if currentStateInThisModel.Id != stateToReturnId {
+				fmt.Println("state to return function broken")
+				os.Exit(1)
+			}
+
+			//fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
 
 			// get the transition probabilities from the given state
-			transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
+			transitionProbabilities := currentStateInThisModel.get_destination_probabilites(localInputsPointer)
 
 			check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 			// get all states this person is in in current cycle
-			fmt.Println("now get all states")
-			states := person.get_states()
+			//fmt.Println("now get all states")
+			states := person.get_states(localInputsPointer)
 
-			fmt.Println("All states this person is in: ", states)
+			//fmt.Println("All states this person is in: ", states)
 
 			// get any interactions that will effect the transtion from
 			// the persons current states based on all states that they are
 			// in - it is a method of their current state in this model,
 			// and accepts an array of all currents states they occupy
-			interactions := currentStateInThisModel.get_relevant_interactions(states)
+			interactions := currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
 
 			if len(interactions) > 0 { // if there are interactions
 
 				for _, interaction := range interactions { // foreach interaction
 					// apply the interactions to the transition probabilities
-					transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
+					transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction)
 				} // end foreach interaction
 
 			} // end if there are interactions
@@ -252,17 +298,52 @@ func runModelWithConcurrentPeople(person Person, masterRecordsToAdd chan []Maste
 			check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 			// using  final transition probabilities, assign new state to person
-			new_state := pickState(transitionProbabilities)
-			fmt.Println("New state is", new_state.Id)
+			new_state := pickState(localInputsPointer, transitionProbabilities)
+			//fmt.Println("New state is", new_state.Id)
+
+			if new_state.Id < 1 {
+				fmt.Println("No new state!")
+				os.Exit(1)
+			}
+
+			if currentStateInThisModel.Id == 2 && new_state.Id == 1 {
+				fmt.Println("cured of HIV?... bug")
+				os.Exit(1)
+			}
+
+			if localInputsPointer.CurrentCycle != cycle.Id {
+				fmt.Println("cycle mismatch!")
+				os.Exit(1)
+			}
+
+			if new_state.Id == 3 || new_state.Id == 0 {
+				fmt.Println("assigning unit state... bug")
+				os.Exit(1)
+			}
+
+			if localInputsPointer.CurrentCycle != 0 && currentStateInThisModel.Id == 0 {
+				fmt.Println("unit state after cycle 0... bug. person, cycle, state: ", person.Id, localInputsPointer.CurrentCycle, currentStateInThisModel.Id)
+				//os.Exit(1)
+			}
 
 			// store new state in master object
-			err := add_master_record(cycle, person, new_state)
+			err := add_master_record(localInputsPointer, cycle, person, new_state)
+			localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = new_state.Id
+
+			check_new_state_id := localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+
+			if check_new_state_id != new_state.Id {
+				fmt.Println("Was not correctly assigned... bug")
+				os.Exit(1)
+			}
 
 			var newMasterRecord MasterRecord
 			newMasterRecord.Cycle_id = cycle.Id + 1
 			newMasterRecord.Person_id = person.Id
 			newMasterRecord.State_id = new_state.Id
 			newMasterRecord.Model_id = model.Id
+
+			fmt.Println("setting c p m", newMasterRecord.Cycle_id, newMasterRecord.Person_id, newMasterRecord.Model_id, "to", newMasterRecord.State_id)
 
 			theseMasterRecordsToAdd = append(theseMasterRecordsToAdd, newMasterRecord)
 
@@ -274,20 +355,21 @@ func runModelWithConcurrentPeople(person Person, masterRecordsToAdd chan []Maste
 			}
 
 		} // end foreach model
-		CurrentCycle++
+		localInputsPointer.CurrentCycle++
+
 	} //end foreach cycle
 
 	masterRecordsToAdd <- theseMasterRecordsToAdd
 }
 
-func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
-	fmt.Println("Person:", person.Id)
-	fmt.Println("Cycle: ", cycle.Name)
-	shuffled := shuffle(Models)      // randomize the order of the models
-	for _, model := range shuffled { // foreach model
-		runPersonCycleModel(person, cycle, model)
-	} // end foreach model
-}
+// func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
+// 	fmt.Println("Person:", person.Id)
+// 	fmt.Println("Cycle: ", cycle.Name)
+// 	shuffled := shuffle(Models) // randomize the order of the models
+// 	for _, model := range shuffled {        // foreach model
+// 		runPersonCycleModel(person, cycle, model)
+// 	} // end foreach model
+// }
 
 // generate a hash key for a map, allows easy access to states
 // by hashing cycle, person and model.
@@ -305,75 +387,77 @@ func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
 
 // }
 
-func setUpQueryData(numberOfPeople int) {
+func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 	// Need to have lengths to be able to access them
 	//Cycles
-	QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Cycles)+1, len(Cycles)+1)
-	for i, _ := range QueryData.State_id_by_cycle_and_person_and_model {
+	Inputs.QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
+	for i, _ := range Inputs.QueryData.State_id_by_cycle_and_person_and_model {
 		//People
-		QueryData.State_id_by_cycle_and_person_and_model[i] = make([][]int, numberOfPeople, numberOfPeople)
-		for p, _ := range QueryData.State_id_by_cycle_and_person_and_model[i] {
-			QueryData.State_id_by_cycle_and_person_and_model[i][p] = make([]int, len(Models), len(Models))
+		Inputs.QueryData.State_id_by_cycle_and_person_and_model[i] = make([][]int, numberOfPeople, numberOfPeople)
+		for p, _ := range Inputs.QueryData.State_id_by_cycle_and_person_and_model[i] {
+			Inputs.QueryData.State_id_by_cycle_and_person_and_model[i][p] = make([]int, len(Inputs.Models), len(Inputs.Models))
 		}
 	}
 
 	//Cycles
-	QueryData.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
-	QueryData.Interactions_id_by_in_state_and_model = make([][]int, 1000000, 1000000)
-	QueryData.Tps_id_by_from_state = make([]int, 1000000, 1000000)
+	Inputs.QueryData.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
+	Inputs.QueryData.Interactions_id_by_in_state_and_model = make([][]int, 1000000, 1000000)
+	Inputs.QueryData.Tps_id_by_from_state = make([]int, 1000000, 1000000)
+
+	return Inputs
 }
 
-func runPersonCycleModel(person Person, cycle Cycle, model Model) {
+// func runPersonCycleModel(person Person, cycle Cycle, model Model) {
 
-	fmt.Println(model.Name)
+// 	fmt.Println(model.Name)
 
-	// get the current state of the person in this model (should be
-	// the uninitialized state for cycle 0)
-	currentStateInThisModel := person.get_state_by_model(model)
+// 	// get the current state of the person in this model (should be
+// 	// the uninitialized state for cycle 0)
+// 	currentStateInThisModel := person.get_state_by_model(model)
 
-	fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
+// 	fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
 
-	// get the transition probabilities from the given state
-	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
+// 	// get the transition probabilities from the given state
+// 	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
 
-	check_sum(transitionProbabilities) // will throw error if sum isn't 1
+// 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
-	// get all states this person is in in current cycle
-	fmt.Println("now get all states")
-	states := person.get_states()
+// 	// get all states this person is in in current cycle
+// 	fmt.Println("now get all states")
+// 	states := person.get_states()
 
-	fmt.Println("All states this person is in: ", states)
+// 	fmt.Println("All states this person is in: ", states)
 
-	// get any interactions that will effect the transtion from
-	// the persons current states based on all states that they are
-	// in - it is a method of their current state in this model,
-	// and accepts an array of all currents states they occupy
-	interactions := currentStateInThisModel.get_relevant_interactions(states)
+// 	// get any interactions that will effect the transtion from
+// 	// the persons current states based on all states that they are
+// 	// in - it is a method of their current state in this model,
+// 	// and accepts an array of all currents states they occupy
+// 	interactions := currentStateInThisModel.get_relevant_interactions(states)
 
-	if len(interactions) > 0 { // if there are interactions
+// 	if len(interactions) > 0 { // if there are interactions
 
-		for _, interaction := range interactions { // foreach interaction
-			// apply the interactions to the transition probabilities
-			transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
-		} // end foreach interaction
+// 		for _, interaction := range interactions { // foreach interaction
+// 			// apply the interactions to the transition probabilities
+// 			transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
+// 		} // end foreach interaction
 
-	} // end if there are interactions
+// 	} // end if there are interactions
 
-	check_sum(transitionProbabilities) // will throw error if sum isn't 1
+// 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
-	// using  final transition probabilities, assign new state to person
-	new_state := pickState(transitionProbabilities)
-	fmt.Println("New state is", new_state.Id)
+// 	// using  final transition probabilities, assign new state to person
+// 	new_state := pickState(transitionProbabilities)
+// 	fmt.Println("New state is", new_state.Id)
 
-	// store new state in master object
-	err := add_master_record(cycle, person, new_state)
-	if err != false {
-		fmt.Println("problem adding master record")
-		os.Exit(1)
-	} else {
-		fmt.Println("master updated")
-	}
-}
+// 	// store new state in master object
+// 	err := add_master_record(cycle, person, new_state)
+// 	if err != false {
+// 		fmt.Println("problem adding master record")
+// 		os.Exit(1)
+// 	} else {
+// 		fmt.Println("master updated")
+// 	}
+// }
 
 // ------------------------------------------- functions
 
@@ -412,14 +496,14 @@ func shuffle(models []Model) []Model {
 
 // create people will generate individuals and add their data to the master
 // records
-func createPeople(number int) {
+func createPeople(Inputs Input, number int) Input {
 	for i := 0; i < number; i++ {
-		People = append(People, Person{i})
+		Inputs.People = append(Inputs.People, Person{i})
 	}
 
-	for _, person := range People {
-		for _, model := range Models {
-			uninitializedState := model.get_uninitialized_state()
+	for _, person := range Inputs.People {
+		for _, model := range Inputs.Models {
+			uninitializedState := model.get_uninitialized_state(Inputs)
 			var mr MasterRecord
 			mr.Cycle_id = 0
 			mr.State_id = uninitializedState.Id
@@ -427,12 +511,13 @@ func createPeople(number int) {
 			mr.Person_id = person.Id
 			// generate a hash key for a map, allows easy access to states
 			// by hashing cycle, person and model.
-			qd := QueryData.State_id_by_cycle_and_person_and_model
-			fmt.Println("trynging to find", mr.Cycle_id, mr.Person_id, mr.Model_id)
+			qd := Inputs.QueryData.State_id_by_cycle_and_person_and_model
 
 			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
 
-			MasterRecords = append(MasterRecords, mr)
+			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
+
+			fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
 
 			//State_id_by_cycle_and_person_and_model
 			//States_ids_by_cycle_and_person
@@ -440,12 +525,14 @@ func createPeople(number int) {
 		}
 	}
 
+	return Inputs
+
 }
 
 // get state by id
-func get_state_by_id(stateId int) State {
+func get_state_by_id(localInputs *Input, stateId int) State {
 
-	theState := States[stateId]
+	theState := localInputs.States[stateId]
 
 	if theState.Id == stateId {
 		return theState
@@ -468,7 +555,7 @@ func get_state_by_id(stateId int) State {
 
 // --------------- transition probabilities
 
-func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction) []TransitionProbability {
 	// TODO if these ever change to pointerss, you'll need to deference them
 	adjustmentFactor := interaction.Adjustment
 	for i, _ := range theseTPs {
@@ -531,13 +618,13 @@ func pause() {
 // --------------- person
 
 // get the current state of the person in this model (should be the uninitialized state for cycle 0)
-func (thisPerson *Person) get_state_by_model(thisModel Model) State {
+func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model) State {
 	thisModelId := thisModel.Id
 	var stateToReturn State
 	var stateToReturnId int
 	//var bestGuess MasterRecord
 	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	fmt.Println("looking for cycle, person, model", CurrentCycle, thisPerson.Id, thisModelId)
+	fmt.Println("looking for cycle, person, model", localInputs.CurrentCycle, thisPerson.Id, thisModelId)
 	// this is tricky; because models are run in a random order, and they place
 	// their results into MasterRecords in the order in which they are run, the
 	// end part of MasterResults is unpredictable. Therefore, we just grab all
@@ -545,7 +632,11 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	// system by which add_to_master_record would lay down results in model-order
 	// as opposed to the order in which they are run.
 
-	stateToReturnId = QueryData.State_id_by_cycle_and_person_and_model[CurrentCycle][thisPerson.Id][thisModelId]
+	stateToReturnId = localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPerson.Id][thisModelId]
+
+	if localInputs.CurrentCycle != 0 && stateToReturnId == 0 {
+		fmt.Println("unint state after cycle 0!")
+	}
 
 	// bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPerson.Id-1)*len(Models)
 	// for i, _ := range Models {
@@ -563,7 +654,7 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	// 	fmt.Println("Cannot find state via get_state_by_model, error 1")
 	// 	os.Exit(1)
 	// }
-	stateToReturn = States[stateToReturnId]
+	stateToReturn = localInputs.States[stateToReturnId]
 	if stateToReturn.Id == stateToReturnId {
 		return stateToReturn
 	}
@@ -573,15 +664,17 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 }
 
 // get all states this person is in at the current cycle
-func (thisPerson *Person) get_states() []State {
+func (thisPerson *Person) get_states(localInputs *Input) []State {
 	thisPersonId := thisPerson.Id
 	var statesToReturn []State
 
-	statesToReturnIds := QueryData.State_id_by_cycle_and_person_and_model[CurrentCycle][thisPersonId]
+	fmt.Println("getting all states of cycle and person", localInputs.CurrentCycle, thisPersonId)
+
+	statesToReturnIds := localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPersonId]
 
 	for _, statesToReturnId := range statesToReturnIds {
-		if States[statesToReturnId].Id == statesToReturnId {
-			statesToReturn = append(statesToReturn, States[statesToReturnId])
+		if localInputs.States[statesToReturnId].Id == statesToReturnId {
+			statesToReturn = append(statesToReturn, localInputs.States[statesToReturnId])
 		} else {
 			fmt.Println("cannot find states via get_states")
 			os.Exit(1)
@@ -613,9 +706,9 @@ func (thisPerson *Person) get_states() []State {
 //  --------------- model
 
 // gets the uninitialized state for a model (the state individuals start in)
-func (model *Model) get_uninitialized_state() State {
+func (model *Model) get_uninitialized_state(Inputs Input) State {
 	modelId := model.Id
-	for _, state := range States {
+	for _, state := range Inputs.States {
 		if state.Model_id == modelId && state.Is_uninitialized_state == true {
 			return state
 		}
@@ -629,10 +722,10 @@ func (model *Model) get_uninitialized_state() State {
 
 // get the transition probabilities *from* the given state. It's called
 // destination because we're finding the chances of moving to each destination
-func (state *State) get_destination_probabilites() []TransitionProbability {
+func (state *State) get_destination_probabilites(localInputs *Input) []TransitionProbability {
 	var tPsToReturn []TransitionProbability
 
-	for _, transitionProbability := range TransitionProbabilities {
+	for _, transitionProbability := range localInputs.TransitionProbabilities {
 		if transitionProbability.From_id == state.Id {
 			tPsToReturn = append(tPsToReturn, transitionProbability)
 		}
@@ -652,10 +745,10 @@ func (state *State) get_destination_probabilites() []TransitionProbability {
 // the persons current states based on all states that they are
 // in - it is a method of their current state in this model,
 // and accepts an array of all currents states they occupy
-func (inState *State) get_relevant_interactions(allStates []State) []Interaction {
+func (inState *State) get_relevant_interactions(localInputs *Input, allStates []State) []Interaction {
 	var relevantInteractions []Interaction
 	for _, alsoInState := range allStates {
-		for _, interaction := range Interactions {
+		for _, interaction := range localInputs.Interactions {
 			// if person is in a state with an interaction that effects current model
 			if interaction.From_state_id == inState.Id && interaction.In_state_id == alsoInState.Id {
 				relevantInteractions = append(relevantInteractions, interaction)
@@ -672,28 +765,32 @@ func (inState *State) get_relevant_interactions(allStates []State) []Interaction
 
 // store new state in master object for n+1 cycle (note that the cycle is
 // auto - incremented within this function)
-func add_master_record(cycle Cycle, person Person, newState State) bool {
-	ogLen := len(MasterRecords)
+func add_master_record(localInputs *Input, cycle Cycle, person Person, newState State) bool {
+	ogLen := len(localInputs.MasterRecords)
 	var newMasterRecord MasterRecord
 	newMasterRecord.Cycle_id = cycle.Id + 1
 	newMasterRecord.Person_id = person.Id
 	newMasterRecord.State_id = newState.Id
 	newMasterRecord.Model_id = newState.Model_id
 
-	QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
+	localInputs.QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
 
-	MasterRecords = append(MasterRecords, newMasterRecord)
-	newLen := len(MasterRecords)
-	if (newLen - ogLen) == 1 { //added one record
-		return false //no error
-	} else {
-		return true //error
-	}
+	//localInputs.MasterRecords = append(localInputs.MasterRecords, newMasterRecord)
+	// newLen := len(localInputs.MasterRecords)
+	// if (newLen - ogLen) == 1 { //added one record
+	// 	return false //no error
+	// } else {
+	// 	return true //error
+	// }
+
+	_ = ogLen
+
+	return false
 }
 
 // Using  the final transition probabilities, pickState assigns a new state to
 // a person. It is given many states and returns one.
-func pickState(tPs []TransitionProbability) State {
+func pickState(localInputs *Input, tPs []TransitionProbability) State {
 	var probs []float64
 	for _, tP := range tPs {
 		probs = append(probs, tP.Tp_base)
@@ -701,7 +798,12 @@ func pickState(tPs []TransitionProbability) State {
 
 	chosenIndex := pick(probs)
 	stateId := tPs[chosenIndex].To_id
-	state := get_state_by_id(stateId)
+	if stateId == 0 {
+		fmt.Println("error!! ")
+		os.Exit(1)
+	}
+
+	state := get_state_by_id(localInputs, stateId)
 
 	if &state != nil {
 		return state

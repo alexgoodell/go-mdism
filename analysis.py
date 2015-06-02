@@ -18,7 +18,7 @@ df = mastercsv
 df = df[df.columns].astype(int)
 hivdf = df[df.Model_id == 0]
 newhivdf = hivdf.drop('Model_id', axis=1, level=None, inplace=False)
-final = newhivdf.pivot(index='Person_id',columns='Cycle_id')
+final = newhivdf.pivot_table(index='Person_id',columns='Cycle_id')
 
 for i in final.index: 
     plt.plot(final.iloc[i-1])
