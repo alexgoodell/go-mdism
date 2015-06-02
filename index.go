@@ -151,7 +151,7 @@ func main() {
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 20000
+	numberOfPeople := 10000
 
 	//set up queryData
 	setUpQueryData(numberOfPeople)
@@ -174,7 +174,7 @@ func runModel(concurrencyBy string) {
 	case "person":
 
 		for _, person := range People { // foreach cycle
-			go runModelWithConcurrentPeople(person)
+			runModelWithConcurrentPeople(person)
 		} // end foreach cycle
 
 	case "person-within-cycle":
