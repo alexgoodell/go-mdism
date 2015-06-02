@@ -254,9 +254,9 @@ func deepCopy(Inputs Input) Input {
 func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
 	localInputsPointer := &localInputs
 	var theseMasterRecordsToAdd []MasterRecord
-	fmt.Println("Person:", person.Id)
+	//fmt.Println("Person:", person.Id)
 	for _, cycle := range localInputsPointer.Cycles { // foreach cycle
-		fmt.Println("Cycle: ", cycle.Name)
+		//fmt.Println("Cycle: ", cycle.Name)
 		//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models //TODO place back in not sure why broken.
 		for _, model := range localInputsPointer.Models { // foreach model
 			//fmt.Println(model.Name)
@@ -347,7 +347,7 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 			newMasterRecord.State_id = new_state.Id
 			newMasterRecord.Model_id = model.Id
 
-			fmt.Println("setting c p m", newMasterRecord.Cycle_id, newMasterRecord.Person_id, newMasterRecord.Model_id, "to", newMasterRecord.State_id)
+			//fmt.Println("setting c p m", newMasterRecord.Cycle_id, newMasterRecord.Person_id, newMasterRecord.Model_id, "to", newMasterRecord.State_id)
 
 			theseMasterRecordsToAdd = append(theseMasterRecordsToAdd, newMasterRecord)
 
@@ -521,7 +521,7 @@ func createPeople(Inputs Input, number int) Input {
 
 			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
 
-			fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
+			//fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
 
 			//State_id_by_cycle_and_person_and_model
 			//States_ids_by_cycle_and_person
@@ -628,7 +628,7 @@ func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model
 	var stateToReturnId int
 	//var bestGuess MasterRecord
 	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	fmt.Println("looking for cycle, person, model", localInputs.CurrentCycle, thisPerson.Id, thisModelId)
+	//fmt.Println("looking for cycle, person, model", localInputs.CurrentCycle, thisPerson.Id, thisModelId)
 	// this is tricky; because models are run in a random order, and they place
 	// their results into MasterRecords in the order in which they are run, the
 	// end part of MasterResults is unpredictable. Therefore, we just grab all
@@ -672,7 +672,7 @@ func (thisPerson *Person) get_states(localInputs *Input) []State {
 	thisPersonId := thisPerson.Id
 	var statesToReturn []State
 
-	fmt.Println("getting all states of cycle and person", localInputs.CurrentCycle, thisPersonId)
+	//fmt.Println("getting all states of cycle and person", localInputs.CurrentCycle, thisPersonId)
 
 	statesToReturnIds := localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPersonId]
 
