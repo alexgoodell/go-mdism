@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
-	//"runtime"
+	"runtime"
 	"time"
 )
 
@@ -104,10 +104,12 @@ func main() {
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
 
-	//runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(1)
+
+	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 1000
+	numberOfPeople := 60000
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
