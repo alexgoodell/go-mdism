@@ -111,7 +111,7 @@ func main() {
 	pause()
 	// Seed the random function
 
-	numberOfPeople := 5000
+	numberOfPeople := 10000
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
@@ -355,7 +355,7 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 				fmt.Println("problem adding master record")
 				os.Exit(1)
 			} else {
-				fmt.Println("master updated")
+				//fmt.Println("master updated")
 			}
 
 		} // end foreach model
