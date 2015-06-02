@@ -113,6 +113,8 @@ func main() {
 
 	numberOfPeople := 68000
 
+	fmt.Println("and ", numberOfPeople, "individuals")
+
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
 
