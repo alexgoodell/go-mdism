@@ -151,7 +151,7 @@ func main() {
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 10000
+	numberOfPeople := 1000
 
 	//set up queryData
 	setUpQueryData(numberOfPeople)
@@ -162,7 +162,7 @@ func main() {
 
 	// table tests here
 
-	concurrencyBy := "person"
+	concurrencyBy := "person-within-cycle"
 	runModel(concurrencyBy)
 
 }
@@ -183,6 +183,7 @@ func runModel(concurrencyBy string) {
 			for _, person := range People { // 	foreach person
 				runModelWithConcurrentPeopleWithinCycle(person, cycle)
 			}
+			CurrentCycle++
 		}
 
 	} // end case
@@ -235,7 +236,7 @@ func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
 func setUpQueryData(numberOfPeople int) {
 	// Need to have lengths to be able to access them
 	//Cycles
-	QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Cycles), len(Cycles))
+	QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Cycles)+1, len(Cycles)+1)
 	for i, _ := range QueryData.State_id_by_cycle_and_person_and_model {
 		//People
 		QueryData.State_id_by_cycle_and_person_and_model[i] = make([][]int, numberOfPeople, numberOfPeople)
@@ -606,6 +607,8 @@ func add_master_record(cycle Cycle, person Person, newState State) bool {
 	newMasterRecord.Person_id = person.Id
 	newMasterRecord.State_id = newState.Id
 	newMasterRecord.Model_id = newState.Model_id
+
+	QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
 
 	MasterRecords = append(MasterRecords, newMasterRecord)
 	newLen := len(MasterRecords)
