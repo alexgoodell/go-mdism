@@ -111,7 +111,7 @@ func main() {
 	pause()
 	// Seed the random function
 
-	numberOfPeople := 10000
+	numberOfPeople := 68000
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
