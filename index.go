@@ -111,7 +111,7 @@ func main() {
 	pause()
 	// Seed the random function
 
-	numberOfPeople := 68000
+	numberOfPeople := 380000
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
