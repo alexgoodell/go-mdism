@@ -107,9 +107,11 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	fmt.Println("using ", runtime.NumCPU(), " cores")
+	pause()
+	pause()
 	// Seed the random function
 
-	numberOfPeople := 10000
+	numberOfPeople := 5000
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
@@ -224,8 +226,8 @@ func runModel(Inputs Input, concurrencyBy string) {
 	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
 
 	//outputs
-	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
-	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 }
 
