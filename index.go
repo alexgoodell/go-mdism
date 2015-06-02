@@ -104,7 +104,7 @@ func main() {
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
 
-	runtime.GOMAXPROCS(untime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
