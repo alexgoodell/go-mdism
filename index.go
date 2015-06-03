@@ -111,7 +111,7 @@ func main() {
 	pause()
 	// Seed the random function
 
-	numberOfPeople := 380000
+	numberOfPeople := 3000
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
@@ -228,8 +228,8 @@ func runModel(Inputs Input, concurrencyBy string) {
 	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
 
 	//outputs
-	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
-	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 }
 
