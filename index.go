@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/gob"
+	"github.com/davecheney/profile"
 	"log"
 	"math"
 	"math/rand"
@@ -101,6 +102,13 @@ var output_dir = "tmp"
 
 func main() {
 
+	cfg := profile.Config{
+		ProfilePath: ".", // store profiles in current directory
+		CPUProfile:  true,
+	}
+
+	defer profile.Start(&cfg).Stop()
+
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
 
@@ -109,7 +117,7 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 68000
+	numberOfPeople := 10000
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
@@ -160,11 +168,11 @@ func runModel(Inputs Input, concurrencyBy string) {
 
 	} // end case
 
-	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
-
 	//outputs
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+
+	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
 
 }
 
