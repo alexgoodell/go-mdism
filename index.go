@@ -14,7 +14,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/gob"
-	"github.com/davecheney/profile"
+	// "github.com/davecheney/profile"
 	"log"
 	"math"
 	"math/rand"
@@ -102,12 +102,12 @@ var output_dir = "tmp"
 
 func main() {
 
-	cfg := profile.Config{
-		ProfilePath: ".", // store profiles in current directory
-		CPUProfile:  true,
-	}
+	// cfg := profile.Config{
+	// 	ProfilePath: ".", // store profiles in current directory
+	// 	CPUProfile:  true,
+	// }
 
-	defer profile.Start(&cfg).Stop()
+	// defer profile.Start(&cfg).Stop()
 
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
@@ -117,7 +117,7 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 10000
+	numberOfPeople := 6800
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
@@ -131,11 +131,26 @@ func main() {
 	// table tests here
 
 	concurrencyBy := "person"
-	runModel(Inputs, concurrencyBy)
+
+	iterationChan := make(chan string)
+
+	for i := 0; i < 100; i++ {
+		go runModel(Inputs, concurrencyBy, iterationChan)
+	}
+
+	for i := 0; i < 100; i++ {
+		toPrint := <-iterationChan
+		fmt.Println(toPrint)
+	}
+
+	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
 
 }
 
-func runModel(Inputs Input, concurrencyBy string) {
+func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
+
+	var localInputs Input
+	localInputs = deepCopy(Inputs)
 
 	switch concurrencyBy {
 
@@ -144,8 +159,6 @@ func runModel(Inputs Input, concurrencyBy string) {
 		masterRecordsToAdd := make(chan []MasterRecord)
 
 		//create pointer to a new local set of inputs for each independent thread
-		var localInputs Input
-		localInputs = deepCopy(Inputs)
 
 		for _, person := range Inputs.People { // foreach cycle
 			go runModelWithConcurrentPeople(localInputs, person, masterRecordsToAdd)
@@ -153,7 +166,7 @@ func runModel(Inputs Input, concurrencyBy string) {
 
 		for _, person := range Inputs.People {
 			mRtoAdd := <-masterRecordsToAdd
-			GlobalMasterRecords = append(GlobalMasterRecords, mRtoAdd...)
+			localInputs.MasterRecords = append(localInputs.MasterRecords, mRtoAdd...)
 			_ = person
 		}
 
@@ -169,10 +182,13 @@ func runModel(Inputs Input, concurrencyBy string) {
 	} // end case
 
 	//outputs
-	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
-	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
-	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
+	randomNumber := fmt.Sprintf("%v", rand.Float64()*100000.0)
+
+	toCsv(output_dir+"/master"+randomNumber+".csv", localInputs.MasterRecords[0], localInputs.MasterRecords)
+	toCsv(output_dir+"/states"+randomNumber+".csv", Inputs.States[0], Inputs.States)
+
+	iterationChan <- "Done"
 
 }
 
