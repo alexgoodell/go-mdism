@@ -197,9 +197,9 @@ func runModel(concurrencyBy string) {
 }
 
 func runModelWithConcurrentPeople(person Person) {
-	fmt.Println("Person:", person.Id)
+	///fmt.Println("Person:", person.Id)
 	for _, cycle := range Cycles { // foreach cycle
-		fmt.Println("Cycle: ", cycle.Name)
+		///fmt.Println("Cycle: ", cycle.Name)
 		shuffled := shuffle(Models)      // randomize the order of the models
 		for _, model := range shuffled { // foreach model
 			runPersonCycleModel(person, cycle, model)
@@ -209,8 +209,8 @@ func runModelWithConcurrentPeople(person Person) {
 }
 
 func runModelWithConcurrentPeopleWithinCycle(person Person, cycle Cycle) {
-	fmt.Println("Person:", person.Id)
-	fmt.Println("Cycle: ", cycle.Name)
+	///fmt.Println("Person:", person.Id)
+	///fmt.Println("Cycle: ", cycle.Name)
 	shuffled := shuffle(Models)      // randomize the order of the models
 	for _, model := range shuffled { // foreach model
 		runPersonCycleModel(person, cycle, model)
@@ -253,13 +253,13 @@ func setUpQueryData(numberOfPeople int) {
 
 func runPersonCycleModel(person Person, cycle Cycle, model Model) {
 
-	fmt.Println(model.Name)
+	///fmt.Println(model.Name)
 
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(model)
 
-	fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
+	///fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
 
 	// get the transition probabilities from the given state
 	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
@@ -267,10 +267,10 @@ func runPersonCycleModel(person Person, cycle Cycle, model Model) {
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 	// get all states this person is in in current cycle
-	fmt.Println("now get all states")
+	///fmt.Println("now get all states")
 	states := person.get_states()
 
-	fmt.Println("All states this person is in: ", states)
+	///fmt.Println("All states this person is in: ", states)
 
 	// get any interactions that will effect the transtion from
 	// the persons current states based on all states that they are
@@ -291,15 +291,15 @@ func runPersonCycleModel(person Person, cycle Cycle, model Model) {
 
 	// using  final transition probabilities, assign new state to person
 	new_state := pickState(transitionProbabilities)
-	fmt.Println("New state is", new_state.Id)
+	///fmt.Println("New state is", new_state.Id)
 
 	// store new state in master object
 	err := add_master_record(cycle, person, new_state)
 	if err != false {
-		fmt.Println("problem adding master record")
+		///fmt.Println("problem adding master record")
 		os.Exit(1)
 	} else {
-		fmt.Println("master updated")
+		///fmt.Println("master updated")
 	}
 }
 
@@ -356,7 +356,7 @@ func createPeople(number int) {
 			// generate a hash key for a map, allows easy access to states
 			// by hashing cycle, person and model.
 			qd := QueryData.State_id_by_cycle_and_person_and_model
-			fmt.Println("trynging to find", mr.Cycle_id, mr.Person_id, mr.Model_id)
+			///fmt.Println("trynging to find", mr.Cycle_id, mr.Person_id, mr.Model_id)
 
 			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
 
@@ -379,7 +379,7 @@ func get_state_by_id(stateId int) State {
 		return theState
 	}
 
-	fmt.Println("Cannot find state by id ", stateId)
+	///fmt.Println("Cannot find state by id ", stateId)
 	os.Exit(1)
 	return theState
 	// var state State
@@ -405,7 +405,7 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
 			tp.Tp_base = tp.Tp_base * adjustmentFactor
 			if tp.Tp_base == originalTpBase {
-				fmt.Println("error adjusting transition probabilities in adjust_transitions()")
+				///fmt.Println("error adjusting transition probabilities in adjust_transitions()")
 				os.Exit(1)
 			}
 		}
@@ -427,7 +427,7 @@ func check_sum(theseTPs []TransitionProbability) {
 	sum := get_sum(theseTPs)
 
 	if !equalFloat(sum, 1.0, 0) {
-		fmt.Println("sum does not equal 1 !")
+		///fmt.Println("sum does not equal 1 !")
 		os.Exit(1)
 	}
 }
@@ -465,7 +465,7 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	var stateToReturnId int
 	//var bestGuess MasterRecord
 	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	fmt.Println("looking for cycle, person, model", CurrentCycle, thisPerson.Id, thisModelId)
+	///fmt.Println("looking for cycle, person, model", CurrentCycle, thisPerson.Id, thisModelId)
 	// this is tricky; because models are run in a random order, and they place
 	// their results into MasterRecords in the order in which they are run, the
 	// end part of MasterResults is unpredictable. Therefore, we just grab all
@@ -481,21 +481,21 @@ func (thisPerson *Person) get_state_by_model(thisModel Model) State {
 	// 		bestGuess = MasterRecords[bestGuessStartingIndex+i]
 
 	// 	}
-	// 	fmt.Println(bestGuessStartingIndex + i)
+	// 	///fmt.Println(bestGuessStartingIndex + i)
 	// 	fmt.Printf("%+v\n", bestGuess)
 	// }
 
 	// if bestGuess.Model_id == thisModelId && bestGuess.Cycle_id == CurrentCycle && bestGuess.Person_id == thisPerson.Id {
 	// 	stateToReturnId = bestGuess.State_id
 	// } else {
-	// 	fmt.Println("Cannot find state via get_state_by_model, error 1")
+	// 	///fmt.Println("Cannot find state via get_state_by_model, error 1")
 	// 	os.Exit(1)
 	// }
 	stateToReturn = States[stateToReturnId]
 	if stateToReturn.Id == stateToReturnId {
 		return stateToReturn
 	}
-	fmt.Println("Cannot find state via get_state_by_model, error 2")
+	///fmt.Println("Cannot find state via get_state_by_model, error 2")
 	os.Exit(1)
 	return stateToReturn
 }
@@ -511,7 +511,7 @@ func (thisPerson *Person) get_states() []State {
 		if States[statesToReturnId].Id == statesToReturnId {
 			statesToReturn = append(statesToReturn, States[statesToReturnId])
 		} else {
-			fmt.Println("cannot find states via get_states")
+			///fmt.Println("cannot find states via get_states")
 			os.Exit(1)
 		}
 	}
@@ -523,7 +523,7 @@ func (thisPerson *Person) get_states() []State {
 	// 	if MasterRecords[bestGuessStartingIndex+i].Person_id == thisPersonId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle {
 	// 		bestGuessIds = append(bestGuessIds, MasterRecords[bestGuessStartingIndex+i].State_id)
 	// 	} else {
-	// 		fmt.Println("Cannot find master records via get_states")
+	// 		///fmt.Println("Cannot find master records via get_states")
 	// 		os.Exit(1)
 	// 	}
 	// }
@@ -531,7 +531,7 @@ func (thisPerson *Person) get_states() []State {
 	if len(statesToReturn) > 0 {
 		return statesToReturn
 	} else {
-		fmt.Println("cannot find states via get_states")
+		///fmt.Println("cannot find states via get_states")
 		os.Exit(1)
 		return statesToReturn
 	}
@@ -548,7 +548,7 @@ func (model *Model) get_uninitialized_state() State {
 			return state
 		}
 	}
-	fmt.Println("cannot find uninitialized state by get_uninitialized_state")
+	///fmt.Println("cannot find uninitialized state by get_uninitialized_state")
 	os.Exit(1)
 	return State{}
 }
@@ -569,7 +569,7 @@ func (state *State) get_destination_probabilites() []TransitionProbability {
 	if len(tPsToReturn) > 0 {
 		return tPsToReturn
 	} else {
-		fmt.Println("cannot find destination probabilities via get_destination_probabilites")
+		///fmt.Println("cannot find destination probabilities via get_destination_probabilites")
 		os.Exit(1)
 		return tPsToReturn
 	}
@@ -634,7 +634,7 @@ func pickState(tPs []TransitionProbability) State {
 	if &state != nil {
 		return state
 	} else {
-		fmt.Println("cannot pick state with pickState")
+		///fmt.Println("cannot pick state with pickState")
 		os.Exit(1)
 		return state
 	}
@@ -653,7 +653,7 @@ func pick(probabilities []float64) int {
 		}
 	}
 	// TODO(alex): figure this out - needed error of something
-	fmt.Println("problem with pick")
+	///fmt.Println("problem with pick")
 	os.Exit(1)
 	return 0
 }
@@ -663,7 +663,7 @@ func pick(probabilities []float64) int {
 // It takes a filename, as well one copy of the struct, and the array of structs
 // itself.
 func toCsv(filename string, record interface{}, records interface{}) error {
-	fmt.Println("Beginning export process to ", filename)
+	///fmt.Println("Beginning export process to ", filename)
 	//create or open file
 	os.Create(filename)
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
@@ -693,10 +693,10 @@ func toCsv(filename string, record interface{}, records interface{}) error {
 		err = writer.Write(line)
 	}
 	if err != nil {
-		fmt.Println("error")
+		///fmt.Println("error")
 		os.Exit(1)
 	}
-	fmt.Println("Exported to ", filename)
+	///fmt.Println("Exported to ", filename)
 	writer.Flush()
 	return err
 }
