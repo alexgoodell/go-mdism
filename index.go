@@ -151,7 +151,7 @@ func main() {
 	// Seed the random function
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	numberOfPeople := 1000
+	numberOfPeople := 68000
 
 	//set up queryData
 	setUpQueryData(numberOfPeople)
