@@ -117,7 +117,8 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 68000
+	numberOfPeople := 100
+	numberOfIterations := 2
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
@@ -131,11 +132,21 @@ func main() {
 	// table tests here
 
 	concurrencyBy := "person"
-	runModel(Inputs, concurrencyBy)
+
+	iterationChan := make(chan string)
+
+	for i := 0; i < numberOfIterations; i++ {
+		go runModel(Inputs, concurrencyBy, iterationChan)
+	}
+
+	for i := 0; i < numberOfIterations; i++ {
+		toPrint := <-iterationChan
+		fmt.Println(toPrint)
+	}
 
 }
 
-func runModel(Inputs Input, concurrencyBy string) {
+func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 	switch concurrencyBy {
 
@@ -156,6 +167,8 @@ func runModel(Inputs Input, concurrencyBy string) {
 			GlobalMasterRecords = append(GlobalMasterRecords, mRtoAdd...)
 			_ = person
 		}
+
+		iterationChan <- "Done"
 
 		// case "person-within-cycle":
 
