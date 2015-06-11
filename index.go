@@ -14,7 +14,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/gob"
-	"github.com/davecheney/profile"
+	//"github.com/davecheney/profile"
 	"log"
 	"math"
 	"math/rand"
@@ -77,7 +77,7 @@ type Query struct {
 	//State_by_cycle_and_person_and_model
 	State_id_by_cycle_and_person_and_model [][][]int
 	States_ids_by_cycle_and_person         [][]int
-	Tps_id_by_from_state                   []int
+	Tps_id_by_from_state                   [][]int
 	Interactions_id_by_in_state_and_model  [][]int
 }
 
@@ -102,12 +102,12 @@ var output_dir = "tmp"
 
 func main() {
 
-	cfg := profile.Config{
-		ProfilePath: ".", // store profiles in current directory
-		CPUProfile:  true,
-	}
+	// cfg := profile.Config{
+	// 	ProfilePath: ".", // store profiles in current directory
+	// 	CPUProfile:  true,
+	// }
 
-	defer profile.Start(&cfg).Stop()
+	// defer profile.Start(&cfg).Stop()
 
 	var Inputs Input
 	Inputs = initializeInputs(Inputs)
@@ -117,7 +117,7 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 10000
+	numberOfPeople := 1000
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 
@@ -168,11 +168,13 @@ func runModel(Inputs Input, concurrencyBy string) {
 
 	} // end case
 
+	fmt.Println("Time elapsed, excluding data export:", fmt.Sprint(time.Since(beginTime)))
+
 	//outputs
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
-	fmt.Println("Time elapsed:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
 }
 
@@ -336,7 +338,17 @@ func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 
 	//Cycles
 	//Inputs.QueryData.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
-	//Inputs.QueryData.Tps_id_by_from_state = make([]int, 1000000, 1000000)
+
+	Inputs.QueryData.Tps_id_by_from_state = make([][]int, len(Inputs.States), len(Inputs.States))
+	for i, _ := range Inputs.QueryData.Tps_id_by_from_state {
+		var tPIdsToReturn []int
+		for _, transitionProbability := range Inputs.TransitionProbabilities {
+			if transitionProbability.From_id == i {
+				tPIdsToReturn = append(tPIdsToReturn, transitionProbability.Id)
+			}
+		}
+		Inputs.QueryData.Tps_id_by_from_state[i] = tPIdsToReturn
+	}
 
 	Inputs.QueryData.Interactions_id_by_in_state_and_model = make([][]int, len(Inputs.States), len(Inputs.States))
 	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_model {
@@ -669,17 +681,18 @@ func (model *Model) get_uninitialized_state(Inputs Input) State {
 // destination because we're finding the chances of moving to each destination
 func (state *State) get_destination_probabilites(localInputs *Input) []TransitionProbability {
 	var tPsToReturn []TransitionProbability
+	var tPIdsToReturn []int
 
-	for _, transitionProbability := range localInputs.TransitionProbabilities {
-		if transitionProbability.From_id == state.Id {
-			tPsToReturn = append(tPsToReturn, transitionProbability)
-		}
+	tPIdsToReturn = localInputs.QueryData.Tps_id_by_from_state[state.Id]
+
+	for _, id := range tPIdsToReturn {
+		tPsToReturn = append(tPsToReturn, localInputs.TransitionProbabilities[id])
 	}
 
 	if len(tPsToReturn) > 0 {
 		return tPsToReturn
 	} else {
-		fmt.Println("cannot find destination probabilities via get_destination_probabilites")
+		///fmt.Println("cannot find destination probabilities via get_destination_probabilites")
 		os.Exit(1)
 		return tPsToReturn
 	}
