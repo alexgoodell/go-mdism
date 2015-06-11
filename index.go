@@ -5,7 +5,7 @@ package main
 
 import (
 	// "encoding/json"
-	// "flag"
+	"flag"
 	"fmt"
 	// 	"github.com/alexgoodell/ghdmodel/models"
 	// 	"io/ioutil"
@@ -117,10 +117,15 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeople := 100
-	numberOfIterations := 2
+	numberOfPeoplePtr := flag.Int("people", 1000, "number of people to run")
+	numberOfIterationsPtr := flag.Int("iterations	", 1, "number times to run")
+	flag.Parse()
+
+	numberOfPeople := *numberOfPeoplePtr
+	numberOfIterations := *numberOfIterationsPtr
 
 	fmt.Println("and ", numberOfPeople, "individuals")
+	fmt.Println("and ", numberOfIterations, "iterations")
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
