@@ -8,12 +8,12 @@ import (
 	"flag"
 	"fmt"
 	// 	"github.com/alexgoodell/ghdmodel/models"
-	// 	"io/ioutil"
+	//"io"
 	// 	"net/http"
-	// 	"strconv"
 	"bytes"
 	"encoding/csv"
 	"encoding/gob"
+	"strconv"
 	//"github.com/davecheney/profile"
 	"log"
 	"math"
@@ -93,6 +93,24 @@ type Input struct {
 	MasterRecords           []MasterRecord
 }
 
+// for unmarshalling plugin
+
+type FieldMismatch struct {
+	expected, found int
+}
+
+func (e *FieldMismatch) Error() string {
+	return "CSV line fields mismatch. Expected " + strconv.Itoa(e.expected) + " found " + strconv.Itoa(e.found)
+}
+
+type UnsupportedType struct {
+	Type string
+}
+
+func (e *UnsupportedType) Error() string {
+	return "Unsupported type: " + e.Type
+}
+
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
 
@@ -109,9 +127,6 @@ func main() {
 
 	// defer profile.Start(&cfg).Stop()
 
-	var Inputs Input
-	Inputs = initializeInputs(Inputs)
-
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	fmt.Println("using ", runtime.NumCPU(), " cores")
@@ -119,13 +134,19 @@ func main() {
 
 	numberOfPeoplePtr := flag.Int("people", 1000, "number of people to run")
 	numberOfIterationsPtr := flag.Int("iterations	", 1, "number times to run")
+	inputsPathPtr := flag.String("inputs", "example", "folder that stores input csvs")
 	flag.Parse()
 
 	numberOfPeople := *numberOfPeoplePtr
 	numberOfIterations := *numberOfIterationsPtr
+	inputsPath := *inputsPathPtr
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 	fmt.Println("and ", numberOfIterations, "iterations")
+	fmt.Println("and ", inputsPath, " as inputs")
+
+	var Inputs Input
+	Inputs = initializeInputs(Inputs, inputsPath)
 
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople)
@@ -208,6 +229,26 @@ func deepCopy(Inputs Input) Input {
 	}
 
 	var cpy Input
+	err = dec.Decode(&cpy)
+	if err != nil {
+		log.Fatal("decode error:", err)
+	}
+
+	return cpy
+}
+
+func deepCopy2(Inputs interface{}) interface{} {
+
+	var mod bytes.Buffer
+	enc := gob.NewEncoder(&mod)
+	dec := gob.NewDecoder(&mod)
+
+	err := enc.Encode(Inputs)
+	if err != nil {
+		log.Fatal("encode error:", err)
+	}
+
+	var cpy interface{}
 	err = dec.Decode(&cpy)
 	if err != nil {
 		log.Fatal("decode error:", err)
@@ -855,170 +896,150 @@ func toCsv(filename string, record interface{}, records interface{}) error {
 	return err
 }
 
-func initializeInputs(Inputs Input) Input {
+func Unmarshal(reader *csv.Reader, v interface{}) error {
+	record, err := reader.Read()
+	if err != nil {
+		return err
+	}
+	s := reflect.ValueOf(v).Elem()
+	if s.Type().NumField() != len(record) {
+		return &FieldMismatch{s.NumField(), len(record)}
+	}
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+		switch f.Type().String() {
+		case "string":
+			f.SetString(record[i])
+		case "int":
+			ival, err := strconv.ParseInt(record[i], 10, 0)
+			if err != nil {
+				return err
+			}
+			f.SetInt(ival)
+		default:
+			return &UnsupportedType{f.Type().String()}
+		}
+	}
+	return nil
+}
 
+func getNumberOfRecords(filename string) int {
+	csvFile, err := os.Open(filename)
+	r := csv.NewReader(csvFile)
+	lines, err := r.ReadAll()
+	if err != nil {
+		log.Fatalf("error reading all lines: %v", err)
+	}
+	return len(lines)
+}
+
+// fromCSV accepts a filename of a properly-formatted CSV and write the content
+// of that CSV into pointers. it returns an array of pointers in an interface
+// which are used later to convert them to their correct structures.
+// adapted from http://stackoverflow.com/questions/20768511/unmarshal-csv-record-into-struct-in-go
+func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []interface{} {
+
+	fmt.Println("Beginning import process from ", filename)
+
+	//open file
+	csvFile, err := os.Open(filename)
+	r := csv.NewReader(csvFile)
+	lines, err := r.ReadAll()
+	if err != nil {
+		log.Fatalf("error reading all lines: %v", err)
+	}
+	// use the single record to determine the fields of the struct
+	val := reflect.Indirect(reflect.ValueOf(record))
+	numberOfFields := val.Type().NumField()
+	var fieldNames []string
+	for i := 0; i < numberOfFields; i++ {
+		fieldNames = append(fieldNames, val.Type().Field(i).Name)
+	}
+	//check to make sure header CSV and structs use the same order
+	for i, _ := range lines[0] {
+		if lines[0][i] != fieldNames[i] {
+			fmt.Println("fatal: CSV fields in wrong order", filename)
+			os.Exit(1)
+		}
+	}
+	// toReturn is where all the pointers will go
+	var toReturn []interface{}
+	for q, line := range lines {
+		//skip first row, just the headers
+		if q > 0 {
+			for i := 0; i < numberOfFields; i++ {
+				f := reflect.ValueOf(recordPtrs[q]).Elem().Field(i)
+				switch f.Type().String() {
+				case "string":
+					f.SetString(line[i])
+					//f.SetString(line[i])
+				case "int":
+					ival, err := strconv.ParseInt(line[i], 10, 0)
+					if err != nil {
+						fmt.Println("error converting to int!", err)
+						os.Exit(1)
+					}
+					f.SetInt(ival)
+				case "float64":
+					ival, err := strconv.ParseFloat(line[i], 64)
+					if err != nil {
+						fmt.Println("error converting to float!", err)
+						os.Exit(1)
+					}
+					f.SetFloat(ival)
+				case "bool":
+					ival, err := strconv.ParseBool(line[i])
+					if err != nil {
+						fmt.Println("error converting to bool!", err)
+						os.Exit(1)
+					}
+					f.SetBool(ival)
+				default:
+					fmt.Println("error with import - not acceptable type")
+					os.Exit(1)
+				}
+			}
+		}
+		toReturn = append(toReturn, recordPtrs[q])
+	}
+	return toReturn
+}
+
+func initializeInputs(Inputs Input, inputsPath string) Input {
+
+	//get the correct csvs
 	Inputs.CurrentCycle = 0
 
-	Inputs.Models = []Model{
-		Model{0, "NAFLD"},
-		Model{1, "CHD"},
-		Model{2, "T2DM"},
-		Model{3, "BMI"},
-		Model{4, "Ethnicity"},
-		Model{5, "Sex"},
-		Model{6, "Physicial activity"},
-		Model{7, "Fructose"},
-		Model{8, "Trans Fat"},
-		Model{9, "N3-PUFA"},
-		Model{10, "Age"}}
+	// ####################### Models #######################
 
-	Inputs.States = []State{
-		State{0, 0, "Unitialized1", true},
-		State{1, 0, "Unitialized2", false},
-		State{2, 0, "No NAFLD", false},
-		State{3, 0, "Steatosis", false},
-		State{4, 0, "NASH", false},
-		State{5, 0, "Cirrhosis", false},
-		State{6, 0, "HCC", false},
-		State{7, 0, "Liver death", false},
-		State{8, 0, "Natural death", false},
-		State{9, 0, "Other death", false},
-		State{10, 1, "Unitialized1", true},
-		State{11, 1, "Unitialized2", false},
-		State{12, 1, "No CHD", false},
-		State{13, 1, "CHD", false},
-		State{14, 1, "CHD Death", false},
-		State{15, 1, "Other death", false},
-		State{16, 2, "Unitialized1", true},
-		State{17, 2, "Unitialized2", false},
-		State{18, 2, "No T2DM", false},
-		State{19, 2, "T2DM", false},
-		State{20, 2, "T2DM Death", false},
-		State{21, 2, "Other death", false},
-		State{22, 3, "Unitialized1", true},
-		State{23, 3, "Unitialized2", false},
-		State{24, 3, "Healthy weight", false},
-		State{25, 3, "Overweight", false},
-		State{26, 3, "Obese", false},
-		State{27, 3, "Other death", false},
-		State{28, 4, "Unitialized1", true},
-		State{29, 4, "Non-hispanic white", false},
-		State{30, 4, "Non-hispanic black", false},
-		State{31, 4, "Hispanic", false},
-		State{32, 4, "Other death", false},
-		State{33, 5, "Unitialized1", true},
-		State{34, 5, "Male", false},
-		State{35, 5, "Female", false},
-		State{36, 5, "Other death", false},
-		State{37, 6, "Unitialized1", true},
-		State{38, 6, "Unitialized2", false},
-		State{39, 6, "Active", false},
-		State{40, 6, "Inactive", false},
-		State{41, 6, "Other death", false},
-		State{42, 7, "Unitialized1", true},
-		State{43, 7, "Increase risk", false},
-		State{44, 7, "No increased risk", false},
-		State{45, 7, "Other death", false},
-		State{46, 8, "Unitialized1", true},
-		State{47, 8, "Increase risk", false},
-		State{48, 8, "No increased risk", false},
-		State{49, 8, "Other death", false},
-		State{50, 9, "Unitialized1", true},
-		State{51, 9, "Decreased risk", false},
-		State{52, 9, "No decreased risk", false},
-		State{53, 9, "Other death", false},
-		State{54, 10, "Unitialized1", true},
-		State{55, 10, "Age of 20", false},
-		State{56, 10, "Age of 21", false},
-		State{57, 10, "Age of 22", false},
-		State{58, 10, "Age of 23", false},
-		State{59, 10, "Age of 24", false},
-		State{60, 10, "Age of 25", false},
-		State{61, 10, "Age of 26", false},
-		State{62, 10, "Age of 27", false},
-		State{63, 10, "Age of 28", false},
-		State{64, 10, "Age of 29", false},
-		State{65, 10, "Age of 30", false},
-		State{66, 10, "Age of 31", false},
-		State{67, 10, "Age of 32", false},
-		State{68, 10, "Age of 33", false},
-		State{69, 10, "Age of 34", false},
-		State{70, 10, "Age of 35", false},
-		State{71, 10, "Age of 36", false},
-		State{72, 10, "Age of 37", false},
-		State{73, 10, "Age of 38", false},
-		State{74, 10, "Age of 39", false},
-		State{75, 10, "Age of 40", false},
-		State{76, 10, "Age of 41", false},
-		State{77, 10, "Age of 42", false},
-		State{78, 10, "Age of 43", false},
-		State{79, 10, "Age of 44", false},
-		State{80, 10, "Age of 45", false},
-		State{81, 10, "Age of 46", false},
-		State{82, 10, "Age of 47", false},
-		State{83, 10, "Age of 48", false},
-		State{84, 10, "Age of 49", false},
-		State{85, 10, "Age of 50", false},
-		State{86, 10, "Age of 51", false},
-		State{87, 10, "Age of 52", false},
-		State{88, 10, "Age of 53", false},
-		State{89, 10, "Age of 54", false},
-		State{90, 10, "Age of 55", false},
-		State{91, 10, "Age of 56", false},
-		State{92, 10, "Age of 57", false},
-		State{93, 10, "Age of 58", false},
-		State{94, 10, "Age of 59", false},
-		State{95, 10, "Age of 60", false},
-		State{96, 10, "Age of 61", false},
-		State{97, 10, "Age of 62", false},
-		State{98, 10, "Age of 63", false},
-		State{99, 10, "Age of 64", false},
-		State{100, 10, "Age of 65", false},
-		State{101, 10, "Age of 66", false},
-		State{102, 10, "Age of 67", false},
-		State{103, 10, "Age of 68", false},
-		State{104, 10, "Age of 69", false},
-		State{105, 10, "Age of 70", false},
-		State{106, 10, "Age of 71", false},
-		State{107, 10, "Age of 72", false},
-		State{108, 10, "Age of 73", false},
-		State{109, 10, "Age of 74", false},
-		State{110, 10, "Age of 75", false},
-		State{111, 10, "Age of 76", false},
-		State{112, 10, "Age of 77", false},
-		State{113, 10, "Age of 78", false},
-		State{114, 10, "Age of 79", false},
-		State{115, 10, "Age of 80", false},
-		State{116, 10, "Age of 81", false},
-		State{117, 10, "Age of 82", false},
-		State{118, 10, "Age of 83", false},
-		State{119, 10, "Age of 84", false},
-		State{120, 10, "Age of 85", false},
-		State{121, 10, "Age of 86", false},
-		State{122, 10, "Age of 87", false},
-		State{123, 10, "Age of 88", false},
-		State{124, 10, "Age of 89", false},
-		State{125, 10, "Age of 90", false},
-		State{126, 10, "Age of 91", false},
-		State{127, 10, "Age of 92", false},
-		State{128, 10, "Age of 93", false},
-		State{129, 10, "Age of 94", false},
-		State{130, 10, "Age of 95", false},
-		State{131, 10, "Age of 96", false},
-		State{132, 10, "Age of 97", false},
-		State{133, 10, "Age of 98", false},
-		State{134, 10, "Age of 99", false},
-		State{135, 10, "Age of 100", false},
-		State{136, 10, "Age of 101", false},
-		State{137, 10, "Age of 102", false},
-		State{138, 10, "Age of 103", false},
-		State{139, 10, "Age of 104", false},
-		State{140, 10, "Age of 105", false},
-		State{141, 10, "Age of 106", false},
-		State{142, 10, "Age of 107", false},
-		State{143, 10, "Age of 108", false},
-		State{144, 10, "Age of 109", false},
-		State{145, 10, "Age of 110", false}}
+	// initialize inputs, needed for fromCsv function
+	filename := "inputs/" + inputsPath + "/models.csv"
+	numberOfRecords := getNumberOfRecords(filename)
+	Inputs.Models = make([]Model, numberOfRecords, numberOfRecords)
+	var ptrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		ptrs = append(ptrs, new(Model))
+	}
+	ptrs = fromCsv(filename, Inputs.Models[0], ptrs)
+	for i, ptr := range ptrs {
+		Inputs.Models[i] = *ptr.(*Model)
+	}
+
+	// ####################### States #######################
+
+	// initialize inputs, needed for fromCsv function
+	filename = "inputs/" + inputsPath + "/states.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+
+	Inputs.States = make([]State, numberOfRecords, numberOfRecords)
+	var statePtrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		statePtrs = append(statePtrs, new(State))
+	}
+	ptrs = fromCsv(filename, Inputs.States[0], statePtrs)
+	for i, ptr := range statePtrs {
+		Inputs.States[i] = *ptr.(*State)
+	}
 
 	// Id      int
 	// From_id int
