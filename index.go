@@ -43,9 +43,6 @@ type MasterRecord struct {
 	Person_id int
 	State_id  int
 	Model_id  int
-	// generate a hash key for a map, allows easy access to states
-	// by hashing cycle, person and model.
-	//Hash_key string
 }
 
 type Cycle struct {
@@ -74,7 +71,6 @@ type TransitionProbability struct {
 }
 
 type Query struct {
-	//State_by_cycle_and_person_and_model
 	State_id_by_cycle_and_person_and_model [][][]int
 	States_ids_by_cycle_and_person         [][]int
 	Tps_id_by_from_state                   [][]int
@@ -91,24 +87,6 @@ type Input struct {
 	Interactions            []Interaction
 	Cycles                  []Cycle
 	MasterRecords           []MasterRecord
-}
-
-// for unmarshalling plugin
-
-type FieldMismatch struct {
-	expected, found int
-}
-
-func (e *FieldMismatch) Error() string {
-	return "CSV line fields mismatch. Expected " + strconv.Itoa(e.expected) + " found " + strconv.Itoa(e.found)
-}
-
-type UnsupportedType struct {
-	Type string
-}
-
-func (e *UnsupportedType) Error() string {
-	return "Unsupported type: " + e.Type
 }
 
 // these are all global variables, which is why they are Capitalized
@@ -237,26 +215,6 @@ func deepCopy(Inputs Input) Input {
 	return cpy
 }
 
-func deepCopy2(Inputs interface{}) interface{} {
-
-	var mod bytes.Buffer
-	enc := gob.NewEncoder(&mod)
-	dec := gob.NewDecoder(&mod)
-
-	err := enc.Encode(Inputs)
-	if err != nil {
-		log.Fatal("encode error:", err)
-	}
-
-	var cpy interface{}
-	err = dec.Decode(&cpy)
-	if err != nil {
-		log.Fatal("decode error:", err)
-	}
-
-	return cpy
-}
-
 func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
 	localInputsPointer := &localInputs
 
@@ -367,22 +325,6 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 // 	} // end foreach model
 // }
 
-// generate a hash key for a map, allows easy access to states
-// by hashing cycle, person and model.
-// func makeHashByCyclePersonModel(cycle Cycle, person Person, model Model) string {
-// 	Hash_key := fmt.Sprintf("%010d%010d%010d", cycle.Id, person.Id, model.Id)
-// 	return Hash_key
-// }
-
-// func makeHashByCyclePerson(cycle Cycle, person Person) string {
-// 	Hash_key := fmt.Sprintf("%010d%010d", cycle.Id, person.Id)
-// 	return Hash_key
-// }
-
-// func makeHashByTpFromState(state State) string {
-
-// }
-
 func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 	// Need to have lengths to be able to access them
 	//Cycles
@@ -421,82 +363,6 @@ func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 
 	return Inputs
 }
-
-// func runPersonCycleModel(person Person, cycle Cycle, model Model) {
-
-// 	fmt.Println(model.Name)
-
-// 	// get the current state of the person in this model (should be
-// 	// the uninitialized state for cycle 0)
-// 	currentStateInThisModel := person.get_state_by_model(model)
-
-// 	fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
-
-// 	// get the transition probabilities from the given state
-// 	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
-
-// 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
-// 	// get all states this person is in in current cycle
-// 	fmt.Println("now get all states")
-// 	states := person.get_states()
-
-// 	fmt.Println("All states this person is in: ", states)
-
-// 	// get any interactions that will effect the transtion from
-// 	// the persons current states based on all states that they are
-// 	// in - it is a method of their current state in this model,
-// 	// and accepts an array of all currents states they occupy
-// 	interactions := currentStateInThisModel.get_relevant_interactions(states)
-
-// 	if len(interactions) > 0 { // if there are interactions
-
-// 		for _, interaction := range interactions { // foreach interaction
-// 			// apply the interactions to the transition probabilities
-// 			transitionProbabilities = adjust_transitions(transitionProbabilities, interaction)
-// 		} // end foreach interaction
-
-// 	} // end if there are interactions
-
-// 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
-// 	// using  final transition probabilities, assign new state to person
-// 	new_state := pickState(transitionProbabilities)
-// 	fmt.Println("New state is", new_state.Id)
-
-// 	// store new state in master object
-// 	err := add_master_record(cycle, person, new_state)
-// 	if err != false {
-// 		fmt.Println("problem adding master record")
-// 		os.Exit(1)
-// 	} else {
-// 		fmt.Println("master updated")
-// 	}
-// }
-
-// ------------------------------------------- functions
-
-// func createQueryData() {
-
-// 	for _, cycle := range Cycles { // foreach cycle
-// 		for _, person := range People { // 	foreach person
-// 			for _, model := range Models { // foreach model
-
-// QueryData.State_by_cycle_and_person_and_model
-
-// type Query struct {
-// 	State_by_cycle_and_person_and_model [][][]int
-// 	States_by_cycle_and_person          [][]int
-// 	Tps_by_from_state                   []int
-// 	Interactions_by_in_state_and_model  [][]int
-// }
-
-// state = state_by_cycle_and_person_and_model[0][person][model]
-// states = states_by_cycle_and_person[0][person]
-// tps_by_from_state[from_state]
-// interactions = interactions_by_in_state_and_model[in_state][model]
-
-// }
 
 // ----------- non-methods
 
@@ -637,15 +503,6 @@ func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model
 	thisModelId := thisModel.Id
 	var stateToReturn State
 	var stateToReturnId int
-	//var bestGuess MasterRecord
-	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	//fmt.Println("looking for cycle, person, model", localInputs.CurrentCycle, thisPerson.Id, thisModelId)
-	// this is tricky; because models are run in a random order, and they place
-	// their results into MasterRecords in the order in which they are run, the
-	// end part of MasterResults is unpredictable. Therefore, we just grab all
-	// the MasterRecords which may fit, and test them. TODO: perhaps design a
-	// system by which add_to_master_record would lay down results in model-order
-	// as opposed to the order in which they are run.
 
 	stateToReturnId = localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPerson.Id][thisModelId]
 
@@ -653,22 +510,6 @@ func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model
 		fmt.Println("unint state after cycle 0!")
 	}
 
-	// bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPerson.Id-1)*len(Models)
-	// for i, _ := range Models {
-	// 	if MasterRecords[bestGuessStartingIndex+i].Model_id == thisModelId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle && MasterRecords[bestGuessStartingIndex+i].Person_id == thisPerson.Id {
-	// 		bestGuess = MasterRecords[bestGuessStartingIndex+i]
-
-	// 	}
-	// 	fmt.Println(bestGuessStartingIndex + i)
-	// 	fmt.Printf("%+v\n", bestGuess)
-	// }
-
-	// if bestGuess.Model_id == thisModelId && bestGuess.Cycle_id == CurrentCycle && bestGuess.Person_id == thisPerson.Id {
-	// 	stateToReturnId = bestGuess.State_id
-	// } else {
-	// 	fmt.Println("Cannot find state via get_state_by_model, error 1")
-	// 	os.Exit(1)
-	// }
 	stateToReturn = localInputs.States[stateToReturnId]
 	if stateToReturn.Id == stateToReturnId {
 		return stateToReturn
@@ -696,18 +537,6 @@ func (thisPerson *Person) get_states(localInputs *Input) []State {
 			os.Exit(1)
 		}
 	}
-
-	// MasterRecords is organized as such: Cycle_id, Person_id, Model_id
-	// bestGuessStartingIndex := (CurrentCycle-1)*(len(People)*len(Models)) + (thisPersonId-1)*len(Models)
-
-	// for i, _ := range Models {
-	// 	if MasterRecords[bestGuessStartingIndex+i].Person_id == thisPersonId && MasterRecords[bestGuessStartingIndex+i].Cycle_id == CurrentCycle {
-	// 		bestGuessIds = append(bestGuessIds, MasterRecords[bestGuessStartingIndex+i].State_id)
-	// 	} else {
-	// 		fmt.Println("Cannot find master records via get_states")
-	// 		os.Exit(1)
-	// 	}
-	// }
 
 	if len(statesToReturn) > 0 {
 		return statesToReturn
@@ -795,14 +624,6 @@ func add_master_record(localInputs *Input, cycle Cycle, person Person, newState 
 	newMasterRecord.Model_id = newState.Model_id
 
 	localInputs.QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
-
-	//localInputs.MasterRecords = append(localInputs.MasterRecords, newMasterRecord)
-	// newLen := len(localInputs.MasterRecords)
-	// if (newLen - ogLen) == 1 { //added one record
-	// 	return false //no error
-	// } else {
-	// 	return true //error
-	// }
 
 	_ = ogLen
 
