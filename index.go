@@ -13,14 +13,14 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/gob"
-	"strconv"
-	//"github.com/davecheney/profile"
+	"github.com/davecheney/profile"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"reflect"
 	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -98,26 +98,24 @@ var output_dir = "tmp"
 
 func main() {
 
-	// cfg := profile.Config{
-	// 	ProfilePath: ".", // store profiles in current directory
-	// 	CPUProfile:  true,
-	// }
-
-	// defer profile.Start(&cfg).Stop()
-
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	numberOfPeoplePtr := flag.Int("people", 1000, "number of people to run")
-	numberOfIterationsPtr := flag.Int("iterations	", 1, "number times to run")
-	inputsPathPtr := flag.String("inputs", "example", "folder that stores input csvs")
+	numberOfPeople := *flag.Int("people", 1000, "number of people to run")
+	numberOfIterations := *flag.Int("iterations	", 1, "number times to run")
+	inputsPath := *flag.String("inputs", "example", "folder that stores input csvs")
+	isProfile := *flag.String("profile", "false", "cpu, mem, or false")
 	flag.Parse()
 
-	numberOfPeople := *numberOfPeoplePtr
-	numberOfIterations := *numberOfIterationsPtr
-	inputsPath := *inputsPathPtr
+	if isProfile != "false" {
+		cfg := profile.Config{
+			ProfilePath: ".", // store profiles in current directory
+			CPUProfile:  true,
+		}
+		defer profile.Start(&cfg).Stop()
+	}
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 	fmt.Println("and ", numberOfIterations, "iterations")
@@ -717,33 +715,6 @@ func toCsv(filename string, record interface{}, records interface{}) error {
 	return err
 }
 
-func Unmarshal(reader *csv.Reader, v interface{}) error {
-	record, err := reader.Read()
-	if err != nil {
-		return err
-	}
-	s := reflect.ValueOf(v).Elem()
-	if s.Type().NumField() != len(record) {
-		return &FieldMismatch{s.NumField(), len(record)}
-	}
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-		switch f.Type().String() {
-		case "string":
-			f.SetString(record[i])
-		case "int":
-			ival, err := strconv.ParseInt(record[i], 10, 0)
-			if err != nil {
-				return err
-			}
-			f.SetInt(ival)
-		default:
-			return &UnsupportedType{f.Type().String()}
-		}
-	}
-	return nil
-}
-
 func getNumberOfRecords(filename string) int {
 	csvFile, err := os.Open(filename)
 	r := csv.NewReader(csvFile)
@@ -786,10 +757,11 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 	// toReturn is where all the pointers will go
 	var toReturn []interface{}
 	for q, line := range lines {
-		//skip first row, just the headers
+		// skip first row, just the headers. use q-1 to reference the
+		// pointer in the array, because of the difference in indcidies
 		if q > 0 {
 			for i := 0; i < numberOfFields; i++ {
-				f := reflect.ValueOf(recordPtrs[q]).Elem().Field(i)
+				f := reflect.ValueOf(recordPtrs[q-1]).Elem().Field(i)
 				switch f.Type().String() {
 				case "string":
 					f.SetString(line[i])
@@ -820,8 +792,8 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 					os.Exit(1)
 				}
 			}
+			toReturn = append(toReturn, recordPtrs[q-1])
 		}
-		toReturn = append(toReturn, recordPtrs[q])
 	}
 	return toReturn
 }
