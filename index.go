@@ -20,6 +20,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	// "runtime/pprof"
 	"strconv"
 	"time"
 )
@@ -109,12 +110,24 @@ func main() {
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
 	flag.Parse()
 
+	GlobalVariableTest = "Acessing global variable"
+
 	if isProfile != "false" {
-		cfg := profile.Config{
-			ProfilePath: ".", // store profiles in current directory
-			CPUProfile:  true,
+		fmt.Println("Enabling profiler")
+
+		if isProfile == "cpu" {
+			cfg := profile.Config{
+				ProfilePath: ".", // store profiles in current directory
+				CPUProfile:  true,
+			}
+			defer profile.Start(&cfg).Stop()
+		} else if isProfile == "mem" {
+			cfg := profile.Config{
+				ProfilePath: ".", // store profiles in current directory
+				MemProfile:  true,
+			}
+			defer profile.Start(&cfg).Stop()
 		}
-		defer profile.Start(&cfg).Stop()
 	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -219,6 +232,7 @@ func deepCopy(Inputs Input) Input {
 }
 
 func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
+
 	localInputsPointer := &localInputs
 
 	var theseMasterRecordsToAdd []MasterRecord
