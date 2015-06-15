@@ -98,15 +98,15 @@ var output_dir = "tmp"
 
 func main() {
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	var numberOfPeople int
+	var numberOfIterations int
+	var inputsPath string
+	var isProfile string
 
-	fmt.Println("using ", runtime.NumCPU(), " cores")
-	// Seed the random function
-
-	numberOfPeople := *flag.Int("people", 1000, "number of people to run")
-	numberOfIterations := *flag.Int("iterations	", 1, "number times to run")
-	inputsPath := *flag.String("inputs", "example", "folder that stores input csvs")
-	isProfile := *flag.String("profile", "false", "cpu, mem, or false")
+	flag.IntVar(&numberOfPeople, "people", 1000, "number of people to run")
+	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
+	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
+	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
 	flag.Parse()
 
 	if isProfile != "false" {
@@ -116,6 +116,11 @@ func main() {
 		}
 		defer profile.Start(&cfg).Stop()
 	}
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	fmt.Println("using ", runtime.NumCPU(), " cores")
+	// Seed the random function
 
 	fmt.Println("and ", numberOfPeople, "individuals")
 	fmt.Println("and ", numberOfIterations, "iterations")
