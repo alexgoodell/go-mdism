@@ -1,0 +1,148 @@
+
+Id,Model_id,Name,Is_uninitialized_state
+0,0,Unitialized1,true
+1,0,Unitialized2,false
+2,0,No NAFLD,false
+3,0,Steatosis,false
+4,0,NASH,false
+5,0,Cirrhosis,false
+6,0,HCC,false
+7,0,Liver death,false
+8,0,Natural death,false
+9,0,Other death,false
+10,1,Unitialized1,true
+11,1,Unitialized2,false
+12,1,No CHD,false
+13,1,CHD,false
+14,1,CHD Death,false
+15,1,Other death,false
+16,2,Unitialized1,true
+17,2,Unitialized2,false
+18,2,No T2DM,false
+19,2,T2DM,false
+20,2,T2DM Death,false
+21,2,Other death,false
+22,3,Unitialized1,true
+23,3,Unitialized2,false
+24,3,Healthy weight,false
+25,3,Overweight,false
+26,3,Obese,false
+27,3,Other death,false
+28,4,Unitialized1,true
+29,4,Non-hispanic white,false
+30,4,Non-hispanic black,false
+31,4,Hispanic,false
+32,4,Other death,false
+33,5,Unitialized1,true
+34,5,Male,false
+35,5,Female,false
+36,5,Other death,false
+37,6,Unitialized1,true
+38,6,Unitialized2,false
+39,6,Active,false
+40,6,Inactive,false
+41,6,Other death,false
+42,7,Unitialized1,true
+43,7,Increase risk,false
+44,7,No increased risk,false
+45,7,Other death,false
+46,8,Unitialized1,true
+47,8,Increase risk,false
+48,8,No increased risk,false
+49,8,Other death,false
+50,9,Unitialized1,true
+51,9,Decreased risk,false
+52,9,No decreased risk,false
+53,9,Other death,false
+54,10,Unitialized1,true
+55,10,Age of 20,false
+56,10,Age of 21,false
+57,10,Age of 22,false
+58,10,Age of 23,false
+59,10,Age of 24,false
+60,10,Age of 25,false
+61,10,Age of 26,false
+62,10,Age of 27,false
+63,10,Age of 28,false
+64,10,Age of 29,false
+65,10,Age of 30,false
+66,10,Age of 31,false
+67,10,Age of 32,false
+68,10,Age of 33,false
+69,10,Age of 34,false
+70,10,Age of 35,false
+71,10,Age of 36,false
+72,10,Age of 37,false
+73,10,Age of 38,false
+74,10,Age of 39,false
+75,10,Age of 40,false
+76,10,Age of 41,false
+77,10,Age of 42,false
+78,10,Age of 43,false
+79,10,Age of 44,false
+80,10,Age of 45,false
+81,10,Age of 46,false
+82,10,Age of 47,false
+83,10,Age of 48,false
+84,10,Age of 49,false
+85,10,Age of 50,false
+86,10,Age of 51,false
+87,10,Age of 52,false
+88,10,Age of 53,false
+89,10,Age of 54,false
+90,10,Age of 55,false
+91,10,Age of 56,false
+92,10,Age of 57,false
+93,10,Age of 58,false
+94,10,Age of 59,false
+95,10,Age of 60,false
+96,10,Age of 61,false
+97,10,Age of 62,false
+98,10,Age of 63,false
+99,10,Age of 64,false
+100,10,Age of 65,false
+101,10,Age of 66,false
+102,10,Age of 67,false
+103,10,Age of 68,false
+104,10,Age of 69,false
+105,10,Age of 70,false
+106,10,Age of 71,false
+107,10,Age of 72,false
+108,10,Age of 73,false
+109,10,Age of 74,false
+110,10,Age of 75,false
+111,10,Age of 76,false
+112,10,Age of 77,false
+113,10,Age of 78,false
+114,10,Age of 79,false
+115,10,Age of 80,false
+116,10,Age of 81,false
+117,10,Age of 82,false
+118,10,Age of 83,false
+119,10,Age of 84,false
+120,10,Age of 85,false
+121,10,Age of 86,false
+122,10,Age of 87,false
+123,10,Age of 88,false
+124,10,Age of 89,false
+125,10,Age of 90,false
+126,10,Age of 91,false
+127,10,Age of 92,false
+128,10,Age of 93,false
+129,10,Age of 94,false
+130,10,Age of 95,false
+131,10,Age of 96,false
+132,10,Age of 97,false
+133,10,Age of 98,false
+134,10,Age of 99,false
+135,10,Age of 100,false
+136,10,Age of 101,false
+137,10,Age of 102,false
+138,10,Age of 103,false
+139,10,Age of 104,false
+140,10,Age of 105,false
+141,10,Age of 106,false
+142,10,Age of 107,false
+143,10,Age of 108,false
+144,10,Age of 109,false
+145,10,Age of 110,false
