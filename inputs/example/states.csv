@@ -1,4 +1,3 @@
-
 Id,Model_id,Name,Is_uninitialized_state
 0,0,Unitialized1,true
 1,0,Unitialized2,false
