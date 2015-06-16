@@ -7,7 +7,7 @@ import (
 	// "encoding/json"
 	"flag"
 	"fmt"
-	"github.com/alexgoodell/go-mdism/modules/sugar"
+	//"github.com/alexgoodell/go-mdism/modules/sugar"
 	//"io"
 	// 	"net/http"
 	"bytes"
@@ -122,8 +122,6 @@ var isProfile string
 var Timer *nitro.B
 
 func main() {
-
-	sugar.Helloworld()
 
 	Timer = nitro.Initalize()
 
@@ -987,6 +985,7 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 }
 
 func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel State, states []State, person Person) []TransitionProbability {
+
 	var tpsToReturn []TransitionProbability
 
 	modelId := currentStateInThisModel.Model_id
