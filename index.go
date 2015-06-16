@@ -154,8 +154,6 @@ func main() {
 	// records
 	Inputs = createPeople(Inputs, numberOfPeople)
 
-	setUpGlobalMasterRecordsByIPCM(Inputs)
-
 	// table tests here
 
 	concurrencyBy := "person"
@@ -176,6 +174,9 @@ func main() {
 }
 
 func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
+
+	fmt.Println("Intialization complete, time elaspsed:", fmt.Sprint(time.Since(beginTime)))
+	beginTime = time.Now()
 
 	switch concurrencyBy {
 
@@ -213,7 +214,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 	} // end case
 
-	fmt.Println("Time elapsed, excluding data export:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	//outputs
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
