@@ -91,6 +91,20 @@ type Input struct {
 	MasterRecords           []MasterRecord
 }
 
+type TPByRAS struct {
+	Model_id      int
+	Model_name    string
+	To_state_id   int
+	To_state_name string
+	Sex_state_id  int
+	Race_state_id int
+	Age_low       int
+	Age_high      int
+	Probability   float64
+}
+
+var GlobalTPsByRAS []TPByRAS
+
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
 
@@ -265,6 +279,7 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 			// get the current state of the person in this model (should be
 			// the uninitialized state for cycle 0)
 			currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
+
 			//stateToReturnId := localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][person.Id][model.Id]
 
 			//fmt.Println("Current state in this model: ", currentStateInThisModel.Id)
@@ -272,11 +287,19 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 			// get the transition probabilities from the given state
 			transitionProbabilities := currentStateInThisModel.get_destination_probabilites(localInputsPointer)
 
-			check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
 			// get all states this person is in in current cycle
 			//fmt.Println("now get all states")
 			states := person.get_states(localInputsPointer)
+
+			// if current state is "unitialized 2", this means that the transition
+			// probabilities rely on information about the person's sex, race, and
+			// age. So a different set of transition probabilties must be used
+			if currentStateInThisModel == 11 || currentStateInThisModel == 17 || currentStateInThisModel == 23 || currentStateInThisModel == 38 {
+
+				transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
+			}
+
+			check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 			//fmt.Println("All states this person is in: ", states)
 
@@ -942,5 +965,30 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 		Inputs.Cycles[i] = *ptr.(*Cycle)
 	}
 
+	// ####################### TPs By RAS #######################
+
+	filename = "inputs/" + inputsPath + "/ras.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+
+	GlobalTPsByRAS = make([]TPByRAS, numberOfRecords, numberOfRecords)
+	var tpbrsPtr []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		tpbrsPtr = append(tpbrsPtr, new(TPByRAS))
+	}
+	ptrs = fromCsv(filename, GlobalTPsByRAS[0], tpbrsPtr)
+	for i, ptr := range tpbrsPtr {
+		GlobalTPsByRAS[i] = *ptr.(*TPByRAS)
+	}
+
+	fmt.Println(GlobalTPsByRAS)
+
 	return Inputs
+}
+
+func getTransitionProbByRAS(localInputsPointer *Input,
+	currentStateInThisModel State, states []State,
+	person Person) []TransitionProbability {
+
+	modelId := currentStateInThisModel.Model_id
+
 }
