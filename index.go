@@ -7,7 +7,7 @@ import (
 	// "encoding/json"
 	"flag"
 	"fmt"
-	// 	"github.com/alexgoodell/ghdmodel/models"
+	"github.com/alexgoodell/go-mdism/modules/sugar"
 	//"io"
 	// 	"net/http"
 	"bytes"
@@ -108,6 +108,8 @@ var isProfile string
 var Timer *nitro.B
 
 func main() {
+
+	sugar.Helloworld()
 
 	Timer = nitro.Initalize()
 
