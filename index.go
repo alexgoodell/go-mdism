@@ -92,14 +92,14 @@ type Input struct {
 }
 
 type TPByRAS struct {
+	Id            int
 	Model_id      int
 	Model_name    string
 	To_state_id   int
 	To_state_name string
 	Sex_state_id  int
 	Race_state_id int
-	Age_low       int
-	Age_high      int
+	Age           int
 	Probability   float64
 }
 
@@ -294,7 +294,10 @@ func runModelWithConcurrentPeople(localInputs Input, person Person, masterRecord
 			// if current state is "unitialized 2", this means that the transition
 			// probabilities rely on information about the person's sex, race, and
 			// age. So a different set of transition probabilties must be used
-			if currentStateInThisModel == 11 || currentStateInThisModel == 17 || currentStateInThisModel == 23 || currentStateInThisModel == 38 {
+
+			// TODO add in CHD currentStateInThisModel.Id == 11 ||
+
+			if currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 || currentStateInThisModel.Id == 38 {
 
 				transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
 			}
@@ -980,15 +983,38 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 		GlobalTPsByRAS[i] = *ptr.(*TPByRAS)
 	}
 
-	fmt.Println(GlobalTPsByRAS)
-
 	return Inputs
 }
 
-func getTransitionProbByRAS(localInputsPointer *Input,
-	currentStateInThisModel State, states []State,
-	person Person) []TransitionProbability {
+func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel State, states []State, person Person) []TransitionProbability {
+	var tpsToReturn []TransitionProbability
 
 	modelId := currentStateInThisModel.Model_id
 
+	raceModel := localInputsPointer.Models[4]
+	raceStateId := person.get_state_by_model(localInputsPointer, raceModel).Id
+
+	sexModel := localInputsPointer.Models[5]
+	sexStateId := person.get_state_by_model(localInputsPointer, sexModel).Id
+
+	ageModel := localInputsPointer.Models[10]
+	ageModelId := person.get_state_by_model(localInputsPointer, ageModel).Id
+	actualAge := ageModelId - 35
+
+	for _, tpByRAS := range GlobalTPsByRAS {
+		if tpByRAS.Model_id == modelId && tpByRAS.Race_state_id == raceStateId && tpByRAS.Age == actualAge && tpByRAS.Sex_state_id == sexStateId {
+			//fmt.Println(tpByRAS.Model_id, modelId, tpByRAS.Race_state_id, raceStateId, tpByRAS.Age, actualAge, tpByRAS.Sex_state_id, sexStateId)
+			var newTp TransitionProbability
+			newTp.To_id = tpByRAS.To_state_id
+			newTp.Tp_base = tpByRAS.Probability
+			tpsToReturn = append(tpsToReturn, newTp)
+		}
+	}
+
+	if len(tpsToReturn) < 1 {
+		fmt.Println("No TPs found with getTransitionProbByRAS for m r a s", modelId, raceStateId, actualAge, sexStateId)
+		os.Exit(1)
+	}
+
+	return tpsToReturn
 }
