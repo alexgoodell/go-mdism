@@ -72,6 +72,7 @@ type TransitionProbability struct {
 	Tp_base float64
 }
 
+//this struct will replicate the data found
 type StatePopulation struct {
 	Id         int
 	State_id   int
