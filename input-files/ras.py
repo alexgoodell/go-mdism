@@ -21,7 +21,7 @@ outputdf = pd.DataFrame(columns=["Model_id", "Model_name", "To_state_id",
 
 
 for i, row in df.iterrows():
-    for p in range(int(row['Age_low']), int(row['Age_high'])):
+    for p in range(int(row['Age_low']), int(row['Age_high'])+1):
         new_row = {
         "Model_id": row['Model_id'],
         "Model_name": row['Model_name'],
@@ -35,3 +35,5 @@ for i, row in df.iterrows():
         outputdf = outputdf.append(new_row, ignore_index=True)
 
 outputdf.to_csv("ras_output.csv")
+
+
