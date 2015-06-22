@@ -1,10 +1,21 @@
 // General to do
-// * open cohort
+// * open cohort - done (6/20/15)
 // * add CHD into risk factor issue
 // * add death-age reporting
+// * death sync
 // * flask display for charts
 // * sensitivity analysis tools
 // * int to uint
+// * stack chart - done
+// * intervention
+// * fix TPs and "other deaths"
+// "natural events" ie
+// 	number who get infected with nash, hiv
+// 	translate into DALYs
+// 	end point prevalence
+//  costs - discounted compared to starting simulation
+// 	DALYs - discounted
+// syncronizing events
 
 package main
 
@@ -34,10 +45,15 @@ import (
 var beginTime = time.Now()
 
 type State struct {
-	Id                     int
-	Model_id               int
-	Name                   string
-	Is_uninitialized_state bool
+	Id                        int
+	Model_id                  int
+	Name                      string
+	Is_uninitialized_state    bool
+	Disability_weight         float64
+	Cost_per_cycle            float64
+	Is_disease_specific_death bool
+	Is_other_death            bool
+	Is_natural_causes_death   bool
 }
 
 type Model struct {
@@ -93,6 +109,7 @@ type Query struct {
 	Interactions_id_by_in_state_and_model  [][]int
 	State_populations_by_cycle             [][]int
 	Model_id_by_state                      []int
+	Other_death_state_by_model             []int
 }
 
 type Input struct {
@@ -126,6 +143,9 @@ var GlobalTPsByRAS []TPByRAS
 
 var GlobalMasterRecords = []MasterRecord{}
 var GlobalStatePopulations = []StatePopulation{}
+
+var GlobalYLDs float64
+var GlobalYLLs float64
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -297,6 +317,8 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	}
 
 	//outputs
+	fmt.Println("Global YLDs: ", GlobalYLDs)
+	fmt.Println("Global YLLs: ", GlobalYLLs)
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -372,6 +394,27 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// using  final transition probabilities, assign new state to person
 	new_state := pickState(localInputsPointer, transitionProbabilities)
 
+	// health metrics
+
+	// years of life lost from disability
+	GlobalYLDs += new_state.Disability_weight
+
+	// check to make sure they are not mis-assigned
+	if new_state.Is_other_death && !currentStateInThisModel.Is_other_death {
+		fmt.Println("Should not be assigned other death here")
+		os.Exit(1)
+	}
+
+	justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
+
+	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
+
+	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
+		GlobalYLLs += getYLLFromDeath(localInputsPointer, person)
+		// Sync deaths. Put person in "other death"
+
+	}
+
 	if new_state.Id < 1 {
 		fmt.Println("No new state!")
 		os.Exit(1)
@@ -405,6 +448,16 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		fmt.Println("problem adding master record")
 		os.Exit(1)
 	}
+}
+
+func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
+	return 20.0
+}
+
+func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
+	otherDeathStateId := localInputsPointer.QueryData.Other_death_state_by_model[model.Id]
+	otherDeathState := get_state_by_id(localInputsPointer, otherDeathStateId)
+	return otherDeathState
 }
 
 // This represents running the full model for one person
@@ -516,6 +569,25 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 	Inputs.QueryData.State_populations_by_cycle = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
 	for c := 0; c < numberOfCalculatedCycles; c++ {
 		Inputs.QueryData.State_populations_by_cycle[c] = make([]int, len(Inputs.States), len(Inputs.States))
+	}
+
+	Inputs.QueryData.Other_death_state_by_model = make([]int, len(Inputs.Models), len(Inputs.Models))
+	for _, model := range Inputs.Models {
+		// find other death state by iteration
+		otherDeathState := State{}
+		for _, state := range Inputs.States {
+			if state.Is_other_death && state.Model_id == model.Id {
+				otherDeathState = state
+			}
+		}
+
+		if !otherDeathState.Is_other_death {
+			fmt.Println("Problem finding other death state for model", model.Id)
+			os.Exit(1)
+		}
+
+		Inputs.QueryData.Other_death_state_by_model[model.Id] = otherDeathState.Id
+
 	}
 
 	Timer.Step("set up query data")
@@ -1052,13 +1124,14 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 	for i, ptr := range ptrs {
 		Inputs.Models[i] = *ptr.(*Model)
 	}
+	fmt.Println("complete")
 
 	// ####################### States #######################
 
 	// initialize inputs, needed for fromCsv function
 	filename = "inputs/" + inputsPath + "/states.csv"
+	fmt.Println(filename)
 	numberOfRecords = getNumberOfRecords(filename)
-
 	Inputs.States = make([]State, numberOfRecords, numberOfRecords)
 	var statePtrs []interface{}
 	for i := 0; i < numberOfRecords; i++ {

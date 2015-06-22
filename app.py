@@ -23,6 +23,8 @@ from bokeh.embed import components
 from bokeh.resources import INLINE
 from bokeh.templates import RESOURCES
 from bokeh.util.string import encode_utf8
+from bokeh.charts import Area
+from collections import OrderedDict
 
 
 app = flask.Flask(__name__)
@@ -65,10 +67,25 @@ def select_model(model_id):
     y = []
     state_names = list(states_df[states_df.Model_id == model_id].Name)
 
+    xyvalues = OrderedDict()
+
     for i, s in enumerate(state_ids):
         x.append(state_pop_df[state_pop_df.State_id == s].Cycle_id)
         y.append(state_pop_df[state_pop_df.State_id == s].Population)
+        xyvalues[state_names[i]] = list(state_pop_df[state_pop_df.State_id == s].Population)
         fig.line(x[i], y[i], legend=state_names[i], color=palette[10][i], line_width=3)
+
+
+# xyval = OrderedDict(
+#     python=[2, 3, 7, 5, 26, 221, 44, 233, 254, 265, 266, 267, 120, 111],
+#     pypy=[12, 33, 47, 15, 126, 121, 144, 233, 254, 225, 226, 267, 110, 130],
+#     jython=[22, 43, 10, 25, 26, 101, 114, 203, 194, 215, 201, 227, 139, 160],
+# )
+    area = Area(
+        xyvalues, title="Area Chart",
+        xlabel='time', ylabel='memory',
+        stacked=True, legend="top_right", palette=palette[10]
+    ).legend("top_left")
 
 
 
@@ -87,7 +104,7 @@ def select_model(model_id):
 
     # For more details see:
     # http://bokeh.pydata.org/en/latest/docs/user_guide/embedding.html#components
-    script, div = components(fig, INLINE)
+    script, div = components(area, INLINE)
     html = flask.render_template(
         'embed.html',
         plot_script=script, plot_div=div, plot_resources=plot_resources,
