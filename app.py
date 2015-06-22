@@ -36,9 +36,12 @@ for index, row in models_df.iterrows():
 
 
 
+<<<<<<< HEAD
 @app.route("/")
 def base():
     reutn "hello"
+=======
+>>>>>>> a4110a99584a4ed16d53e7964708fa595b5361b0
 
 
 @app.route("/model/<int:model_id>")
