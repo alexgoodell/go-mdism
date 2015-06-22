@@ -178,8 +178,12 @@ func main() {
 	var Inputs Input
 	Inputs = initializeInputs(Inputs, inputsPath)
 
+	// TODO
+	// assume same amount of people will enter over 20 years as are currently
+	// in model
+	numberOfPeopleEntering := numberOfPeople * 10
 	//set up queryData
-	Inputs = setUpQueryData(Inputs, numberOfPeople)
+	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
 	// create people will generate individuals and add their data to the master
 	// records
@@ -187,9 +191,11 @@ func main() {
 
 	Inputs = initializeGlobalStatePopulations(Inputs)
 
+	setUpGlobalMasterRecordsByIPCM(Inputs)
+
 	// table tests here
 
-	concurrencyBy := "person"
+	concurrencyBy := "person-within-cycle"
 
 	iterationChan := make(chan string)
 
@@ -238,25 +244,48 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	case "person-within-cycle":
 
 		for _, cycle := range Inputs.Cycles { // foreach cycle
-			for _, person := range Inputs.People { // 	foreach person
-				go runOneCycleForOnePerson(localInputs, cycle, person, masterRecordsToAdd)
+
+			// need to create new people before calculating the year
+			// of they're unit states will be written over
+			createNewPeople(&localInputs, cycle, 10)
+
+			for _, person := range localInputs.People { // 	foreach person
+				go runOneCycleForOnePerson(&localInputs, cycle, person, masterRecordsToAdd)
 			}
-			localInputs.CurrentCycle++
-		}
-		for _, cycle := range Inputs.Cycles { // foreach cycle
-			for _, person := range Inputs.People { // 	foreach person
+
+			for _, person := range localInputs.People { // 	foreach person
 				mRstoAdd := <-masterRecordsToAdd
+				//TODO very slow!
 				GlobalMasterRecords = append(GlobalMasterRecords, mRstoAdd...)
+				for _, mRtoAdd := range mRstoAdd {
+					//GlobalMasterRecordsByIPCM[0][mRtoAdd.Person_id][mRtoAdd.Cycle_id][mRtoAdd.Model_id] = mRtoAdd.State_id
+					_ = mRtoAdd
+				}
 				_ = person // to avoid unused warning
 				_ = cycle  // to avoid unused warning
 			}
+
 			localInputs.CurrentCycle++
+			fmt.Println("total num people, a or d, in sim", len(localInputs.People))
+			//createNewPeople(&Inputs, cycle, 100)
 		}
+		// for _, cycle := range Inputs.Cycles { // foreach cycle
+		// 	for _, person := range Inputs.People { // 	foreach person
+		// 		mRstoAdd := <-masterRecordsToAdd
+		// 		GlobalMasterRecords = append(GlobalMasterRecords, mRstoAdd...)
+		// 		_ = person // to avoid unused warning
+		// 		_ = cycle  // to avoid unused warning
+		// 	}
+		// }
 	} // end case
 
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	for _, masterRecord := range GlobalMasterRecords {
+
+		if masterRecord.Person_id > 100 {
+			//fmt.Println("Bingo", masterRecord.Person_id)
+		}
 		//fmt.Println(masterRecord.Cycle_id, masterRecord.State_id, Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id])
 		Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 	}
@@ -268,8 +297,8 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	}
 
 	//outputs
-	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
-	toCsv(output_dir+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
 	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
@@ -349,7 +378,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	}
 
 	if localInputsPointer.CurrentCycle != cycle.Id {
-		fmt.Println("cycle mismatch!")
+		fmt.Println("cycle mismatch!", localInputsPointer.CurrentCycle, cycle.Id)
 		os.Exit(1)
 	}
 
@@ -404,10 +433,11 @@ func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToA
 	masterRecordsToAdd <- theseMasterRecordsToAdd
 }
 
-func runOneCycleForOnePerson(localInputs Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
+func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
 
-	localInputsPointer := &localInputs
-	mrSize := len(localInputsPointer.Cycles) * len(localInputsPointer.Models)
+	localInputsPointer := localInputs
+	//small MR size bc just for one person
+	mrSize := len(localInputsPointer.Models)
 	theseMasterRecordsToAdd := make([]MasterRecord, mrSize, mrSize)
 	mrIndex := 0
 	for _, model := range localInputsPointer.Models { // foreach model
@@ -428,9 +458,13 @@ func runOneCycleForOnePerson(localInputs Input, cycle Cycle, person Person, mast
 // 	} // end foreach model
 // }
 
-func setUpQueryData(Inputs Input, numberOfPeople int) Input {
+func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int) Input {
 	// Need to have lengths to be able to access them
 	//Cycles
+
+	numberOfPeople = numberOfPeople + numberOfPeopleEntering
+	fmt.Println("Total num", numberOfPeople)
+
 	Inputs.QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
 	for i, _ := range Inputs.QueryData.State_id_by_cycle_and_person_and_model {
 		//People
@@ -458,7 +492,7 @@ func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_model {
 		Inputs.QueryData.Interactions_id_by_in_state_and_model[i] = make([]int, len(Inputs.Models), len(Inputs.Models))
 		for r := 0; r < len(Inputs.Models); r++ {
-			Inputs.QueryData.Interactions_id_by_in_state_and_model[i][r] = 99999999 // placeholder value to represent no interaction
+			Inputs.QueryData.Interactions_id_by_in_state_and_model[i][r] = 99999999 // TODO placeholder value to represent no interaction
 		}
 	}
 
@@ -513,8 +547,8 @@ func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 	for i := 0; i < numberOfIterations; i++ {
 		GlobalMasterRecordsByIPCM[i] = make([][][]int, numberOfPeople, numberOfPeople)
 		for p := 0; p < numberOfPeople; p++ {
-			GlobalMasterRecordsByIPCM[i][p] = make([][]int, len(Inputs.Cycles), len(Inputs.Cycles))
-			for q := 0; q < len(Inputs.Cycles); q++ {
+			GlobalMasterRecordsByIPCM[i][p] = make([][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1) // TODO cycles hack
+			for q := 0; q < len(Inputs.Cycles)+1; q++ {
 				GlobalMasterRecordsByIPCM[i][p][q] = make([]int, len(Inputs.Models), len(Inputs.Models))
 			}
 		}
@@ -534,6 +568,43 @@ func shuffle(models []Model) []Model {
 	return models
 }
 
+// Since we are using an open cohort, we need to add people to the
+// simulation every year - these represent people that are being
+// born into the simulation
+func createNewPeople(Inputs *Input, cycle Cycle, number int) {
+	idForFirstPerson := len(Inputs.People) + 1
+	//newPeople = make([]Person, number, number)
+	for i := 0; i < number; i++ {
+		newPerson := Person{idForFirstPerson + i}
+		//newPeople[i] = newPerson
+		Inputs.People = append(Inputs.People, newPerson)
+		fmt.Println("new person", newPerson.Id)
+		for _, model := range Inputs.Models {
+			// TODO fix hack here - this should be more systematic
+			// Place person into correct age category
+			uninitializedState := State{}
+			uninitializedState = model.get_uninitialized_state(Inputs)
+			if model.Name == "Age" {
+				// Start them at age 20
+				// TODO they will enter the model at age 21?
+				uninitializedState = get_state_by_id(Inputs, 55)
+			}
+			fmt.Println("unit state", uninitializedState)
+			var mr MasterRecord
+			mr.Cycle_id = cycle.Id
+			mr.State_id = uninitializedState.Id
+			mr.Model_id = model.Id
+			mr.Person_id = newPerson.Id
+
+			qd := Inputs.QueryData.State_id_by_cycle_and_person_and_model
+
+			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
+
+			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
+		}
+	}
+}
+
 // create people will generate individuals and add their data to the master
 // records
 func createInitialPeople(Inputs Input, number int) Input {
@@ -543,7 +614,7 @@ func createInitialPeople(Inputs Input, number int) Input {
 
 	for _, person := range Inputs.People {
 		for _, model := range Inputs.Models {
-			uninitializedState := model.get_uninitialized_state(Inputs)
+			uninitializedState := model.get_uninitialized_state(&Inputs)
 			var mr MasterRecord
 			mr.Cycle_id = 0
 			mr.State_id = uninitializedState.Id
@@ -669,7 +740,7 @@ func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model
 	stateToReturnId = localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPerson.Id][thisModelId]
 
 	if localInputs.CurrentCycle != 0 && stateToReturnId == 0 {
-		fmt.Println("unint state after cycle 0!")
+		//fmt.Println("unint state after cycle 0!")
 	}
 
 	stateToReturn = localInputs.States[stateToReturnId]
@@ -714,7 +785,7 @@ func (thisPerson *Person) get_states(localInputs *Input) []State {
 //  --------------- model
 
 // gets the uninitialized state for a model (the state individuals start in)
-func (model *Model) get_uninitialized_state(Inputs Input) State {
+func (model *Model) get_uninitialized_state(Inputs *Input) State {
 	modelId := model.Id
 	for _, state := range Inputs.States {
 		if state.Model_id == modelId && state.Is_uninitialized_state == true {
