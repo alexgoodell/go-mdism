@@ -35,13 +35,10 @@ for index, row in models_df.iterrows():
     selector += "<a href=\"/model/" + str(row["Id"]) + "\">" + row["Name"] +"</a> "
 
 
-
-<<<<<<< HEAD
 @app.route("/")
 def base():
-    reutn "hello"
-=======
->>>>>>> a4110a99584a4ed16d53e7964708fa595b5361b0
+    return "hello"
+
 
 
 @app.route("/model/<int:model_id>")
