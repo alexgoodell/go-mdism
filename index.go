@@ -78,6 +78,7 @@ type StatePopulation struct {
 	State_id   int
 	Cycle_id   int
 	Population int
+	Model_id   int
 }
 
 type Query struct {
@@ -86,6 +87,7 @@ type Query struct {
 	Tps_id_by_from_state                   [][]int
 	Interactions_id_by_in_state_and_model  [][]int
 	State_populations_by_cycle             [][]int
+	Model_id_by_state                      []int
 }
 
 type Input struct {
@@ -118,6 +120,7 @@ var GlobalTPsByRAS []TPByRAS
 // current refers to the current cycle, which is used to calculate the next cycle
 
 var GlobalMasterRecords = []MasterRecord{}
+var GlobalStatePopulations = []StatePopulation{}
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -175,7 +178,9 @@ func main() {
 
 	// create people will generate individuals and add their data to the master
 	// records
-	Inputs = createPeople(Inputs, numberOfPeople)
+	Inputs = createInitialPeople(Inputs, numberOfPeople)
+
+	Inputs = initializeGlobalStatePopulations(Inputs)
 
 	// table tests here
 
@@ -246,8 +251,21 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
+	for _, masterRecord := range GlobalMasterRecords {
+		//fmt.Println(masterRecord.Cycle_id, masterRecord.State_id, Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id])
+		Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
+	}
+
+	for s, statePopulation := range GlobalStatePopulations {
+		//fmt.Println(Inputs.QueryData.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id])
+		GlobalStatePopulations[s].Population = Inputs.QueryData.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
+
+	}
+
 	//outputs
 	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	toCsv(output_dir+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+
 	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
@@ -444,8 +462,20 @@ func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 		Inputs.QueryData.Interactions_id_by_in_state_and_model[interaction.In_state_id][interaction.Effected_model_id] = interaction.Id
 	}
 
-	Inputs.QueryData.State_populations_by_cycle = make([][]int, len(Inputs.Cycles), len(Inputs.Cycles))
-	for c, _ := range Inputs.Cycles {
+	Inputs.QueryData.Model_id_by_state = make([]int, len(Inputs.States), len(Inputs.States))
+
+	for _, state := range Inputs.States {
+		Inputs.QueryData.Model_id_by_state[state.Id] = state.Model_id
+	}
+
+	/* TODO Fix this hack. We actually end up storing len(Cycles)+1 cycles,
+	because we start on 0 and calculate the cycle ahead of us, so if we have
+	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
+
+	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
+
+	Inputs.QueryData.State_populations_by_cycle = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
+	for c := 0; c < numberOfCalculatedCycles; c++ {
 		Inputs.QueryData.State_populations_by_cycle[c] = make([]int, len(Inputs.States), len(Inputs.States))
 	}
 
@@ -453,6 +483,25 @@ func setUpQueryData(Inputs Input, numberOfPeople int) Input {
 	return Inputs
 }
 
+func initializeGlobalStatePopulations(Inputs Input) Input {
+	/* TODO Fix this hack. We actually end up storing len(Cycles)+1 cycles,
+	because we start on 0 and calculate the cycle ahead of us, so if we have
+	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
+	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
+	GlobalStatePopulations = make([]StatePopulation, numberOfCalculatedCycles*len(Inputs.States))
+	q := 0
+	for c := 0; c < numberOfCalculatedCycles; c++ {
+		for s, _ := range Inputs.States {
+			GlobalStatePopulations[q].Cycle_id = c
+			GlobalStatePopulations[q].Id = q
+			GlobalStatePopulations[q].Population = 0
+			GlobalStatePopulations[q].State_id = s
+			GlobalStatePopulations[q].Model_id = Inputs.QueryData.Model_id_by_state[s]
+			q++
+		}
+	}
+	return Inputs
+}
 func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 
 	GlobalMasterRecordsByIPCM = make([][][][]int, numberOfIterations, numberOfIterations)
@@ -482,7 +531,7 @@ func shuffle(models []Model) []Model {
 
 // create people will generate individuals and add their data to the master
 // records
-func createPeople(Inputs Input, number int) Input {
+func createInitialPeople(Inputs Input, number int) Input {
 	for i := 0; i < number; i++ {
 		Inputs.People = append(Inputs.People, Person{i})
 	}
