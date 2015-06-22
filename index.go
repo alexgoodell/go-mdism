@@ -1,4 +1,9 @@
 // General to do
+// * open cohort
+// * add CHD into risk factor issue
+// * add death-age reporting
+// * flask display for charts
+// * sensitivity analysis tools
 // * int to uint
 
 package main
