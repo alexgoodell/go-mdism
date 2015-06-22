@@ -45,7 +45,7 @@ def base():
 def select_model(model_id):
 
     palette = brewer["Spectral"]
-    state_pop_df = pd.read_csv('tmp/state_populations.csv', header=0, skip_blank_lines=1)
+    state_pop_df = pd.read_csv('output/state_populations.csv', header=0, skip_blank_lines=1)
     state_pop_df = state_pop_df[(state_pop_df.Model_id == model_id)]
     state_pop_df = state_pop_df.drop('Model_id', axis=1, level=None, inplace=False)
     state_pop_df = state_pop_df.drop('Id', axis=1, level=None, inplace=False)
