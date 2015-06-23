@@ -1,13 +1,13 @@
 // General to do
 // * open cohort - done (6/20/15)
 // * add CHD into risk factor issue
-// * add death-age reporting
-// * death sync
-// * flask display for charts
+// * add death-age reporting - rick to work on
+// * death sync - done
+// * flask display for charts - done
 // * sensitivity analysis tools
-// * int to uint
 // * stack chart - done
 // * intervention
+// * int to uint
 // * fix TPs and "other deaths"
 // "natural events" ie
 // 	number who get infected with nash, hiv
@@ -286,7 +286,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 			}
 
 			localInputs.CurrentCycle++
-			fmt.Println("total num people, a or d, in sim", len(localInputs.People))
+			//fmt.Println("total num people, a or d, in sim", len(localInputs.People))
 			//createNewPeople(&Inputs, cycle, 100)
 		}
 		// for _, cycle := range Inputs.Cycles { // foreach cycle
@@ -411,7 +411,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 		GlobalYLLs += getYLLFromDeath(localInputsPointer, person)
 
-		fmt.Println("death sync in model ", model.Id)
+		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
 		for _, sub_model := range localInputsPointer.Models {
 			//skip current model because should show disease-specific death
@@ -424,7 +424,6 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 				prev_cycle.Id = cycle.Id - 1
 				addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
 				addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
-				fmt.Println("done")
 			}
 		}
 
@@ -669,7 +668,7 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 		newPerson := Person{idForFirstPerson + i}
 		//newPeople[i] = newPerson
 		Inputs.People = append(Inputs.People, newPerson)
-		fmt.Println("new person", newPerson.Id)
+		//fmt.Println("new person", newPerson.Id)
 		for _, model := range Inputs.Models {
 			// TODO fix hack here - this should be more systematic
 			// Place person into correct age category
@@ -680,7 +679,7 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 				// TODO they will enter the model at age 21?
 				uninitializedState = get_state_by_id(Inputs, 55)
 			}
-			fmt.Println("unit state", uninitializedState)
+			//fmt.Println("unit state", uninitializedState)
 			var mr MasterRecord
 			mr.Cycle_id = cycle.Id
 			mr.State_id = uninitializedState.Id
