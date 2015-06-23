@@ -1,7 +1,7 @@
 // General to do
 // * open cohort - done (6/20/15)
 // * add CHD into risk factor issue
-// * add death-age reporting - rick to work on
+// * add death-age reporting - rick to work on (began to solve, waiting on response from Jim)
 // * death sync - done
 // * flask display for charts - done
 // * sensitivity analysis tools
@@ -146,6 +146,8 @@ var GlobalStatePopulations = []StatePopulation{}
 
 var GlobalYLDs float64
 var GlobalYLLs float64
+var GlobalDALYs float64
+var GlobalCostsDiabetes float64
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -319,6 +321,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//outputs
 	fmt.Println("Global YLDs: ", GlobalYLDs)
 	fmt.Println("Global YLLs: ", GlobalYLLs)
+	fmt.Println("Global Costs Diabetes: ", GlobalCostsDiabetes)
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -394,11 +397,28 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	// health metrics
 
+	// costs calculations - diabetes as example
+	diabetesModel := localInputsPointer.Models[3]
+	thisDiseaseState := person.get_state_by_model(localInputsPointer, diabetesModel)
+	diseaseState := thisDiseaseState.Id
+	prevalenceDiabetes := 0.00
+	if diseaseState == 2 {
+		prevalenceDiabetes = 1.00
+	} else {
+		prevalenceDiabetes = 0.00
+	}
+
+	getDiseaseCostsDiab := make([]float64, 4, 4)
+	getDiseaseCostsDiab[3] = 7888 //T2D
+	diseaseCosts := getDiseaseCostsDiab[diseaseState]
+
+	discountfactorCosts := math.Pow((1 - 0.03), float64(cycle.Id))
+	GlobalCostsDiabetes += discountfactorCosts * diseaseCosts * prevalenceDiabetes
+
 	// years of life lost from disability
-	if cycle.Id > 1 {
-		discount := 1.00 - math.Pow((1-0.03), float64(cycle.Id)+1.00)
+	if cycle.Id > 0 {
+		discount := 1.00 - math.Pow((1-0.03), float64(cycle.Id))
 		discountedYLD := new_state.Disability_weight / discount * (1 - math.Exp(-discount))
-		fmt.Println(discountedYLD)
 		if math.IsNaN(discountedYLD) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discount, discountedYLD, new_state.Disability_weight)
@@ -440,6 +460,8 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		}
 
 	}
+
+	GlobalDALYs = GlobalYLDs + GlobalYLLs
 
 	if new_state.Id < 1 {
 		fmt.Println("No new state!")
