@@ -352,8 +352,6 @@ func deepCopy(Inputs Input) Input {
 
 func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, person Person, theseMasterRecordsToAddPtr *[]MasterRecord, mrIndex int) {
 
-	//dereference
-	theseMasterRecordsToAdd := *theseMasterRecordsToAddPtr
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
@@ -405,13 +403,30 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		os.Exit(1)
 	}
 
+	//fmt.Println("model Id", model.Id)
 	justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
 
 	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 		GlobalYLLs += getYLLFromDeath(localInputsPointer, person)
+
+		fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
+		for _, sub_model := range localInputsPointer.Models {
+			//skip current model because should show disease-specific death
+			if sub_model.Id != model.Id {
+
+				otherDeathState := getOtherDeathStateByModel(localInputsPointer, sub_model)
+				//fmt.Println("updated model ", sub_model.Id, " with otherdeathstate ", otherDeathState)
+				// add new records for all the deaths for this cycle and next
+				prev_cycle := Cycle{}
+				prev_cycle.Id = cycle.Id - 1
+				addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
+				addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
+				fmt.Println("done")
+			}
+		}
 
 	}
 
@@ -426,8 +441,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	}
 
 	// store new state in master object
-	err := add_master_record(localInputsPointer, cycle, person, new_state)
-	localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = new_state.Id
+	err := addToQueryDataMasterRecord(localInputsPointer, cycle, person, new_state)
 
 	check_new_state_id := localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
 
@@ -435,14 +449,6 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		fmt.Println("Was not correctly assigned... bug")
 		os.Exit(1)
 	}
-
-	var newMasterRecord MasterRecord
-	newMasterRecord.Cycle_id = cycle.Id + 1
-	newMasterRecord.Person_id = person.Id
-	newMasterRecord.State_id = new_state.Id
-	newMasterRecord.Model_id = model.Id
-
-	theseMasterRecordsToAdd[mrIndex] = newMasterRecord
 
 	if err != false {
 		fmt.Println("problem adding master record")
@@ -463,27 +469,29 @@ func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
 // This represents running the full model for one person
 func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
 
-	localInputsPointer := &localInputs
+	// --------- FIX WITH OTHER DEATHS ==============
 
-	mrSize := len(localInputsPointer.Cycles) * len(localInputsPointer.Models)
-	theseMasterRecordsToAdd := make([]MasterRecord, mrSize, mrSize)
-	mrIndex := 0
-	//fmt.Println("Person:", person.Id)
-	for _, cycle := range localInputsPointer.Cycles { // foreach cycle
-		//fmt.Println("Cycle: ", cycle.Name)
-		//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models //TODO place back in not sure why broken.
-		for _, model := range localInputsPointer.Models { // foreach model
-			//fmt.Println(model.Name)
-			runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
-			mrIndex++
-		} // end foreach model
-		localInputsPointer.CurrentCycle++
+	// localInputsPointer := &localInputs
 
-	} //end foreach cycle
+	// mrSize := len(localInputsPointer.Cycles) * len(localInputsPointer.Models)
+	// theseMasterRecordsToAdd := make([]MasterRecord, mrSize, mrSize)
+	// mrIndex := 0
+	// //fmt.Println("Person:", person.Id)
+	// for _, cycle := range localInputsPointer.Cycles { // foreach cycle
+	// 	//fmt.Println("Cycle: ", cycle.Name)
+	// 	//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models //TODO place back in not sure why broken.
+	// 	for _, model := range localInputsPointer.Models { // foreach model
+	// 		//fmt.Println(model.Name)
+	// 		runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
+	// 		mrIndex++
+	// 	} // end foreach model
+	// 	localInputsPointer.CurrentCycle++
 
-	//Timer := nitro.Initialize()
+	// } //end foreach cycle
 
-	masterRecordsToAdd <- theseMasterRecordsToAdd
+	// //Timer := nitro.Initialize()
+
+	// masterRecordsToAdd <- theseMasterRecordsToAdd
 }
 
 func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
@@ -495,6 +503,17 @@ func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, mas
 	mrIndex := 0
 	for _, model := range localInputsPointer.Models { // foreach model
 		runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
+	}
+	// Below iteration finds the new states. This needs to be done here
+	// in case someone died - even if someone dies in the "last" model,
+	// that deaths forces a death in all other models
+	for _, model := range localInputsPointer.Models { // foreach model
+		var newMasterRecord MasterRecord
+		newMasterRecord.Cycle_id = cycle.Id + 1
+		newMasterRecord.Person_id = person.Id
+		newMasterRecord.State_id = localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+		newMasterRecord.Model_id = model.Id
+		theseMasterRecordsToAdd[mrIndex] = newMasterRecord
 		mrIndex++
 	}
 
@@ -883,7 +902,7 @@ func (state *State) get_destination_probabilites(localInputs *Input) []Transitio
 	if len(tPsToReturn) > 0 {
 		return tPsToReturn
 	} else {
-		///fmt.Println("cannot find destination probabilities via get_destination_probabilites")
+		fmt.Println("cannot find destination probabilities via get_destination_probabilites")
 		os.Exit(1)
 		return tPsToReturn
 	}
@@ -918,7 +937,7 @@ func (inState *State) get_relevant_interactions(localInputs *Input, allStates []
 
 // store new state in master object for n+1 cycle (note that the cycle is
 // auto - incremented within this function)
-func add_master_record(localInputs *Input, cycle Cycle, person Person, newState State) bool {
+func addToQueryDataMasterRecord(localInputs *Input, cycle Cycle, person Person, newState State) bool {
 	ogLen := len(localInputs.MasterRecords)
 	var newMasterRecord MasterRecord
 	newMasterRecord.Cycle_id = cycle.Id + 1
