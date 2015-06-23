@@ -395,7 +395,17 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// health metrics
 
 	// years of life lost from disability
-	GlobalYLDs += new_state.Disability_weight
+	if cycle.Id > 1 {
+		discount := 1.00 - math.Pow((1-0.03), float64(cycle.Id)+1.00)
+		discountedYLD := new_state.Disability_weight / discount * (1 - math.Exp(-discount))
+		fmt.Println(discountedYLD)
+		if math.IsNaN(discountedYLD) {
+			fmt.Println("problem w discount. discount, disyld, dw:")
+			fmt.Println(discount, discountedYLD, new_state.Disability_weight)
+			os.Exit(1)
+		}
+		GlobalYLDs += discountedYLD
+	}
 
 	// check to make sure they are not mis-assigned
 	if new_state.Is_other_death && !currentStateInThisModel.Is_other_death {
@@ -420,6 +430,8 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 				otherDeathState := getOtherDeathStateByModel(localInputsPointer, sub_model)
 				//fmt.Println("updated model ", sub_model.Id, " with otherdeathstate ", otherDeathState)
 				// add new records for all the deaths for this cycle and next
+				// TODO add toQueryData adds to the next cycle not the currrent cycle
+				// make this more clear
 				prev_cycle := Cycle{}
 				prev_cycle.Id = cycle.Id - 1
 				addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
@@ -456,7 +468,108 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 }
 
 func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
-	return 20.0
+	agesModel := localInputsPointer.Models[10]
+	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
+	//TODO fix this age hack - not sustainable, what happens is the state IDS change?
+	age := stateInAge.Id - 35
+	getLifeexpectancy := make([]float64, 111, 111)
+
+	getLifeexpectancy[20] = 49.627
+	getLifeexpectancy[21] = 49.627
+	getLifeexpectancy[22] = 49.627
+	getLifeexpectancy[23] = 49.627
+	getLifeexpectancy[24] = 49.627
+	getLifeexpectancy[25] = 45.331
+	getLifeexpectancy[26] = 45.331
+	getLifeexpectancy[27] = 45.331
+	getLifeexpectancy[28] = 45.331
+	getLifeexpectancy[29] = 45.331
+	getLifeexpectancy[30] = 41.078
+	getLifeexpectancy[31] = 41.078
+	getLifeexpectancy[32] = 41.078
+	getLifeexpectancy[33] = 41.078
+	getLifeexpectancy[34] = 41.078
+	getLifeexpectancy[35] = 36.848
+	getLifeexpectancy[36] = 36.848
+	getLifeexpectancy[37] = 36.848
+	getLifeexpectancy[38] = 36.848
+	getLifeexpectancy[39] = 36.848
+	getLifeexpectancy[40] = 32.682
+	getLifeexpectancy[41] = 32.682
+	getLifeexpectancy[42] = 32.682
+	getLifeexpectancy[43] = 32.682
+	getLifeexpectancy[44] = 32.682
+	getLifeexpectancy[45] = 28.638
+	getLifeexpectancy[46] = 28.638
+	getLifeexpectancy[47] = 28.638
+	getLifeexpectancy[48] = 28.638
+	getLifeexpectancy[49] = 28.638
+	getLifeexpectancy[50] = 24.749
+	getLifeexpectancy[51] = 24.749
+	getLifeexpectancy[52] = 24.749
+	getLifeexpectancy[53] = 24.749
+	getLifeexpectancy[54] = 24.749
+	getLifeexpectancy[55] = 21.034
+	getLifeexpectancy[56] = 21.034
+	getLifeexpectancy[57] = 21.034
+	getLifeexpectancy[58] = 21.034
+	getLifeexpectancy[59] = 21.034
+	getLifeexpectancy[60] = 17.498
+	getLifeexpectancy[61] = 17.498
+	getLifeexpectancy[62] = 17.498
+	getLifeexpectancy[63] = 17.498
+	getLifeexpectancy[64] = 17.498
+	getLifeexpectancy[65] = 14.217
+	getLifeexpectancy[66] = 14.217
+	getLifeexpectancy[67] = 14.217
+	getLifeexpectancy[68] = 14.217
+	getLifeexpectancy[69] = 14.217
+	getLifeexpectancy[70] = 11.217
+	getLifeexpectancy[71] = 11.217
+	getLifeexpectancy[72] = 11.217
+	getLifeexpectancy[73] = 11.217
+	getLifeexpectancy[74] = 11.217
+	getLifeexpectancy[75] = 8.537
+	getLifeexpectancy[76] = 8.537
+	getLifeexpectancy[77] = 8.537
+	getLifeexpectancy[78] = 8.537
+	getLifeexpectancy[79] = 8.537
+	getLifeexpectancy[80] = 6.202
+	getLifeexpectancy[81] = 6.202
+	getLifeexpectancy[82] = 6.202
+	getLifeexpectancy[83] = 6.202
+	getLifeexpectancy[84] = 6.202
+	getLifeexpectancy[85] = 6.202
+	getLifeexpectancy[86] = 6.202
+	getLifeexpectancy[87] = 6.202
+	getLifeexpectancy[88] = 6.202
+	getLifeexpectancy[89] = 6.202
+	getLifeexpectancy[90] = 6.202
+	getLifeexpectancy[91] = 6.202
+	getLifeexpectancy[92] = 6.202
+	getLifeexpectancy[93] = 6.202
+	getLifeexpectancy[94] = 6.202
+	getLifeexpectancy[95] = 6.202
+	getLifeexpectancy[96] = 6.202
+	getLifeexpectancy[97] = 6.202
+	getLifeexpectancy[98] = 6.202
+	getLifeexpectancy[99] = 6.202
+	getLifeexpectancy[100] = 6.202
+	getLifeexpectancy[101] = 6.202
+	getLifeexpectancy[102] = 6.202
+	getLifeexpectancy[103] = 6.202
+	getLifeexpectancy[104] = 6.202
+	getLifeexpectancy[105] = 6.202
+	getLifeexpectancy[106] = 6.202
+	getLifeexpectancy[107] = 6.202
+	getLifeexpectancy[108] = 6.202
+	getLifeexpectancy[109] = 6.202
+	getLifeexpectancy[110] = 6.202
+
+	lifeExpectancy := getLifeexpectancy[age]
+	calculatedYLL := 1.00 / 0.03 * (1.00 - math.Exp(-0.03*lifeExpectancy))
+
+	return calculatedYLL
 }
 
 func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
