@@ -22,9 +22,9 @@ go tool pprof --pdf (which go-mdism) tmp/cpu.pprof  > test.pdf
 
 
 General to do
-- [ ] Split DALYs, YLD, YLL, events and costs by state - Alex to complete
-- [ ] set up PSA reporting - natural events,	etc - Alex to complete
-- [ ] sensitivity analysis tools - waiting on consult from E Marsielle
+- [ ] Split DALYs, YLD, YLL by state - Rick to complete
+- [ ] Set up PSA reporting - natural events, PSA switch etc - Alex to complete
+- [ ] sensitivity analysis tools - waiting on consult from E Marsielle, beta, gamma, normal - Alex, 
 - [x] costs - rick is working on
 - [x] discounting - began (6/22/15), waiting on response from Jim
 - [x] open cohort - done (6/20/15)
@@ -34,6 +34,7 @@ General to do
 - [x] flask display for charts - done  (6/21/15)
 - [x] stack chart - done  (6/22/15)
 - [x] intervention - done (6/23/15)
+- [x] report costs (6/24/15)
 - [ ] fix TPs and "other deaths" - later, works as is now, just not elegant
 - [ ] int to uint - later, works now as is, this is an optimization
 - [ ] Make profiling simpler. Maybe have a makefile that allows for a simple `make profile-cpu` that automatically generates and opens the results in your browser
