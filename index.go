@@ -4,9 +4,10 @@
 // * add death-age reporting - rick to work on
 // * death sync - done
 // * flask display for charts - done
-// * sensitivity analysis tools
 // * stack chart - done
-// * intervention
+// * sensitivity analysis tools --------
+// * intervention --------
+// * Split DALYs, YLD, YLL, events and costs by state ---------
 // * int to uint
 // * fix TPs and "other deaths"
 // "natural events" ie
