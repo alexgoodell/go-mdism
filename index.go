@@ -214,6 +214,26 @@ func main() {
 
 	setUpGlobalMasterRecordsByIPCM(Inputs)
 
+	interventionIsOn := false
+
+	interventionAsInteraction := Interaction{}
+	// changes % increase risk from 0.7 to 0.5
+	interventionAsInteraction.Adjustment = 0.71
+	interventionAsInteraction.From_state_id = 42
+	interventionAsInteraction.To_state_id = 43
+
+	var newTps []TransitionProbability
+	// TODO fix this hack
+	if interventionIsOn {
+		unitFructoseState := get_state_by_id(&Inputs, 42)
+		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
+		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction)
+	}
+
+	for _, newTp := range newTps {
+		Inputs.TransitionProbabilities[newTp.Id] = newTp
+	}
+
 	// table tests here
 
 	concurrencyBy := "person-within-cycle"
@@ -835,6 +855,10 @@ func createInitialPeople(Inputs Input, number int) Input {
 
 			// this inputs will go into the threads of the model
 			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
+
+			// this inputs is the master inputs and is used to display data
+			// at the end of the cycle
+			GlobalMasterRecords = append(Inputs.MasterRecords, mr)
 
 			// fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
 
