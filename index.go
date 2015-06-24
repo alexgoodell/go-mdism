@@ -129,6 +129,7 @@ var GlobalStatePopulations = []StatePopulation{}
 
 var GlobalYLDs float64
 var GlobalYLLs float64
+var GlobalCosts = make([]float64, 150, 150)
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -322,6 +323,15 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//outputs
 	fmt.Println("Global YLDs: ", GlobalYLDs)
 	fmt.Println("Global YLLs: ", GlobalYLLs)
+	fmt.Println("Global costs Steatosis: ", GlobalCosts[3])
+	fmt.Println("Global costs NASH: ", GlobalCosts[4])
+	fmt.Println("Global costs Cirrhosis: ", GlobalCosts[5])
+	fmt.Println("Global costs HCC: ", GlobalCosts[6])
+	fmt.Println("Global costs CHD: ", GlobalCosts[13])
+	fmt.Println("Global costs T2D: ", GlobalCosts[19])
+	fmt.Println("Global costs Overweight: ", GlobalCosts[25])
+	fmt.Println("Global costs Obesity: ", GlobalCosts[26])
+
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -396,6 +406,62 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	new_state := pickState(localInputsPointer, transitionProbabilities)
 
 	// health metrics
+
+	//Cost calculations
+	/*Costs = "Diabetes", 0
+	Costs[2] = "CHD", 0
+	Costs[3] = "Steatosis", 0
+	Costs[4] = "NASH", 0
+	Costs[5] = "Cirrhosis", 0
+	Costs[6] = "HCC", 0
+	Costs[7] = "Overweight",0
+	Costs[8] = "Obese", 0
+	*/
+
+	discountValue := 1.00 - math.Pow(1.00-0.03, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
+
+	stateCosts := make([]float64, 147, 147)
+	stateCosts[3] = 150.00
+	stateCosts[4] = 262.00
+	stateCosts[5] = 5330.00
+	stateCosts[6] = 37951.00
+	stateCosts[13] = 8000.00
+	stateCosts[19] = 7888.00
+	stateCosts[25] = 350.00
+	stateCosts[26] = 852.00
+
+	stateNr := 0
+	costState := 0.00
+	costsDisease := 0.00
+	statesofPerson := make([]int, 10, 10)
+
+	statesofPerson[0] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[0]).Id
+	statesofPerson[1] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[1]).Id
+	statesofPerson[2] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[2]).Id
+	statesofPerson[3] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[3]).Id
+	// What I want is to put the current states of this person in an array of integers,
+	// but the get_states function already returns an array of type states. How do I extract the Id's from that?
+
+	for i := 0; i < 4; i++ {
+		//I cannot use model, since that is a type? Maybe I can do it for a range of states?
+		//OR: for person.get_state_by_model(localInputsPointer, thisModel) = 3 || 4 || 5|| 6 || 13 ||19 || 25 || 26; {
+		// I need to find all the states that this person occupies -> so for each model a state. But only for models 0 to 3.
+
+		//stateNr = person.get_state_by_model(localInputsPointer, model)
+		stateNr = statesofPerson[i]
+		costState = stateCosts[stateNr]
+
+		costsDisease = discountValue * costState
+
+		GlobalCosts[stateNr] += costsDisease //OR like: GlobalCosts.Costs_Value += costsDisease   --> I am not sure to get it correctly in the array
+	}
+
+	/*Try costs:
+	Prevalence * discountvalue * costs per state -> but we calculate per person, so no prevalence, just disease states
+	add to GlobalCosts, specific for the state.
+	To calculate the GlobalCosts for each disease, I need to get the current discount rate (dependent on cycle number)
+	And multiply this number by the disease specific costs.
+	*/
 
 	// years of life lost from disability
 	if cycle.Id > 1 {

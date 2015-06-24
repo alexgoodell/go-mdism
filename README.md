@@ -37,3 +37,4 @@ General to do
 - [ ] fix TPs and "other deaths" - later, works as is now, just not elegant
 - [ ] int to uint - later, works now as is, this is an optimization
 - [ ] Make profiling simpler. Maybe have a makefile that allows for a simple `make profile-cpu` that automatically generates and opens the results in your browser
+- [ ] Calculate prevalence per cycle, calculate costs and YLD per cycle as well. This could save time because costs are only added once per cycle, in stead of 68000 times
