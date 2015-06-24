@@ -1,22 +1,4 @@
-// General to do
-// * open cohort - done (6/20/15)
-// * add CHD into risk factor issue
-// * add death-age reporting - rick to work on
-// * death sync - done
-// * flask display for charts - done
-// * stack chart - done
-// * sensitivity analysis tools --------
-// * intervention --------
-// * Split DALYs, YLD, YLL, events and costs by state ---------
-// * int to uint
-// * fix TPs and "other deaths"
-// "natural events" ie
-// 	number who get infected with nash, hiv
-// 	translate into DALYs
-// 	end point prevalence
-//  costs - discounted compared to starting simulation
-// 	DALYs - discounted
-// syncronizing events
+// see readme for todos
 
 package main
 
