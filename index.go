@@ -129,7 +129,7 @@ var GlobalStatePopulations = []StatePopulation{}
 
 var GlobalYLDs float64
 var GlobalYLLs float64
-var GlobalCosts = make([]float64, 150, 150)
+var GlobalCostsByState = make([]float64, 150, 150)
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -323,14 +323,14 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//outputs
 	fmt.Println("Global YLDs: ", GlobalYLDs)
 	fmt.Println("Global YLLs: ", GlobalYLLs)
-	fmt.Println("Global costs Steatosis: ", GlobalCosts[3])
-	fmt.Println("Global costs NASH: ", GlobalCosts[4])
-	fmt.Println("Global costs Cirrhosis: ", GlobalCosts[5])
-	fmt.Println("Global costs HCC: ", GlobalCosts[6])
-	fmt.Println("Global costs CHD: ", GlobalCosts[13])
-	fmt.Println("Global costs T2D: ", GlobalCosts[19])
-	fmt.Println("Global costs Overweight: ", GlobalCosts[25])
-	fmt.Println("Global costs Obesity: ", GlobalCosts[26])
+	fmt.Println("Global costs Steatosis: ", GlobalCostsByState[3])
+	fmt.Println("Global costs NASH: ", GlobalCostsByState[4])
+	fmt.Println("Global costs Cirrhosis: ", GlobalCostsByState[5])
+	fmt.Println("Global costs HCC: ", GlobalCostsByState[6])
+	fmt.Println("Global costs CHD: ", GlobalCostsByState[13])
+	fmt.Println("Global costs T2D: ", GlobalCostsByState[19])
+	fmt.Println("Global costs Overweight: ", GlobalCostsByState[25])
+	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
 
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
@@ -408,16 +408,6 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// health metrics
 
 	//Cost calculations
-	/*Costs = "Diabetes", 0
-	Costs[2] = "CHD", 0
-	Costs[3] = "Steatosis", 0
-	Costs[4] = "NASH", 0
-	Costs[5] = "Cirrhosis", 0
-	Costs[6] = "HCC", 0
-	Costs[7] = "Overweight",0
-	Costs[8] = "Obese", 0
-	*/
-
 	discountValue := 1.00 - math.Pow(1.00-0.03, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
 	stateCosts := make([]float64, 147, 147)
@@ -430,30 +420,29 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	stateCosts[25] = 350.00
 	stateCosts[26] = 852.00
 
-	stateNr := 0
+	GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
+
+	/*stateNr := 0
 	costState := 0.00
 	costsDisease := 0.00
-	statesofPerson := make([]int, 10, 10)
+	statesofPersonByModelId := make([]int, 4, 4)
 
-	statesofPerson[0] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[0]).Id
-	statesofPerson[1] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[1]).Id
-	statesofPerson[2] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[2]).Id
-	statesofPerson[3] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[3]).Id
-	// What I want is to put the current states of this person in an array of integers,
-	// but the get_states function already returns an array of type states. How do I extract the Id's from that?
+	statesofPersonByModelId[0] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[0]).Id
+	statesofPersonByModelId[1] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[1]).Id
+	statesofPersonByModelId[2] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[2]).Id
+	statesofPersonByModelId[3] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[3]).Id
 
 	for i := 0; i < 4; i++ {
-		//I cannot use model, since that is a type? Maybe I can do it for a range of states?
-		//OR: for person.get_state_by_model(localInputsPointer, thisModel) = 3 || 4 || 5|| 6 || 13 ||19 || 25 || 26; {
+
 		// I need to find all the states that this person occupies -> so for each model a state. But only for models 0 to 3.
 
 		//stateNr = person.get_state_by_model(localInputsPointer, model)
-		stateNr = statesofPerson[i]
+		stateNr = statesofPersonByModelId[i]
 		costState = stateCosts[stateNr]
 
 		costsDisease = discountValue * costState
 
-		GlobalCosts[stateNr] += costsDisease //OR like: GlobalCosts.Costs_Value += costsDisease   --> I am not sure to get it correctly in the array
+		GlobalCostsByState[stateNr] += costsDisease
 	}
 
 	/*Try costs:
