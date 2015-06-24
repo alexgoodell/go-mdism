@@ -367,8 +367,8 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// probabilities rely on information about the person's sex, race, and
 	// age. So a different set of transition probabilties must be used
 
-	// TODO add in CHD currentStateInThisModel.Id == 11 ||
-	if currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 || currentStateInThisModel.Id == 38 {
+	// TODO add in CHD
+	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 || currentStateInThisModel.Id == 38 {
 		transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
 	}
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -399,7 +399,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	if cycle.Id > 1 {
 		discount := 1.00 - math.Pow((1-0.03), float64(cycle.Id)+1.00)
 		discountedYLD := new_state.Disability_weight / discount * (1 - math.Exp(-discount))
-		fmt.Println(discountedYLD)
+		// fmt.Println(discountedYLD)
 		if math.IsNaN(discountedYLD) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discount, discountedYLD, new_state.Disability_weight)
@@ -469,6 +469,9 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 }
 
 func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
+
+	//TODO sloppy need to make imported table
+
 	agesModel := localInputsPointer.Models[10]
 	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
 	//TODO fix this age hack - not sustainable, what happens is the state IDS change?
@@ -830,6 +833,7 @@ func createInitialPeople(Inputs Input, number int) Input {
 
 			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
 
+			// this inputs will go into the threads of the model
 			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
 
 			// fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
