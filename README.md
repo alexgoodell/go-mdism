@@ -25,7 +25,7 @@ General to do
 - [ ] Split DALYs, YLD, YLL, events and costs by state - Alex to complete
 - [ ] set up PSA reporting - natural events,	etc - Alex to complete
 - [ ] sensitivity analysis tools - waiting on consult from E Marsielle
-- [ ] costs - rick is working on
+- [x] costs - rick is working on
 - [x] discounting - began (6/22/15), waiting on response from Jim
 - [x] open cohort - done (6/20/15)
 - [x] add CHD into risk factor issue - done  (6/23/15)
