@@ -147,7 +147,7 @@ func main() {
 
 	Timer = nitro.Initalize()
 
-	flag.IntVar(&numberOfPeople, "people", 1000, "number of people to run")
+	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
@@ -186,7 +186,7 @@ func main() {
 	// TODO
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
-	numberOfPeopleEntering := numberOfPeople * 10
+	numberOfPeopleEntering := numberOfPeople / 2
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
@@ -202,7 +202,7 @@ func main() {
 
 	interventionAsInteraction := Interaction{}
 	// changes % increase risk from 0.7 to 0.5
-	interventionAsInteraction.Adjustment = 0.71
+	interventionAsInteraction.Adjustment = 0.80
 	interventionAsInteraction.From_state_id = 42
 	interventionAsInteraction.To_state_id = 43
 
