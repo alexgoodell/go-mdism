@@ -127,9 +127,10 @@ var GlobalTPsByRAS []TPByRAS
 var GlobalMasterRecords = []MasterRecord{}
 var GlobalStatePopulations = []StatePopulation{}
 
-var GlobalYLDs float64
-var GlobalYLLs float64
+var GlobalYLDsByState = make([]float64, 150, 150)
+var GlobalYLLsByState = make([]float64, 150, 150)
 var GlobalCostsByState = make([]float64, 150, 150)
+var GlobalDALYs = 0.00
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -303,6 +304,10 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 		// }
 	} // end case
 
+	GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
+	//after total YLD and YLL is calculated, add everything into total DALYs
+	//(cannot specify this per disease, since YLL for all states in NAFLD is split into natural death and liver death)
+
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	for _, masterRecord := range GlobalMasterRecords {
@@ -321,8 +326,36 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	}
 
 	//outputs
-	fmt.Println("Global YLDs: ", GlobalYLDs)
-	fmt.Println("Global YLLs: ", GlobalYLLs)
+	for i := 0; i < 150; i++ {
+		if GlobalYLDsByState[i] != 0 {
+			fmt.Println("Global YLDs: ", GlobalYLDsByState[i])
+		}
+	}
+	for i := 0; i < 150; i++ {
+		if GlobalYLLsByState[i] != 0 {
+			fmt.Println("Global YLLs: ", GlobalYLLsByState[i])
+		}
+	}
+	for i := 0; i < 150; i++ {
+		if GlobalCostsByState[i] != 0 {
+			fmt.Println("Global Costs: ", GlobalCostsByState[i])
+		}
+	}
+	fmt.Println("GlobalDALYs: ", GlobalDALYs)
+
+	/*fmt.Println("Global YLDs Steatosis: ", GlobalYLDsByState[3])
+	fmt.Println("Global YLDs NASH: ", GlobalYLDsByState[4])
+	fmt.Println("Global YLDs Cirrhosis: ", GlobalYLDsByState[5])
+	fmt.Println("Global YLDs HCC: ", GlobalYLDsByState[6])
+	fmt.Println("Global YLDs CHD: ", GlobalYLDsByState[13])
+	fmt.Println("Global YLDs T2D: ", GlobalYLDsByState[19])
+	fmt.Println("Global YLDs Overweight: ", GlobalYLDsByState[25])
+	fmt.Println("Global YLDs Obesity: ", GlobalYLDsByState[26])
+	fmt.Println("Global YLLs Liver Death: ", GlobalYLLsByState[7])
+	fmt.Println("Global YLLs Natural Death: ", GlobalYLLsByState[8])
+	fmt.Println("Global YLLs CHD: ", GlobalYLLsByState[14])
+	fmt.Println("Global YLLs T2D: ", GlobalYLLsByState[20])
+	fmt.Println("GlobalDALYs: ", GlobalDALYs)
 	fmt.Println("Global costs Steatosis: ", GlobalCostsByState[3])
 	fmt.Println("Global costs NASH: ", GlobalCostsByState[4])
 	fmt.Println("Global costs Cirrhosis: ", GlobalCostsByState[5])
@@ -331,6 +364,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Global costs T2D: ", GlobalCostsByState[19])
 	fmt.Println("Global costs Overweight: ", GlobalCostsByState[25])
 	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
+	*/
 
 	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
@@ -408,7 +442,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// health metrics
 
 	//Cost calculations
-	discountValue := 1.00 - math.Pow(1.00-0.03, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
+	discountValue := math.Pow(0.97, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
 	stateCosts := make([]float64, 147, 147)
 	stateCosts[3] = 150.00
@@ -420,55 +454,23 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	stateCosts[25] = 350.00
 	stateCosts[26] = 852.00
 
-	GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
-
-	/*stateNr := 0
-	costState := 0.00
-	costsDisease := 0.00
-	statesofPersonByModelId := make([]int, 4, 4)
-
-	statesofPersonByModelId[0] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[0]).Id
-	statesofPersonByModelId[1] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[1]).Id
-	statesofPersonByModelId[2] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[2]).Id
-	statesofPersonByModelId[3] = person.get_state_by_model(localInputsPointer, localInputsPointer.Models[3]).Id
-
-	for i := 0; i < 4; i++ {
-
-		// I need to find all the states that this person occupies -> so for each model a state. But only for models 0 to 3.
-
-		//stateNr = person.get_state_by_model(localInputsPointer, model)
-		stateNr = statesofPersonByModelId[i]
-		costState = stateCosts[stateNr]
-
-		costsDisease = discountValue * costState
-
-		GlobalCostsByState[stateNr] += costsDisease
+	if cycle.Id > 1 {
+		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
 	}
-
-	/*Try costs:
-	Prevalence * discountvalue * costs per state -> but we calculate per person, so no prevalence, just disease states
-	add to GlobalCosts, specific for the state.
-	To calculate the GlobalCosts for each disease, I need to get the current discount rate (dependent on cycle number)
-	And multiply this number by the disease specific costs.
-	*/
 
 	// years of life lost from disability
+	stateSpecificYLDs := make([]float64, 150, 150)
+
 	if cycle.Id > 1 {
-		discount := 1.00 - math.Pow((1-0.03), float64(cycle.Id)+1.00)
-		discountedYLD := new_state.Disability_weight / discount * (1 - math.Exp(-discount))
-		// fmt.Println(discountedYLD)
-		if math.IsNaN(discountedYLD) {
+		stateSpecificYLDs[new_state.Id] = new_state.Disability_weight / (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
+
+		if math.IsNaN(stateSpecificYLDs[new_state.Id]) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
-			fmt.Println(discount, discountedYLD, new_state.Disability_weight)
+			fmt.Println(discountValue, stateSpecificYLDs[new_state.Id], new_state.Disability_weight)
 			os.Exit(1)
 		}
-		GlobalYLDs += discountedYLD
-	}
 
-	// check to make sure they are not mis-assigned
-	if new_state.Is_other_death && !currentStateInThisModel.Is_other_death {
-		fmt.Println("Should not be assigned other death here")
-		os.Exit(1)
+		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs[new_state.Id]
 	}
 
 	//fmt.Println("model Id", model.Id)
@@ -476,8 +478,12 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
+	stateSpecificYLLs := make([]float64, 150, 150)
+
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
-		GlobalYLLs += getYLLFromDeath(localInputsPointer, person)
+
+		stateSpecificYLLs[new_state.Id] = 1 / (1 - discountValue) * (1 - math.Exp(-(1-discountValue)*getYLLFromDeath(localInputsPointer, person)))
+		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs[new_state.Id]
 
 		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
@@ -497,6 +503,12 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 			}
 		}
 
+	}
+
+	// check to make sure they are not mis-assigned
+	if new_state.Is_other_death && !currentStateInThisModel.Is_other_death {
+		fmt.Println("Should not be assigned other death here")
+		os.Exit(1)
 	}
 
 	if new_state.Id < 1 {
@@ -523,6 +535,21 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		fmt.Println("problem adding master record")
 		os.Exit(1)
 	}
+}
+
+func sumSlices(x []float64, y []float64) float64 {
+
+	totalx := 0.0
+	for _, valuex := range x {
+		totalx += valuex
+	}
+
+	totaly := 0.0
+	for _, valuey := range y {
+		totaly += valuey
+	}
+
+	return totalx + totaly
 }
 
 func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
@@ -628,9 +655,8 @@ func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 	getLifeexpectancy[110] = 6.202
 
 	lifeExpectancy := getLifeexpectancy[age]
-	calculatedYLL := 1.00 / 0.03 * (1.00 - math.Exp(-0.03*lifeExpectancy))
 
-	return calculatedYLL
+	return lifeExpectancy
 }
 
 func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
