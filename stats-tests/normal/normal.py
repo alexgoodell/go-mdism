@@ -11,8 +11,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-os.chdir('/Applications/XAMPP/xamppfiles/htdocs/ghd_model_go/gocode/src/github.com/alexgoodell/go-mdism/gammatests')
-df = pd.read_csv('gamma.csv', names=["dist"], skip_blank_lines=1)
+os.chdir('/Applications/XAMPP/xamppfiles/htdocs/ghd_model_go/gocode/src/github.com/alexgoodell/go-mdism/stats-tests/normal')
+df = pd.read_csv('normal.csv', names=["dist"], skip_blank_lines=1)
 
 plt.figure();
 
