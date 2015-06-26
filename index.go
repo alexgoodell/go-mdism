@@ -1004,12 +1004,32 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 	// it currently sums to, and make a new adjustment factor. We can then
 	// adjust every transition probability by that amount.
 	sum := get_sum(theseTPs)
-	newAdjFactor := float64(1) / sum
+	remain := sum - 1.0
+
+	var recursiveTp float64
 
 	for i, _ := range theseTPs {
-		tp := &theseTPs[i] // TODO don't really understand why this works
-		tp.Tp_base = tp.Tp_base * newAdjFactor
+		tp := &theseTPs[i] // need pointer to get underlying value, see above
+		//find "recursive" tp, ie chance of staying in same state
+		if tp.From_id == tp.To_id {
+			tp.Tp_base -= remain
+			recursiveTp = tp.Tp_base
+			if tp.Tp_base < 0 {
+				fmt.Println("Error: Tp under 0. Interaction: ", interaction.Id)
+				os.Exit(1)
+			}
+		}
 	}
+
+	//check to make sure that people don't stay unitialized
+	// TODO what about unit 2 ?
+	model := localInputs.Models[interaction.Effected_model_id]
+	unitState := model.get_uninitialized_state(localInputs)
+	if theseTPs[0].From_id == unitState.Id && recursiveTp != 0 {
+		fmt.Println("recursiveTp is not zero for initialization!")
+		os.Exit(1)
+	}
+
 	return theseTPs
 }
 
