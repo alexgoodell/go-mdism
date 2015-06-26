@@ -21,10 +21,15 @@ go tool pprof --pdf (which go-mdism) tmp/cpu.pprof  > test.pdf
 ## Todo
 
 
+0.4 <- varied, then sum was 1.1
+0.3 <- use correction factor (minus - 3/7 * 0.1)
+0.4 <- use correction factor (minus - 4/7 * 0.1)
+
+
 General to do
 - [ ] Split DALYs, YLD, YLL by state - Rick to complete
 - [ ] Set up PSA reporting - natural events, PSA switch etc - Alex to complete
-- [ ] sensitivity analysis tools - waiting on consult from E Marsielle, beta, gamma, normal - Alex, 
+- [] sensitivity analysis tools - built gamma, beta, and normal. To discuss when to use each
 - [x] costs - rick is working on
 - [x] discounting - began (6/22/15), waiting on response from Jim
 - [x] open cohort - done (6/20/15)
