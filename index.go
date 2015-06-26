@@ -147,7 +147,7 @@ func main() {
 
 	Timer = nitro.Initalize()
 
-	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
+	flag.IntVar(&numberOfPeople, "people", 1000, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
@@ -206,12 +206,14 @@ func main() {
 	interventionAsInteraction.From_state_id = 42
 	interventionAsInteraction.To_state_id = 43
 
+	cycle := Cycle{}
+
 	var newTps []TransitionProbability
 	// TODO fix this hack
 	if interventionIsOn {
 		unitFructoseState := get_state_by_id(&Inputs, 42)
 		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
-		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction)
+		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle)
 	}
 
 	for _, newTp := range newTps {
@@ -435,7 +437,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
-			transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction)
+			transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle)
 		} // end foreach interaction
 
 	} // end if there are interactions
@@ -964,11 +966,31 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 
 // --------------- transition probabilities
 
-func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle) []TransitionProbability {
+
 	// TODO if these ever change to pointerss, you'll need to deference them
 	adjustmentFactor := interaction.Adjustment
+
+	// TODO implement hook here
+	// this adjusts a few transition probabilities which have a projected change over time
+	// 8  = natural death
+	// 13 = CHD
+	// 14 = CHD death
+	hasTimeEffect := interaction.To_state_id == 13 || interaction.To_state_id == 14 || interaction.To_state_id == 8
+	if cycle.Id > 1 && hasTimeEffect {
+		// these prepresent the remaining risk after N cycles. ie remaining risk
+		// is equal to original risk * 0.985 ^ number of years from original risk
+		timeEffectByToState := make([]float64, 15, 15)
+		timeEffectByToState[8] = 0.985  //natural deaths
+		timeEffectByToState[13] = 0.985 //CHD incidence
+		timeEffectByToState[14] = 0.979 //CHD mortality
+		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
+	}
+
 	for i, _ := range theseTPs {
-		tp := &theseTPs[i] // TODO don't really understand why this works
+		// & represents the address, so now tp is a pointer - needed because you want to change the
+		// underlying value of the elements of theseTPs, not just a copy of them
+		tp := &theseTPs[i]
 		originalTpBase := tp.Tp_base
 		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
 			tp.Tp_base = tp.Tp_base * adjustmentFactor
@@ -983,12 +1005,32 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 	// it currently sums to, and make a new adjustment factor. We can then
 	// adjust every transition probability by that amount.
 	sum := get_sum(theseTPs)
-	newAdjFactor := float64(1) / sum
+	remain := sum - 1.0
+
+	var recursiveTp float64
 
 	for i, _ := range theseTPs {
-		tp := &theseTPs[i] // TODO don't really understand why this works
-		tp.Tp_base = tp.Tp_base * newAdjFactor
+		tp := &theseTPs[i] // need pointer to get underlying value, see above
+		//find "recursive" tp, ie chance of staying in same state
+		if tp.From_id == tp.To_id {
+			tp.Tp_base -= remain
+			recursiveTp = tp.Tp_base
+			if tp.Tp_base < 0 {
+				fmt.Println("Error: Tp under 0. Interaction: ", interaction.Id)
+				os.Exit(1)
+			}
+		}
 	}
+
+	//check to make sure that people don't stay unitialized
+	// TODO what about unit 2 ?
+	model := localInputs.Models[interaction.Effected_model_id]
+	unitState := model.get_uninitialized_state(localInputs)
+	if theseTPs[0].From_id == unitState.Id && recursiveTp != 0 {
+		fmt.Println("recursiveTp is not zero for initialization!")
+		os.Exit(1)
+	}
+
 	return theseTPs
 }
 
