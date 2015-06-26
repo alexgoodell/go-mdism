@@ -201,7 +201,7 @@ func main() {
 	interventionIsOn := false
 
 	interventionAsInteraction := Interaction{}
-	// changes % increase risk from 0.7 to 0.5
+	// changes % increase risk from 0.7 to 0.56 (20%)
 	interventionAsInteraction.Adjustment = 0.80
 	interventionAsInteraction.From_state_id = 42
 	interventionAsInteraction.To_state_id = 43
@@ -272,7 +272,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 			// need to create new people before calculating the year
 			// of they're unit states will be written over
-			createNewPeople(&localInputs, cycle, 10)
+			createNewPeople(&localInputs, cycle, 10) //Is 10 the number of created people? That is wrong then?
 
 			for _, person := range localInputs.People { // 	foreach person
 				go runOneCycleForOnePerson(&localInputs, cycle, person, masterRecordsToAdd)
@@ -289,6 +289,15 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 				_ = person // to avoid unused warning
 				_ = cycle  // to avoid unused warning
 			}
+
+			//After each cycle we want the interaction values of CHD incidence and mortality, and natural mortality to change.
+			//That should be put here?
+			/*
+				for interactionToAdjust := (Put here all interactions that need to be adjusted) {
+					Interaction[interactionToAdjust].Adjustment = 0.985 * Interaction[interactionToAdjust].Adjustment
+					//This has to be done for CHD incidence, CHD mortality and natural mortality
+				}
+			*/
 
 			localInputs.CurrentCycle++
 			//fmt.Println("total num people, a or d, in sim", len(localInputs.People))
@@ -328,19 +337,16 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//outputs
 	for i := 0; i < 150; i++ {
 		if GlobalYLDsByState[i] != 0 {
-			fmt.Println("Global YLDs: ", GlobalYLDsByState[i])
+			fmt.Println("Global YLDs ", Inputs.States[i].Name, GlobalYLDsByState[i])
 		}
-	}
-	for i := 0; i < 150; i++ {
 		if GlobalYLLsByState[i] != 0 {
-			fmt.Println("Global YLLs: ", GlobalYLLsByState[i])
+			fmt.Println("Global YLLs ", Inputs.States[i].Name, GlobalYLLsByState[i])
 		}
-	}
-	for i := 0; i < 150; i++ {
 		if GlobalCostsByState[i] != 0 {
-			fmt.Println("Global Costs: ", GlobalCostsByState[i])
+			fmt.Println("Global Costs ", Inputs.States[i].Name, GlobalCostsByState[i])
 		}
 	}
+
 	fmt.Println("GlobalDALYs: ", GlobalDALYs)
 
 	/*fmt.Println("Global YLDs Steatosis: ", GlobalYLDsByState[3])
@@ -448,29 +454,27 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	stateCosts[3] = 150.00
 	stateCosts[4] = 262.00
 	stateCosts[5] = 5330.00
-	stateCosts[6] = 37951.00
+	stateCosts[6] = 37931.00
 	stateCosts[13] = 8000.00
 	stateCosts[19] = 7888.00
-	stateCosts[25] = 350.00
-	stateCosts[26] = 852.00
+	stateCosts[25] = 336.00
+	stateCosts[26] = 897.00
 
 	if cycle.Id > 1 {
 		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
 	}
 
 	// years of life lost from disability
-	stateSpecificYLDs := make([]float64, 150, 150)
-
 	if cycle.Id > 1 {
-		stateSpecificYLDs[new_state.Id] = new_state.Disability_weight / (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
 
-		if math.IsNaN(stateSpecificYLDs[new_state.Id]) {
+		stateSpecificYLDs := new_state.Disability_weight / (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
+		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
-			fmt.Println(discountValue, stateSpecificYLDs[new_state.Id], new_state.Disability_weight)
+			fmt.Println(discountValue, stateSpecificYLDs, new_state.Disability_weight)
 			os.Exit(1)
 		}
-
-		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs[new_state.Id]
+		//Saving YLD for each personcyclemodel to GlobalYLD
+		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs
 	}
 
 	//fmt.Println("model Id", model.Id)
@@ -478,12 +482,10 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
-	stateSpecificYLLs := make([]float64, 150, 150)
-
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
-		stateSpecificYLLs[new_state.Id] = 1 / (1 - discountValue) * (1 - math.Exp(-(1-discountValue)*getYLLFromDeath(localInputsPointer, person)))
-		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs[new_state.Id]
+		stateSpecificYLLs := 1 / (1 - discountValue) * (1 - math.Exp(-(1-discountValue)*getYLLFromDeath(localInputsPointer, person)))
+		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
 
 		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
@@ -848,7 +850,6 @@ func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 }
 
 // ----------- non-methods
-
 func shuffle(models []Model) []Model {
 	//randomize order of models
 	for i := range models {
