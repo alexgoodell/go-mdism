@@ -33,6 +33,7 @@ go tool pprof --pdf (which go-mdism) tmp/cpu.pprof  > test.pdf
 - [x] stack chart - done  (6/22/15)
 - [x] intervention - done (6/23/15)
 - [x] report costs (6/24/15)
+- [ ] Extra people entering starts two years to soon. First we have 2 unin cycles, then cycle 0, then 25 normal cycles. Now they start entering at unin2, and therefore year 0 already has the 416 extra people, while they should only start filling at year 2.
 - [ ] fix TPs and "other deaths" - later, works as is now, just not elegant
 - [ ] int to uint - later, works now as is, this is an optimization
 - [ ] Make profiling simpler. Maybe have a makefile that allows for a simple `make profile-cpu` that automatically generates and opens the results in your browser

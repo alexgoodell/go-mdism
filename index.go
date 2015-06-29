@@ -147,7 +147,7 @@ func main() {
 
 	Timer = nitro.Initalize()
 
-	flag.IntVar(&numberOfPeople, "people", 1000, "number of people to run")
+	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
@@ -186,7 +186,7 @@ func main() {
 	// TODO
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
-	numberOfPeopleEntering := numberOfPeople / 2
+	numberOfPeopleEntering := 20000
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
@@ -203,15 +203,15 @@ func main() {
 	interventionAsInteraction := Interaction{}
 	// changes % increase risk from 0.7 to 0.56 (20%)
 	interventionAsInteraction.Adjustment = 0.80
-	interventionAsInteraction.From_state_id = 42
-	interventionAsInteraction.To_state_id = 43
+	interventionAsInteraction.From_state_id = 37 //CHANGEDTHISFROM42
+	interventionAsInteraction.To_state_id = 38   //CHANGEDTHISFROM43
 
 	cycle := Cycle{}
 
 	var newTps []TransitionProbability
 	// TODO fix this hack
 	if interventionIsOn {
-		unitFructoseState := get_state_by_id(&Inputs, 42)
+		unitFructoseState := get_state_by_id(&Inputs, 37) //CHANGEDTHISFROM42
 		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
 		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle)
 	}
@@ -274,7 +274,9 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 			// need to create new people before calculating the year
 			// of they're unit states will be written over
-			createNewPeople(&localInputs, cycle, 10) //Is 10 the number of created people? That is wrong then?
+			if cycle.Id > 0 {
+				createNewPeople(&localInputs, cycle, 416) //=The number of created people per cycle
+			}
 
 			for _, person := range localInputs.People { // 	foreach person
 				go runOneCycleForOnePerson(&localInputs, cycle, person, masterRecordsToAdd)
@@ -422,7 +424,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// age. So a different set of transition probabilties must be used
 
 	// TODO add in CHD
-	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 || currentStateInThisModel.Id == 38 {
+	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 {
 		transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
 	}
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -452,7 +454,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	//Cost calculations
 	discountValue := math.Pow(0.97, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
-	stateCosts := make([]float64, 147, 147)
+	stateCosts := make([]float64, 150, 150)
 	stateCosts[3] = 150.00
 	stateCosts[4] = 262.00
 	stateCosts[5] = 5330.00
@@ -462,7 +464,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	stateCosts[25] = 336.00
 	stateCosts[26] = 897.00
 
-	if cycle.Id > 1 {
+	if cycle.Id > 1 { //CHECK: is 1 really the right number? Cycle ID versus cyclenumber?
 		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
 	}
 
@@ -560,10 +562,10 @@ func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 
 	//TODO sloppy need to make imported table
 
-	agesModel := localInputsPointer.Models[10]
+	agesModel := localInputsPointer.Models[7] //CHANGEDTHISFROM10
 	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
 	//TODO fix this age hack - not sustainable, what happens is the state IDS change?
-	age := stateInAge.Id - 35
+	age := stateInAge.Id - 22 //CHANGEDTHISFROM35
 	getLifeexpectancy := make([]float64, 111, 111)
 
 	getLifeexpectancy[20] = 49.627
@@ -880,7 +882,7 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 			if model.Name == "Age" {
 				// Start them at age 20
 				// TODO they will enter the model at age 21?
-				uninitializedState = get_state_by_id(Inputs, 55)
+				uninitializedState = get_state_by_id(Inputs, 41) //CHANGEDTHISFROM 55, but I think it should have been 54 anyway?
 			}
 			//fmt.Println("unit state", uninitializedState)
 			var mr MasterRecord
@@ -1486,9 +1488,9 @@ func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel S
 	sexModel := localInputsPointer.Models[5]
 	sexStateId := person.get_state_by_model(localInputsPointer, sexModel).Id
 
-	ageModel := localInputsPointer.Models[10]
+	ageModel := localInputsPointer.Models[7] //CHANGEDTHISFROM 10
 	ageModelId := person.get_state_by_model(localInputsPointer, ageModel).Id
-	actualAge := ageModelId - 35
+	actualAge := ageModelId - 22 //CHANGEDTHISFROM 35
 
 	for _, tpByRAS := range GlobalTPsByRAS {
 		if tpByRAS.Model_id == modelId && tpByRAS.Race_state_id == raceStateId && tpByRAS.Age == actualAge && tpByRAS.Sex_state_id == sexStateId {
