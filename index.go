@@ -241,7 +241,7 @@ func main() {
 
 func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
-	fmt.Println("Intialization complete, time elaspsed:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
 	beginTime = time.Now()
 
 	masterRecordsToAdd := make(chan []MasterRecord)
@@ -376,10 +376,10 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
 	*/
 
-	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
-	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
