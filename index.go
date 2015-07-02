@@ -130,7 +130,7 @@ var GlobalStatePopulations = []StatePopulation{}
 var GlobalYLDsByState = make([]float64, 150, 150)
 var GlobalYLLsByState = make([]float64, 150, 150)
 var GlobalCostsByState = make([]float64, 150, 150)
-var GlobalDALYs = 0.00
+var GlobalDALYsByState = make([]float64, 150, 150)
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -294,15 +294,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 				_ = cycle  // to avoid unused warning
 			}
 
-			//After each cycle we want the interaction values of CHD incidence and mortality, and natural mortality to change.
-			//That should be put here?
-			/*
-				for interactionToAdjust := (Put here all interactions that need to be adjusted) {
-					Interaction[interactionToAdjust].Adjustment = 0.985 * Interaction[interactionToAdjust].Adjustment
-					//This has to be done for CHD incidence, CHD mortality and natural mortality
-				}
-			*/
-
 			localInputs.CurrentCycle++
 			//fmt.Println("total num people, a or d, in sim", len(localInputs.People))
 			//createNewPeople(&Inputs, cycle, 100)
@@ -317,7 +308,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 		// }
 	} // end case
 
-	GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
+	//GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
 	//after total YLD and YLL is calculated, add everything into total DALYs
 	//(cannot specify this per disease, since YLL for all states in NAFLD is split into natural death and liver death)
 
@@ -349,9 +340,12 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 		if GlobalCostsByState[i] != 0 {
 			fmt.Println("Global Costs ", Inputs.States[i].Name, GlobalCostsByState[i])
 		}
+		if GlobalDALYsByState[i] != 0 {
+			fmt.Println("Global DALYs ", Inputs.States[i].Name, GlobalDALYsByState[i])
+		}
 	}
 
-	fmt.Println("GlobalDALYs: ", GlobalDALYs)
+	//fmt.Println("GlobalDALYs: ", GlobalDALYs)
 
 	/*fmt.Println("Global YLDs Steatosis: ", GlobalYLDsByState[3])
 	fmt.Println("Global YLDs NASH: ", GlobalYLDsByState[4])
@@ -378,7 +372,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
-
 	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
@@ -434,12 +427,17 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// in - it is a method of their current state in this model,
 	// and accepts an array of all currents states they occupy
 	interactions := currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
+	/*
+		interactions := make([]Interaction, 150, 150)
+		interactions = currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
+	*/
 
 	if len(interactions) > 0 { // if there are interactions
 
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
 			transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle)
+
 		} // end foreach interaction
 
 	} // end if there are interactions
@@ -466,12 +464,8 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	if cycle.Id > 1 { //CHECK: is 1 really the right number? Cycle ID versus cyclenumber?
 		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
-	}
 
-	// years of life lost from disability
-	if cycle.Id > 1 {
-
-		stateSpecificYLDs := new_state.Disability_weight / (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
+		stateSpecificYLDs := new_state.Disability_weight // (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
 		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discountValue, stateSpecificYLDs, new_state.Disability_weight)
@@ -479,6 +473,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		}
 		//Saving YLD for each personcyclemodel to GlobalYLD
 		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs
+		GlobalDALYsByState[new_state.Id] += stateSpecificYLDs
 	}
 
 	//fmt.Println("model Id", model.Id)
@@ -486,10 +481,18 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
+	if justDiedOfDiseaseSpecific /*|| justDiedOfNaturalCauses*/ {
+
+		stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
+		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
+		GlobalDALYsByState[new_state.Id] += stateSpecificYLLs
+	}
+
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
-		stateSpecificYLLs := 1 / (1 - discountValue) * (1 - math.Exp(-(1-discountValue)*getYLLFromDeath(localInputsPointer, person)))
+		stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
 		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
+		GlobalDALYsByState[new_state.Id] += stateSpecificYLLs
 
 		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
@@ -543,7 +546,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	}
 }
 
-func sumSlices(x []float64, y []float64) float64 {
+/*func sumSlices(x []float64, y []float64) float64 {
 
 	totalx := 0.0
 	for _, valuex := range x {
@@ -557,6 +560,7 @@ func sumSlices(x []float64, y []float64) float64 {
 
 	return totalx + totaly
 }
+*/
 
 func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 
@@ -564,105 +568,212 @@ func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 
 	agesModel := localInputsPointer.Models[7] //CHANGEDTHISFROM10
 	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
-	//TODO fix this age hack - not sustainable, what happens is the state IDS change?
+	//TODO fix this age hack - not sustainable, what happens is the state IDs change?
 	age := stateInAge.Id - 22 //CHANGEDTHISFROM35
-	getLifeexpectancy := make([]float64, 111, 111)
 
-	getLifeexpectancy[20] = 49.627
-	getLifeexpectancy[21] = 49.627
-	getLifeexpectancy[22] = 49.627
-	getLifeexpectancy[23] = 49.627
-	getLifeexpectancy[24] = 49.627
-	getLifeexpectancy[25] = 45.331
-	getLifeexpectancy[26] = 45.331
-	getLifeexpectancy[27] = 45.331
-	getLifeexpectancy[28] = 45.331
-	getLifeexpectancy[29] = 45.331
-	getLifeexpectancy[30] = 41.078
-	getLifeexpectancy[31] = 41.078
-	getLifeexpectancy[32] = 41.078
-	getLifeexpectancy[33] = 41.078
-	getLifeexpectancy[34] = 41.078
-	getLifeexpectancy[35] = 36.848
-	getLifeexpectancy[36] = 36.848
-	getLifeexpectancy[37] = 36.848
-	getLifeexpectancy[38] = 36.848
-	getLifeexpectancy[39] = 36.848
-	getLifeexpectancy[40] = 32.682
-	getLifeexpectancy[41] = 32.682
-	getLifeexpectancy[42] = 32.682
-	getLifeexpectancy[43] = 32.682
-	getLifeexpectancy[44] = 32.682
-	getLifeexpectancy[45] = 28.638
-	getLifeexpectancy[46] = 28.638
-	getLifeexpectancy[47] = 28.638
-	getLifeexpectancy[48] = 28.638
-	getLifeexpectancy[49] = 28.638
-	getLifeexpectancy[50] = 24.749
-	getLifeexpectancy[51] = 24.749
-	getLifeexpectancy[52] = 24.749
-	getLifeexpectancy[53] = 24.749
-	getLifeexpectancy[54] = 24.749
-	getLifeexpectancy[55] = 21.034
-	getLifeexpectancy[56] = 21.034
-	getLifeexpectancy[57] = 21.034
-	getLifeexpectancy[58] = 21.034
-	getLifeexpectancy[59] = 21.034
-	getLifeexpectancy[60] = 17.498
-	getLifeexpectancy[61] = 17.498
-	getLifeexpectancy[62] = 17.498
-	getLifeexpectancy[63] = 17.498
-	getLifeexpectancy[64] = 17.498
-	getLifeexpectancy[65] = 14.217
-	getLifeexpectancy[66] = 14.217
-	getLifeexpectancy[67] = 14.217
-	getLifeexpectancy[68] = 14.217
-	getLifeexpectancy[69] = 14.217
-	getLifeexpectancy[70] = 11.217
-	getLifeexpectancy[71] = 11.217
-	getLifeexpectancy[72] = 11.217
-	getLifeexpectancy[73] = 11.217
-	getLifeexpectancy[74] = 11.217
-	getLifeexpectancy[75] = 8.537
-	getLifeexpectancy[76] = 8.537
-	getLifeexpectancy[77] = 8.537
-	getLifeexpectancy[78] = 8.537
-	getLifeexpectancy[79] = 8.537
-	getLifeexpectancy[80] = 6.202
-	getLifeexpectancy[81] = 6.202
-	getLifeexpectancy[82] = 6.202
-	getLifeexpectancy[83] = 6.202
-	getLifeexpectancy[84] = 6.202
-	getLifeexpectancy[85] = 6.202
-	getLifeexpectancy[86] = 6.202
-	getLifeexpectancy[87] = 6.202
-	getLifeexpectancy[88] = 6.202
-	getLifeexpectancy[89] = 6.202
-	getLifeexpectancy[90] = 6.202
-	getLifeexpectancy[91] = 6.202
-	getLifeexpectancy[92] = 6.202
-	getLifeexpectancy[93] = 6.202
-	getLifeexpectancy[94] = 6.202
-	getLifeexpectancy[95] = 6.202
-	getLifeexpectancy[96] = 6.202
-	getLifeexpectancy[97] = 6.202
-	getLifeexpectancy[98] = 6.202
-	getLifeexpectancy[99] = 6.202
-	getLifeexpectancy[100] = 6.202
-	getLifeexpectancy[101] = 6.202
-	getLifeexpectancy[102] = 6.202
-	getLifeexpectancy[103] = 6.202
-	getLifeexpectancy[104] = 6.202
-	getLifeexpectancy[105] = 6.202
-	getLifeexpectancy[106] = 6.202
-	getLifeexpectancy[107] = 6.202
-	getLifeexpectancy[108] = 6.202
-	getLifeexpectancy[109] = 6.202
-	getLifeexpectancy[110] = 6.202
+	getLifeexpectancyMALE := make([]float64, 111, 111)
+	getLifeexpectancyFEMALE := make([]float64, 111, 111)
 
-	lifeExpectancy := getLifeexpectancy[age]
+	getLifeexpectancyFEMALE[20] = 51.138
+	getLifeexpectancyFEMALE[21] = 51.138
+	getLifeexpectancyFEMALE[22] = 51.138
+	getLifeexpectancyFEMALE[23] = 51.138
+	getLifeexpectancyFEMALE[24] = 51.138
+	getLifeexpectancyFEMALE[25] = 46.766
+	getLifeexpectancyFEMALE[26] = 46.766
+	getLifeexpectancyFEMALE[27] = 46.766
+	getLifeexpectancyFEMALE[28] = 46.766
+	getLifeexpectancyFEMALE[29] = 46.766
+	getLifeexpectancyFEMALE[30] = 42.466
+	getLifeexpectancyFEMALE[31] = 42.466
+	getLifeexpectancyFEMALE[32] = 42.466
+	getLifeexpectancyFEMALE[33] = 42.466
+	getLifeexpectancyFEMALE[34] = 42.466
+	getLifeexpectancyFEMALE[35] = 38.214
+	getLifeexpectancyFEMALE[36] = 38.214
+	getLifeexpectancyFEMALE[37] = 38.214
+	getLifeexpectancyFEMALE[38] = 38.214
+	getLifeexpectancyFEMALE[39] = 38.214
+	getLifeexpectancyFEMALE[40] = 34.033
+	getLifeexpectancyFEMALE[41] = 34.033
+	getLifeexpectancyFEMALE[42] = 34.033
+	getLifeexpectancyFEMALE[43] = 34.033
+	getLifeexpectancyFEMALE[44] = 34.033
+	getLifeexpectancyFEMALE[45] = 29.96
+	getLifeexpectancyFEMALE[46] = 29.96
+	getLifeexpectancyFEMALE[47] = 29.96
+	getLifeexpectancyFEMALE[48] = 29.96
+	getLifeexpectancyFEMALE[49] = 29.96
+	getLifeexpectancyFEMALE[50] = 26.017
+	getLifeexpectancyFEMALE[51] = 26.017
+	getLifeexpectancyFEMALE[52] = 26.017
+	getLifeexpectancyFEMALE[53] = 26.017
+	getLifeexpectancyFEMALE[54] = 26.017
+	getLifeexpectancyFEMALE[55] = 22.214
+	getLifeexpectancyFEMALE[56] = 22.214
+	getLifeexpectancyFEMALE[57] = 22.214
+	getLifeexpectancyFEMALE[58] = 22.214
+	getLifeexpectancyFEMALE[59] = 22.214
+	getLifeexpectancyFEMALE[60] = 18.574
+	getLifeexpectancyFEMALE[61] = 18.574
+	getLifeexpectancyFEMALE[62] = 18.574
+	getLifeexpectancyFEMALE[63] = 18.574
+	getLifeexpectancyFEMALE[64] = 18.574
+	getLifeexpectancyFEMALE[65] = 15.167
+	getLifeexpectancyFEMALE[66] = 15.167
+	getLifeexpectancyFEMALE[67] = 15.167
+	getLifeexpectancyFEMALE[68] = 15.167
+	getLifeexpectancyFEMALE[69] = 15.167
+	getLifeexpectancyFEMALE[70] = 12.02
+	getLifeexpectancyFEMALE[71] = 12.02
+	getLifeexpectancyFEMALE[72] = 12.02
+	getLifeexpectancyFEMALE[73] = 12.02
+	getLifeexpectancyFEMALE[74] = 12.02
+	getLifeexpectancyFEMALE[75] = 9.169
+	getLifeexpectancyFEMALE[76] = 9.169
+	getLifeexpectancyFEMALE[77] = 9.169
+	getLifeexpectancyFEMALE[78] = 9.169
+	getLifeexpectancyFEMALE[79] = 9.169
+	getLifeexpectancyFEMALE[80] = 6.646
+	getLifeexpectancyFEMALE[81] = 6.646
+	getLifeexpectancyFEMALE[82] = 6.646
+	getLifeexpectancyFEMALE[83] = 6.646
+	getLifeexpectancyFEMALE[84] = 6.646
+	getLifeexpectancyFEMALE[85] = 4.512
+	getLifeexpectancyFEMALE[86] = 4.512
+	getLifeexpectancyFEMALE[87] = 4.512
+	getLifeexpectancyFEMALE[88] = 4.512
+	getLifeexpectancyFEMALE[89] = 4.512
+	getLifeexpectancyFEMALE[90] = 2.915
+	getLifeexpectancyFEMALE[91] = 2.915
+	getLifeexpectancyFEMALE[92] = 2.915
+	getLifeexpectancyFEMALE[93] = 2.915
+	getLifeexpectancyFEMALE[94] = 2.915
+	getLifeexpectancyFEMALE[95] = 1.868
+	getLifeexpectancyFEMALE[96] = 1.868
+	getLifeexpectancyFEMALE[97] = 1.868
+	getLifeexpectancyFEMALE[98] = 1.868
+	getLifeexpectancyFEMALE[99] = 1.868
+	getLifeexpectancyFEMALE[100] = 1.231
+	getLifeexpectancyFEMALE[101] = 1.231
+	getLifeexpectancyFEMALE[102] = 1.231
+	getLifeexpectancyFEMALE[103] = 1.231
+	getLifeexpectancyFEMALE[104] = 1.231
+	getLifeexpectancyFEMALE[105] = 1
+	getLifeexpectancyFEMALE[106] = 1
+	getLifeexpectancyFEMALE[107] = 1
+	getLifeexpectancyFEMALE[108] = 1
+	getLifeexpectancyFEMALE[109] = 1
+	getLifeexpectancyFEMALE[110] = 1
+
+	getLifeexpectancyMALE[20] = 48.035
+	getLifeexpectancyMALE[21] = 48.035
+	getLifeexpectancyMALE[22] = 48.035
+	getLifeexpectancyMALE[23] = 48.035
+	getLifeexpectancyMALE[24] = 48.035
+	getLifeexpectancyMALE[25] = 43.802
+	getLifeexpectancyMALE[26] = 43.802
+	getLifeexpectancyMALE[27] = 43.802
+	getLifeexpectancyMALE[28] = 43.802
+	getLifeexpectancyMALE[29] = 43.802
+	getLifeexpectancyMALE[30] = 39.589
+	getLifeexpectancyMALE[31] = 39.589
+	getLifeexpectancyMALE[32] = 39.589
+	getLifeexpectancyMALE[33] = 39.589
+	getLifeexpectancyMALE[34] = 39.589
+	getLifeexpectancyMALE[35] = 35.374
+	getLifeexpectancyMALE[36] = 35.374
+	getLifeexpectancyMALE[37] = 35.374
+	getLifeexpectancyMALE[38] = 35.374
+	getLifeexpectancyMALE[39] = 35.374
+	getLifeexpectancyMALE[40] = 31.217
+	getLifeexpectancyMALE[41] = 31.217
+	getLifeexpectancyMALE[42] = 31.217
+	getLifeexpectancyMALE[43] = 31.217
+	getLifeexpectancyMALE[44] = 31.217
+	getLifeexpectancyMALE[45] = 27.195
+	getLifeexpectancyMALE[46] = 27.195
+	getLifeexpectancyMALE[47] = 27.195
+	getLifeexpectancyMALE[48] = 27.195
+	getLifeexpectancyMALE[49] = 27.195
+	getLifeexpectancyMALE[50] = 23.347
+	getLifeexpectancyMALE[51] = 23.347
+	getLifeexpectancyMALE[52] = 23.347
+	getLifeexpectancyMALE[53] = 23.347
+	getLifeexpectancyMALE[54] = 23.347
+	getLifeexpectancyMALE[55] = 19.705
+	getLifeexpectancyMALE[56] = 19.705
+	getLifeexpectancyMALE[57] = 19.705
+	getLifeexpectancyMALE[58] = 19.705
+	getLifeexpectancyMALE[59] = 19.705
+	getLifeexpectancyMALE[60] = 16.256
+	getLifeexpectancyMALE[61] = 16.256
+	getLifeexpectancyMALE[62] = 16.256
+	getLifeexpectancyMALE[63] = 16.256
+	getLifeexpectancyMALE[64] = 16.256
+	getLifeexpectancyMALE[65] = 13.08
+	getLifeexpectancyMALE[66] = 13.08
+	getLifeexpectancyMALE[67] = 13.08
+	getLifeexpectancyMALE[68] = 13.08
+	getLifeexpectancyMALE[69] = 13.08
+	getLifeexpectancyMALE[70] = 10.208
+	getLifeexpectancyMALE[71] = 10.208
+	getLifeexpectancyMALE[72] = 10.208
+	getLifeexpectancyMALE[73] = 10.208
+	getLifeexpectancyMALE[74] = 10.208
+	getLifeexpectancyMALE[75] = 7.68
+	getLifeexpectancyMALE[76] = 7.68
+	getLifeexpectancyMALE[77] = 7.68
+	getLifeexpectancyMALE[78] = 7.68
+	getLifeexpectancyMALE[79] = 7.68
+	getLifeexpectancyMALE[80] = 5.524
+	getLifeexpectancyMALE[81] = 5.524
+	getLifeexpectancyMALE[82] = 5.524
+	getLifeexpectancyMALE[83] = 5.524
+	getLifeexpectancyMALE[84] = 5.524
+	getLifeexpectancyMALE[85] = 3.723
+	getLifeexpectancyMALE[86] = 3.723
+	getLifeexpectancyMALE[87] = 3.723
+	getLifeexpectancyMALE[88] = 3.723
+	getLifeexpectancyMALE[89] = 3.723
+	getLifeexpectancyMALE[90] = 2.388
+	getLifeexpectancyMALE[91] = 2.388
+	getLifeexpectancyMALE[92] = 2.388
+	getLifeexpectancyMALE[93] = 2.388
+	getLifeexpectancyMALE[94] = 2.388
+	getLifeexpectancyMALE[95] = 1.521
+	getLifeexpectancyMALE[96] = 1.521
+	getLifeexpectancyMALE[97] = 1.521
+	getLifeexpectancyMALE[98] = 1.521
+	getLifeexpectancyMALE[99] = 1.521
+	getLifeexpectancyMALE[100] = 1.000
+	getLifeexpectancyMALE[101] = 1.000
+	getLifeexpectancyMALE[102] = 1.000
+	getLifeexpectancyMALE[103] = 1.000
+	getLifeexpectancyMALE[104] = 1.000
+	getLifeexpectancyMALE[105] = 1.000
+	getLifeexpectancyMALE[106] = 1.000
+	getLifeexpectancyMALE[107] = 1.000
+	getLifeexpectancyMALE[108] = 1.000
+	getLifeexpectancyMALE[109] = 1.000
+	getLifeexpectancyMALE[110] = 1.000
+
+	sexModel := localInputsPointer.Models[5] //Fix this hack - what happens when models change
+	stateInSexModel := person.get_state_by_model(localInputsPointer, sexModel)
+	sexOfPerson := stateInSexModel.Id
+	lifeExpectancy := 0.00
+
+	if sexOfPerson == 34 {
+		lifeExpectancy = getLifeexpectancyMALE[age]
+	} else if sexOfPerson == 35 {
+		lifeExpectancy = getLifeexpectancyMALE[age]
+	} else {
+		fmt.Println("Error: no sex found. stateInSexModel is: ", sexOfPerson)
+		os.Exit(1)
+	}
 
 	return lifeExpectancy
+
 }
 
 func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
@@ -837,6 +948,7 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 	}
 	return Inputs
 }
+
 func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 
 	GlobalMasterRecordsByIPCM = make([][][][]int, numberOfIterations, numberOfIterations)
@@ -882,7 +994,7 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 			if model.Name == "Age" {
 				// Start them at age 20
 				// TODO they will enter the model at age 21?
-				uninitializedState = get_state_by_id(Inputs, 41) //CHANGEDTHISFROM 55, but I think it should have been 54 anyway?
+				uninitializedState = get_state_by_id(Inputs, 42) //CHANGEDTHISFROM 55, but I think it should have been 54 anyway?
 			}
 			//fmt.Println("unit state", uninitializedState)
 			var mr MasterRecord
@@ -1017,10 +1129,10 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		if tp.From_id == tp.To_id {
 			tp.Tp_base -= remain
 			recursiveTp = tp.Tp_base
-			if tp.Tp_base < 0 {
+			/*if tp.Tp_base < 0 {
 				fmt.Println("Error: Tp under 0. Interaction: ", interaction.Id)
 				os.Exit(1)
-			}
+			}*/
 		}
 	}
 
