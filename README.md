@@ -32,7 +32,7 @@ I chose not to dive too deep into it, because it was already known that the inte
 
 # PSA
 - [ ] Set up PSA reporting - natural events, PSA switch etc - Alex to complete
-- [ ] Define borders and distributions for PSA. How to code this in GO? What happens when a baseline transition probability changes? Do we adjust the rest accordingly or should we subtract/add from/to remaining? Discuss with Jim Tuesday 07-07.
+- [ ] Define borders and distributions for PSA. How to code this in GO? - Randomly change the input variables? + Also: what happens when a baseline transition probability changes? Do we adjust the rest accordingly or should we subtract/add from/to remaining? Discuss with Jim Tuesday 07-07.
 
 # DALY, YLD and YLL
 - [ ] Adjust YLD values - when somebody has 2 diseases simultaneously Dw = 1-PRODUCT(1-Dwx) Where Dwx is each disease specific Dw.
@@ -54,6 +54,7 @@ The same goes for YLL values, if somebody by chance dies in two models at the sa
 - [ ] Entry of new people causes them to be 21 before they actualy start being simulated. Fix this.
 - [ ] Introduce effects of Sugar->BMI->NAFLD->Diabetes->CHD? - Discuss with Jim
 - [ ] Need to build in checks to see if decline mortality rate is actually functioning, same goes for other interactions.
+- [ ] Starting prevalence of HCC should only be possible in the NAFLD population.
 
 # Optimizations for later
 - [ ] int to uint - later, works now as is, this is an optimization
