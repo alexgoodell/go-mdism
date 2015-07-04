@@ -427,10 +427,10 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// in - it is a method of their current state in this model,
 	// and accepts an array of all currents states they occupy
 	interactions := currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
-	/*
-		interactions := make([]Interaction, 150, 150)
-		interactions = currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
-	*/
+
+
+
+
 
 	if len(interactions) > 0 { // if there are interactions
 
@@ -462,7 +462,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	stateCosts[25] = 336.00
 	stateCosts[26] = 897.00
 
-	if cycle.Id > 1 { //CHECK: is 1 really the right number? Cycle ID versus cyclenumber?
+	if cycle.Id > 0 { //CHECK: is 1 really the right number? Cycle ID versus cyclenumber?
 		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
 
 		stateSpecificYLDs := new_state.Disability_weight // (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
@@ -490,9 +490,9 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
-		stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
-		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
-		GlobalDALYsByState[new_state.Id] += stateSpecificYLLs
+
+
+
 
 		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
@@ -783,7 +783,7 @@ func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
 }
 
 // This represents running the full model for one person
-func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
+/*func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
 
 	// --------- FIX WITH OTHER DEATHS ==============
 
@@ -808,7 +808,7 @@ func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToA
 	// //Timer := nitro.Initialize()
 
 	// masterRecordsToAdd <- theseMasterRecordsToAdd
-}
+}*/
 
 func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
 

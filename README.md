@@ -55,6 +55,7 @@ The same goes for YLL values, if somebody by chance dies in two models at the sa
 - [ ] Introduce effects of Sugar->BMI->NAFLD->Diabetes->CHD? - Discuss with Jim
 - [ ] Need to build in checks to see if decline mortality rate is actually functioning, same goes for other interactions.
 - [ ] Starting prevalence of HCC should only be possible in the NAFLD population.
+- [ ] What is the weird function after line 316 (just after time elapsed, excluding data import and export)
 
 # Optimizations for later
 - [ ] int to uint - later, works now as is, this is an optimization
