@@ -86,13 +86,13 @@ type StatePopulation struct {
 }
 
 type Query struct {
-	State_id_by_cycle_and_person_and_model [][][]int
-	States_ids_by_cycle_and_person         [][]int
-	Tps_id_by_from_state                   [][]int
-	Interactions_id_by_in_state_and_model  [][]int
-	State_populations_by_cycle             [][]int
-	Model_id_by_state                      []int
-	Other_death_state_by_model             []int
+	State_id_by_cycle_and_person_and_model                  [][][]int
+	States_ids_by_cycle_and_person                          [][]int
+	Tps_id_by_from_state                                    [][]int
+	Interactions_id_by_in_state_and_from_state_and_to_state [][][]int
+	State_populations_by_cycle                              [][]int
+	Model_id_by_state                                       []int
+	Other_death_state_by_model                              []int
 }
 
 type Input struct {
@@ -130,7 +130,7 @@ var GlobalStatePopulations = []StatePopulation{}
 var GlobalYLDsByState = make([]float64, 150, 150)
 var GlobalYLLsByState = make([]float64, 150, 150)
 var GlobalCostsByState = make([]float64, 150, 150)
-var GlobalDALYsByState = make([]float64, 150, 150)
+var GlobalDALYs = 0.00
 
 var GlobalMasterRecordsByIPCM [][][][]int
 
@@ -143,11 +143,14 @@ var isProfile string
 
 var Timer *nitro.B
 
+var printCycle = 2
+var printPerson int
+
 func main() {
 
 	Timer = nitro.Initalize()
 
-	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
+	flag.IntVar(&numberOfPeople, "people", 1000, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
@@ -186,7 +189,7 @@ func main() {
 	// TODO
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
-	numberOfPeopleEntering := 20000
+	numberOfPeopleEntering := numberOfPeople / 2
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
@@ -201,19 +204,19 @@ func main() {
 	interventionIsOn := false
 
 	interventionAsInteraction := Interaction{}
-	// changes % increase risk from 0.7 to 0.56 (20%)
+	// changes % increase risk from 0.7 to 0.5
 	interventionAsInteraction.Adjustment = 0.80
-	interventionAsInteraction.From_state_id = 37 //CHANGEDTHISFROM42
-	interventionAsInteraction.To_state_id = 38   //CHANGEDTHISFROM43
+	interventionAsInteraction.From_state_id = 42
+	interventionAsInteraction.To_state_id = 43
 
 	cycle := Cycle{}
 
 	var newTps []TransitionProbability
 	// TODO fix this hack
 	if interventionIsOn {
-		unitFructoseState := get_state_by_id(&Inputs, 37) //CHANGEDTHISFROM42
+		unitFructoseState := get_state_by_id(&Inputs, 42)
 		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
-		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle)
+		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, false)
 	}
 
 	for _, newTp := range newTps {
@@ -241,7 +244,7 @@ func main() {
 
 func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
-	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("Intialization complete, time elaspsed:", fmt.Sprint(time.Since(beginTime)))
 	beginTime = time.Now()
 
 	masterRecordsToAdd := make(chan []MasterRecord)
@@ -274,9 +277,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 			// need to create new people before calculating the year
 			// of they're unit states will be written over
-			if cycle.Id > 0 {
-				createNewPeople(&localInputs, cycle, 416) //=The number of created people per cycle
-			}
+			createNewPeople(&localInputs, cycle, 10)
 
 			for _, person := range localInputs.People { // 	foreach person
 				go runOneCycleForOnePerson(&localInputs, cycle, person, masterRecordsToAdd)
@@ -308,7 +309,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 		// }
 	} // end case
 
-	//GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
+	GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
 	//after total YLD and YLL is calculated, add everything into total DALYs
 	//(cannot specify this per disease, since YLL for all states in NAFLD is split into natural death and liver death)
 
@@ -332,20 +333,20 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//outputs
 	for i := 0; i < 150; i++ {
 		if GlobalYLDsByState[i] != 0 {
-			fmt.Println("Global YLDs ", Inputs.States[i].Name, GlobalYLDsByState[i])
-		}
-		if GlobalYLLsByState[i] != 0 {
-			fmt.Println("Global YLLs ", Inputs.States[i].Name, GlobalYLLsByState[i])
-		}
-		if GlobalCostsByState[i] != 0 {
-			fmt.Println("Global Costs ", Inputs.States[i].Name, GlobalCostsByState[i])
-		}
-		if GlobalDALYsByState[i] != 0 {
-			fmt.Println("Global DALYs ", Inputs.States[i].Name, GlobalDALYsByState[i])
+			fmt.Println("Global YLDs: ", GlobalYLDsByState[i])
 		}
 	}
-
-	//fmt.Println("GlobalDALYs: ", GlobalDALYs)
+	for i := 0; i < 150; i++ {
+		if GlobalYLLsByState[i] != 0 {
+			fmt.Println("Global YLLs: ", GlobalYLLsByState[i])
+		}
+	}
+	for i := 0; i < 150; i++ {
+		if GlobalCostsByState[i] != 0 {
+			fmt.Println("Global Costs: ", GlobalCostsByState[i])
+		}
+	}
+	fmt.Println("GlobalDALYs: ", GlobalDALYs)
 
 	/*fmt.Println("Global YLDs Steatosis: ", GlobalYLDsByState[3])
 	fmt.Println("Global YLDs NASH: ", GlobalYLDsByState[4])
@@ -370,9 +371,10 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
 	*/
 
-	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+	toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
-	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+
+	toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
@@ -402,6 +404,8 @@ func deepCopy(Inputs Input) Input {
 
 func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, person Person, theseMasterRecordsToAddPtr *[]MasterRecord, mrIndex int) {
 
+	doPrint := false
+
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
@@ -417,7 +421,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// age. So a different set of transition probabilties must be used
 
 	// TODO add in CHD
-	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 {
+	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 || currentStateInThisModel.Id == 38 {
 		transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
 	}
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -428,17 +432,39 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	// and accepts an array of all currents states they occupy
 	interactions := currentStateInThisModel.get_relevant_interactions(localInputsPointer, states)
 
-
-
-
-
 	if len(interactions) > 0 { // if there are interactions
+
+		if currentStateInThisModel.Id == 2 {
+			if printPerson == 0 {
+				printPerson = person.Id
+			}
+			if printPerson == person.Id {
+				if printCycle == cycle.Id {
+					// fmt.Println("======================================", " cycle: ", printCycle, "======================================")
+					// fmt.Println("before interaction: ")
+					// fmt.Println(transitionProbabilities)
+					// fmt.Println("interactions:", interactions)
+					// doPrint = true
+				}
+			}
+
+		}
 
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
-			transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle)
 
+			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, doPrint)
+			transitionProbabilities = newTransitionProbabilities
 		} // end foreach interaction
+
+		if printPerson == person.Id {
+			// if printCycle == cycle.Id {
+			// 	fmt.Println("after interaction: ")
+			// 	fmt.Println(transitionProbabilities)
+			// 	doPrint = false
+			// 	printCycle++
+			// }
+		}
 
 	} // end if there are interactions
 
@@ -452,28 +478,33 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	//Cost calculations
 	discountValue := math.Pow(0.97, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
-	stateCosts := make([]float64, 150, 150)
+	stateCosts := make([]float64, 147, 147)
 	stateCosts[3] = 150.00
 	stateCosts[4] = 262.00
 	stateCosts[5] = 5330.00
-	stateCosts[6] = 37931.00
+	stateCosts[6] = 37951.00
 	stateCosts[13] = 8000.00
 	stateCosts[19] = 7888.00
-	stateCosts[25] = 336.00
-	stateCosts[26] = 897.00
+	stateCosts[25] = 350.00
+	stateCosts[26] = 852.00
 
-	if cycle.Id > 0 { //CHECK: is 1 really the right number? Cycle ID versus cyclenumber?
+	if cycle.Id > 1 {
 		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
+	}
 
-		stateSpecificYLDs := new_state.Disability_weight // (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
-		if math.IsNaN(stateSpecificYLDs) {
+	// years of life lost from disability
+	stateSpecificYLDs := make([]float64, 150, 150)
+
+	if cycle.Id > 1 {
+		stateSpecificYLDs[new_state.Id] = new_state.Disability_weight / (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
+
+		if math.IsNaN(stateSpecificYLDs[new_state.Id]) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
-			fmt.Println(discountValue, stateSpecificYLDs, new_state.Disability_weight)
+			fmt.Println(discountValue, stateSpecificYLDs[new_state.Id], new_state.Disability_weight)
 			os.Exit(1)
 		}
-		//Saving YLD for each personcyclemodel to GlobalYLD
-		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs
-		GlobalDALYsByState[new_state.Id] += stateSpecificYLDs
+
+		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs[new_state.Id]
 	}
 
 	//fmt.Println("model Id", model.Id)
@@ -481,18 +512,12 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
-	if justDiedOfDiseaseSpecific /*|| justDiedOfNaturalCauses*/ {
-
-		stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
-		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
-		GlobalDALYsByState[new_state.Id] += stateSpecificYLLs
-	}
+	stateSpecificYLLs := make([]float64, 150, 150)
 
 	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
-
-
-
+		stateSpecificYLLs[new_state.Id] = 1 / (1 - discountValue) * (1 - math.Exp(-(1-discountValue)*getYLLFromDeath(localInputsPointer, person)))
+		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs[new_state.Id]
 
 		//fmt.Println("death sync in model ", model.Id)
 		// Sync deaths. Put person in "other death"
@@ -546,7 +571,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	}
 }
 
-/*func sumSlices(x []float64, y []float64) float64 {
+func sumSlices(x []float64, y []float64) float64 {
 
 	totalx := 0.0
 	for _, valuex := range x {
@@ -560,220 +585,112 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	return totalx + totaly
 }
-*/
 
 func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 
 	//TODO sloppy need to make imported table
 
-	agesModel := localInputsPointer.Models[7] //CHANGEDTHISFROM10
+	agesModel := localInputsPointer.Models[10]
 	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
-	//TODO fix this age hack - not sustainable, what happens is the state IDs change?
-	age := stateInAge.Id - 22 //CHANGEDTHISFROM35
+	//TODO fix this age hack - not sustainable, what happens is the state IDS change?
+	age := stateInAge.Id - 35
+	getLifeexpectancy := make([]float64, 111, 111)
 
-	getLifeexpectancyMALE := make([]float64, 111, 111)
-	getLifeexpectancyFEMALE := make([]float64, 111, 111)
+	getLifeexpectancy[20] = 49.627
+	getLifeexpectancy[21] = 49.627
+	getLifeexpectancy[22] = 49.627
+	getLifeexpectancy[23] = 49.627
+	getLifeexpectancy[24] = 49.627
+	getLifeexpectancy[25] = 45.331
+	getLifeexpectancy[26] = 45.331
+	getLifeexpectancy[27] = 45.331
+	getLifeexpectancy[28] = 45.331
+	getLifeexpectancy[29] = 45.331
+	getLifeexpectancy[30] = 41.078
+	getLifeexpectancy[31] = 41.078
+	getLifeexpectancy[32] = 41.078
+	getLifeexpectancy[33] = 41.078
+	getLifeexpectancy[34] = 41.078
+	getLifeexpectancy[35] = 36.848
+	getLifeexpectancy[36] = 36.848
+	getLifeexpectancy[37] = 36.848
+	getLifeexpectancy[38] = 36.848
+	getLifeexpectancy[39] = 36.848
+	getLifeexpectancy[40] = 32.682
+	getLifeexpectancy[41] = 32.682
+	getLifeexpectancy[42] = 32.682
+	getLifeexpectancy[43] = 32.682
+	getLifeexpectancy[44] = 32.682
+	getLifeexpectancy[45] = 28.638
+	getLifeexpectancy[46] = 28.638
+	getLifeexpectancy[47] = 28.638
+	getLifeexpectancy[48] = 28.638
+	getLifeexpectancy[49] = 28.638
+	getLifeexpectancy[50] = 24.749
+	getLifeexpectancy[51] = 24.749
+	getLifeexpectancy[52] = 24.749
+	getLifeexpectancy[53] = 24.749
+	getLifeexpectancy[54] = 24.749
+	getLifeexpectancy[55] = 21.034
+	getLifeexpectancy[56] = 21.034
+	getLifeexpectancy[57] = 21.034
+	getLifeexpectancy[58] = 21.034
+	getLifeexpectancy[59] = 21.034
+	getLifeexpectancy[60] = 17.498
+	getLifeexpectancy[61] = 17.498
+	getLifeexpectancy[62] = 17.498
+	getLifeexpectancy[63] = 17.498
+	getLifeexpectancy[64] = 17.498
+	getLifeexpectancy[65] = 14.217
+	getLifeexpectancy[66] = 14.217
+	getLifeexpectancy[67] = 14.217
+	getLifeexpectancy[68] = 14.217
+	getLifeexpectancy[69] = 14.217
+	getLifeexpectancy[70] = 11.217
+	getLifeexpectancy[71] = 11.217
+	getLifeexpectancy[72] = 11.217
+	getLifeexpectancy[73] = 11.217
+	getLifeexpectancy[74] = 11.217
+	getLifeexpectancy[75] = 8.537
+	getLifeexpectancy[76] = 8.537
+	getLifeexpectancy[77] = 8.537
+	getLifeexpectancy[78] = 8.537
+	getLifeexpectancy[79] = 8.537
+	getLifeexpectancy[80] = 6.202
+	getLifeexpectancy[81] = 6.202
+	getLifeexpectancy[82] = 6.202
+	getLifeexpectancy[83] = 6.202
+	getLifeexpectancy[84] = 6.202
+	getLifeexpectancy[85] = 6.202
+	getLifeexpectancy[86] = 6.202
+	getLifeexpectancy[87] = 6.202
+	getLifeexpectancy[88] = 6.202
+	getLifeexpectancy[89] = 6.202
+	getLifeexpectancy[90] = 6.202
+	getLifeexpectancy[91] = 6.202
+	getLifeexpectancy[92] = 6.202
+	getLifeexpectancy[93] = 6.202
+	getLifeexpectancy[94] = 6.202
+	getLifeexpectancy[95] = 6.202
+	getLifeexpectancy[96] = 6.202
+	getLifeexpectancy[97] = 6.202
+	getLifeexpectancy[98] = 6.202
+	getLifeexpectancy[99] = 6.202
+	getLifeexpectancy[100] = 6.202
+	getLifeexpectancy[101] = 6.202
+	getLifeexpectancy[102] = 6.202
+	getLifeexpectancy[103] = 6.202
+	getLifeexpectancy[104] = 6.202
+	getLifeexpectancy[105] = 6.202
+	getLifeexpectancy[106] = 6.202
+	getLifeexpectancy[107] = 6.202
+	getLifeexpectancy[108] = 6.202
+	getLifeexpectancy[109] = 6.202
+	getLifeexpectancy[110] = 6.202
 
-	getLifeexpectancyFEMALE[20] = 51.138
-	getLifeexpectancyFEMALE[21] = 51.138
-	getLifeexpectancyFEMALE[22] = 51.138
-	getLifeexpectancyFEMALE[23] = 51.138
-	getLifeexpectancyFEMALE[24] = 51.138
-	getLifeexpectancyFEMALE[25] = 46.766
-	getLifeexpectancyFEMALE[26] = 46.766
-	getLifeexpectancyFEMALE[27] = 46.766
-	getLifeexpectancyFEMALE[28] = 46.766
-	getLifeexpectancyFEMALE[29] = 46.766
-	getLifeexpectancyFEMALE[30] = 42.466
-	getLifeexpectancyFEMALE[31] = 42.466
-	getLifeexpectancyFEMALE[32] = 42.466
-	getLifeexpectancyFEMALE[33] = 42.466
-	getLifeexpectancyFEMALE[34] = 42.466
-	getLifeexpectancyFEMALE[35] = 38.214
-	getLifeexpectancyFEMALE[36] = 38.214
-	getLifeexpectancyFEMALE[37] = 38.214
-	getLifeexpectancyFEMALE[38] = 38.214
-	getLifeexpectancyFEMALE[39] = 38.214
-	getLifeexpectancyFEMALE[40] = 34.033
-	getLifeexpectancyFEMALE[41] = 34.033
-	getLifeexpectancyFEMALE[42] = 34.033
-	getLifeexpectancyFEMALE[43] = 34.033
-	getLifeexpectancyFEMALE[44] = 34.033
-	getLifeexpectancyFEMALE[45] = 29.96
-	getLifeexpectancyFEMALE[46] = 29.96
-	getLifeexpectancyFEMALE[47] = 29.96
-	getLifeexpectancyFEMALE[48] = 29.96
-	getLifeexpectancyFEMALE[49] = 29.96
-	getLifeexpectancyFEMALE[50] = 26.017
-	getLifeexpectancyFEMALE[51] = 26.017
-	getLifeexpectancyFEMALE[52] = 26.017
-	getLifeexpectancyFEMALE[53] = 26.017
-	getLifeexpectancyFEMALE[54] = 26.017
-	getLifeexpectancyFEMALE[55] = 22.214
-	getLifeexpectancyFEMALE[56] = 22.214
-	getLifeexpectancyFEMALE[57] = 22.214
-	getLifeexpectancyFEMALE[58] = 22.214
-	getLifeexpectancyFEMALE[59] = 22.214
-	getLifeexpectancyFEMALE[60] = 18.574
-	getLifeexpectancyFEMALE[61] = 18.574
-	getLifeexpectancyFEMALE[62] = 18.574
-	getLifeexpectancyFEMALE[63] = 18.574
-	getLifeexpectancyFEMALE[64] = 18.574
-	getLifeexpectancyFEMALE[65] = 15.167
-	getLifeexpectancyFEMALE[66] = 15.167
-	getLifeexpectancyFEMALE[67] = 15.167
-	getLifeexpectancyFEMALE[68] = 15.167
-	getLifeexpectancyFEMALE[69] = 15.167
-	getLifeexpectancyFEMALE[70] = 12.02
-	getLifeexpectancyFEMALE[71] = 12.02
-	getLifeexpectancyFEMALE[72] = 12.02
-	getLifeexpectancyFEMALE[73] = 12.02
-	getLifeexpectancyFEMALE[74] = 12.02
-	getLifeexpectancyFEMALE[75] = 9.169
-	getLifeexpectancyFEMALE[76] = 9.169
-	getLifeexpectancyFEMALE[77] = 9.169
-	getLifeexpectancyFEMALE[78] = 9.169
-	getLifeexpectancyFEMALE[79] = 9.169
-	getLifeexpectancyFEMALE[80] = 6.646
-	getLifeexpectancyFEMALE[81] = 6.646
-	getLifeexpectancyFEMALE[82] = 6.646
-	getLifeexpectancyFEMALE[83] = 6.646
-	getLifeexpectancyFEMALE[84] = 6.646
-	getLifeexpectancyFEMALE[85] = 4.512
-	getLifeexpectancyFEMALE[86] = 4.512
-	getLifeexpectancyFEMALE[87] = 4.512
-	getLifeexpectancyFEMALE[88] = 4.512
-	getLifeexpectancyFEMALE[89] = 4.512
-	getLifeexpectancyFEMALE[90] = 2.915
-	getLifeexpectancyFEMALE[91] = 2.915
-	getLifeexpectancyFEMALE[92] = 2.915
-	getLifeexpectancyFEMALE[93] = 2.915
-	getLifeexpectancyFEMALE[94] = 2.915
-	getLifeexpectancyFEMALE[95] = 1.868
-	getLifeexpectancyFEMALE[96] = 1.868
-	getLifeexpectancyFEMALE[97] = 1.868
-	getLifeexpectancyFEMALE[98] = 1.868
-	getLifeexpectancyFEMALE[99] = 1.868
-	getLifeexpectancyFEMALE[100] = 1.231
-	getLifeexpectancyFEMALE[101] = 1.231
-	getLifeexpectancyFEMALE[102] = 1.231
-	getLifeexpectancyFEMALE[103] = 1.231
-	getLifeexpectancyFEMALE[104] = 1.231
-	getLifeexpectancyFEMALE[105] = 1
-	getLifeexpectancyFEMALE[106] = 1
-	getLifeexpectancyFEMALE[107] = 1
-	getLifeexpectancyFEMALE[108] = 1
-	getLifeexpectancyFEMALE[109] = 1
-	getLifeexpectancyFEMALE[110] = 1
-
-	getLifeexpectancyMALE[20] = 48.035
-	getLifeexpectancyMALE[21] = 48.035
-	getLifeexpectancyMALE[22] = 48.035
-	getLifeexpectancyMALE[23] = 48.035
-	getLifeexpectancyMALE[24] = 48.035
-	getLifeexpectancyMALE[25] = 43.802
-	getLifeexpectancyMALE[26] = 43.802
-	getLifeexpectancyMALE[27] = 43.802
-	getLifeexpectancyMALE[28] = 43.802
-	getLifeexpectancyMALE[29] = 43.802
-	getLifeexpectancyMALE[30] = 39.589
-	getLifeexpectancyMALE[31] = 39.589
-	getLifeexpectancyMALE[32] = 39.589
-	getLifeexpectancyMALE[33] = 39.589
-	getLifeexpectancyMALE[34] = 39.589
-	getLifeexpectancyMALE[35] = 35.374
-	getLifeexpectancyMALE[36] = 35.374
-	getLifeexpectancyMALE[37] = 35.374
-	getLifeexpectancyMALE[38] = 35.374
-	getLifeexpectancyMALE[39] = 35.374
-	getLifeexpectancyMALE[40] = 31.217
-	getLifeexpectancyMALE[41] = 31.217
-	getLifeexpectancyMALE[42] = 31.217
-	getLifeexpectancyMALE[43] = 31.217
-	getLifeexpectancyMALE[44] = 31.217
-	getLifeexpectancyMALE[45] = 27.195
-	getLifeexpectancyMALE[46] = 27.195
-	getLifeexpectancyMALE[47] = 27.195
-	getLifeexpectancyMALE[48] = 27.195
-	getLifeexpectancyMALE[49] = 27.195
-	getLifeexpectancyMALE[50] = 23.347
-	getLifeexpectancyMALE[51] = 23.347
-	getLifeexpectancyMALE[52] = 23.347
-	getLifeexpectancyMALE[53] = 23.347
-	getLifeexpectancyMALE[54] = 23.347
-	getLifeexpectancyMALE[55] = 19.705
-	getLifeexpectancyMALE[56] = 19.705
-	getLifeexpectancyMALE[57] = 19.705
-	getLifeexpectancyMALE[58] = 19.705
-	getLifeexpectancyMALE[59] = 19.705
-	getLifeexpectancyMALE[60] = 16.256
-	getLifeexpectancyMALE[61] = 16.256
-	getLifeexpectancyMALE[62] = 16.256
-	getLifeexpectancyMALE[63] = 16.256
-	getLifeexpectancyMALE[64] = 16.256
-	getLifeexpectancyMALE[65] = 13.08
-	getLifeexpectancyMALE[66] = 13.08
-	getLifeexpectancyMALE[67] = 13.08
-	getLifeexpectancyMALE[68] = 13.08
-	getLifeexpectancyMALE[69] = 13.08
-	getLifeexpectancyMALE[70] = 10.208
-	getLifeexpectancyMALE[71] = 10.208
-	getLifeexpectancyMALE[72] = 10.208
-	getLifeexpectancyMALE[73] = 10.208
-	getLifeexpectancyMALE[74] = 10.208
-	getLifeexpectancyMALE[75] = 7.68
-	getLifeexpectancyMALE[76] = 7.68
-	getLifeexpectancyMALE[77] = 7.68
-	getLifeexpectancyMALE[78] = 7.68
-	getLifeexpectancyMALE[79] = 7.68
-	getLifeexpectancyMALE[80] = 5.524
-	getLifeexpectancyMALE[81] = 5.524
-	getLifeexpectancyMALE[82] = 5.524
-	getLifeexpectancyMALE[83] = 5.524
-	getLifeexpectancyMALE[84] = 5.524
-	getLifeexpectancyMALE[85] = 3.723
-	getLifeexpectancyMALE[86] = 3.723
-	getLifeexpectancyMALE[87] = 3.723
-	getLifeexpectancyMALE[88] = 3.723
-	getLifeexpectancyMALE[89] = 3.723
-	getLifeexpectancyMALE[90] = 2.388
-	getLifeexpectancyMALE[91] = 2.388
-	getLifeexpectancyMALE[92] = 2.388
-	getLifeexpectancyMALE[93] = 2.388
-	getLifeexpectancyMALE[94] = 2.388
-	getLifeexpectancyMALE[95] = 1.521
-	getLifeexpectancyMALE[96] = 1.521
-	getLifeexpectancyMALE[97] = 1.521
-	getLifeexpectancyMALE[98] = 1.521
-	getLifeexpectancyMALE[99] = 1.521
-	getLifeexpectancyMALE[100] = 1.000
-	getLifeexpectancyMALE[101] = 1.000
-	getLifeexpectancyMALE[102] = 1.000
-	getLifeexpectancyMALE[103] = 1.000
-	getLifeexpectancyMALE[104] = 1.000
-	getLifeexpectancyMALE[105] = 1.000
-	getLifeexpectancyMALE[106] = 1.000
-	getLifeexpectancyMALE[107] = 1.000
-	getLifeexpectancyMALE[108] = 1.000
-	getLifeexpectancyMALE[109] = 1.000
-	getLifeexpectancyMALE[110] = 1.000
-
-	sexModel := localInputsPointer.Models[5] //Fix this hack - what happens when models change
-	stateInSexModel := person.get_state_by_model(localInputsPointer, sexModel)
-	sexOfPerson := stateInSexModel.Id
-	lifeExpectancy := 0.00
-
-	if sexOfPerson == 34 {
-		lifeExpectancy = getLifeexpectancyMALE[age]
-	} else if sexOfPerson == 35 {
-		lifeExpectancy = getLifeexpectancyMALE[age]
-	} else {
-		fmt.Println("Error: no sex found. stateInSexModel is: ", sexOfPerson)
-		os.Exit(1)
-	}
+	lifeExpectancy := getLifeexpectancy[age]
 
 	return lifeExpectancy
-
 }
 
 func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
@@ -783,7 +700,7 @@ func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
 }
 
 // This represents running the full model for one person
-/*func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
+func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToAdd chan []MasterRecord) {
 
 	// --------- FIX WITH OTHER DEATHS ==============
 
@@ -808,7 +725,7 @@ func getOtherDeathStateByModel(localInputsPointer *Input, model Model) State {
 	// //Timer := nitro.Initialize()
 
 	// masterRecordsToAdd <- theseMasterRecordsToAdd
-}*/
+}
 
 func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
 
@@ -876,17 +793,20 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		Inputs.QueryData.Tps_id_by_from_state[i] = tPIdsToReturn
 	}
 
-	Inputs.QueryData.Interactions_id_by_in_state_and_model = make([][]int, len(Inputs.States), len(Inputs.States))
-	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_model {
-		Inputs.QueryData.Interactions_id_by_in_state_and_model[i] = make([]int, len(Inputs.Models), len(Inputs.Models))
-		for r := 0; r < len(Inputs.Models); r++ {
-			Inputs.QueryData.Interactions_id_by_in_state_and_model[i][r] = 99999999 // TODO placeholder value to represent no interaction
+	Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state = make([][][]int, len(Inputs.States), len(Inputs.States))
+	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state {
+		Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i] = make([][]int, len(Inputs.States), len(Inputs.States))
+		for r := 0; r < len(Inputs.States); r++ {
+			Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r] = make([]int, len(Inputs.States), len(Inputs.States))
+			for l := 0; l < len(Inputs.States); l++ {
+				Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r][l] = 99999999 // TODO placeholder value to represent no interaction
+			}
 		}
 	}
 
 	for _, interaction := range Inputs.Interactions {
 		// if person is in a state with an interaction that effects current model
-		Inputs.QueryData.Interactions_id_by_in_state_and_model[interaction.In_state_id][interaction.Effected_model_id] = interaction.Id
+		Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[interaction.In_state_id][interaction.From_state_id][interaction.To_state_id] = interaction.Id
 	}
 
 	Inputs.QueryData.Model_id_by_state = make([]int, len(Inputs.States), len(Inputs.States))
@@ -948,7 +868,6 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 	}
 	return Inputs
 }
-
 func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 
 	GlobalMasterRecordsByIPCM = make([][][][]int, numberOfIterations, numberOfIterations)
@@ -966,6 +885,7 @@ func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 }
 
 // ----------- non-methods
+
 func shuffle(models []Model) []Model {
 	//randomize order of models
 	for i := range models {
@@ -994,7 +914,7 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 			if model.Name == "Age" {
 				// Start them at age 20
 				// TODO they will enter the model at age 21?
-				uninitializedState = get_state_by_id(Inputs, 42) //CHANGEDTHISFROM 55, but I think it should have been 54 anyway?
+				uninitializedState = get_state_by_id(Inputs, 55)
 			}
 			//fmt.Println("unit state", uninitializedState)
 			var mr MasterRecord
@@ -1080,7 +1000,7 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 
 // --------------- transition probabilities
 
-func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, doPrint bool) []TransitionProbability {
 
 	// TODO if these ever change to pointerss, you'll need to deference them
 	adjustmentFactor := interaction.Adjustment
@@ -1101,6 +1021,17 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
 	}
 
+	if doPrint {
+		// fmt.Println("---------- interaction ----------")
+		// fromState := get_state_by_id(localInputs, interaction.From_state_id)
+		// toState := get_state_by_id(localInputs, interaction.To_state_id)
+		// inState := get_state_by_id(localInputs, interaction.In_state_id)
+		// fmt.Println("in state: ", inState.Name, ", model: ", localInputs.Models[inState.Model_id].Name)
+		// fmt.Println("from state: ", fromState.Name)
+		// fmt.Println("to State: ", toState.Name)
+		// fmt.Println("adjustment: ", adjustmentFactor)
+	}
+
 	for i, _ := range theseTPs {
 		// & represents the address, so now tp is a pointer - needed because you want to change the
 		// underlying value of the elements of theseTPs, not just a copy of them
@@ -1108,12 +1039,29 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		originalTpBase := tp.Tp_base
 		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
 			tp.Tp_base = tp.Tp_base * adjustmentFactor
-			if tp.Tp_base == originalTpBase && adjustmentFactor != 1 {
-				fmt.Println("error adjusting transition probabilities in adjust_transitions()")
-				fmt.Println("interaction id is: ", interaction.Id)
-				os.Exit(1)
+
+			if doPrint {
+				// fmt.Println("~~~~~~ adjustment ~~~~~~")
+				// fromState := get_state_by_id(localInputs, interaction.From_state_id)
+				// toState := get_state_by_id(localInputs, interaction.To_state_id)
+				// fmt.Println("from state: ", fromState.Name)
+				// fmt.Println("to State: ", toState.Name)
+				// fmt.Println("original TP base: ", originalTpBase)
+				// fmt.Println("adjustment: ", adjustmentFactor)
+				// fmt.Println("new TP base: ", tp.Tp_base)
+			}
+
+			if tp.Tp_base == originalTpBase && adjustmentFactor != 1 && originalTpBase != 0 {
+				// fmt.Println("error adjusting transition probabilities in adjust_transitions()")
+				// fmt.Println("interaction id is: ", interaction.Id)
+				// os.Exit(1)
 			}
 		}
+	}
+
+	if doPrint {
+		// fmt.Println("TP after an adjustment: -> ")
+		// fmt.Println(theseTPs)
 	}
 	// now, we need to make sure everything adds to one. to do so, we find what
 	// it currently sums to, and make a new adjustment factor. We can then
@@ -1129,10 +1077,10 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		if tp.From_id == tp.To_id {
 			tp.Tp_base -= remain
 			recursiveTp = tp.Tp_base
-			/*if tp.Tp_base < 0 {
+			if tp.Tp_base < 0 {
 				fmt.Println("Error: Tp under 0. Interaction: ", interaction.Id)
 				os.Exit(1)
-			}*/
+			}
 		}
 	}
 
@@ -1273,12 +1221,15 @@ func (state *State) get_destination_probabilites(localInputs *Input) []Transitio
 // the persons current states based on all states that they are
 // in - it is a method of their current state in this model,
 // and accepts an array of all currents states they occupy
-func (inState *State) get_relevant_interactions(localInputs *Input, allStates []State) []Interaction {
-	modelId := inState.Model_id
+func (fromState *State) get_relevant_interactions(localInputs *Input, allStates []State) []Interaction {
 
 	var relevantInteractions []Interaction
+	var relevantInteractionIds []int
 	for _, alsoInState := range allStates {
-		relevantInteractionId := localInputs.QueryData.Interactions_id_by_in_state_and_model[alsoInState.Id][modelId]
+		relevantInteractionIds = append(relevantInteractionIds, localInputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[alsoInState.Id][fromState.Id]...)
+	}
+
+	for _, relevantInteractionId := range relevantInteractionIds {
 		if relevantInteractionId != 99999999 {
 			if relevantInteractionId == localInputs.Interactions[relevantInteractionId].Id {
 				relevantInteractions = append(relevantInteractions, localInputs.Interactions[relevantInteractionId])
@@ -1286,6 +1237,7 @@ func (inState *State) get_relevant_interactions(localInputs *Input, allStates []
 				fmt.Println("off-by-one error or similar in get_relevant_interactions")
 			}
 		}
+
 	}
 
 	return relevantInteractions
@@ -1600,9 +1552,9 @@ func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel S
 	sexModel := localInputsPointer.Models[5]
 	sexStateId := person.get_state_by_model(localInputsPointer, sexModel).Id
 
-	ageModel := localInputsPointer.Models[7] //CHANGEDTHISFROM 10
+	ageModel := localInputsPointer.Models[10]
 	ageModelId := person.get_state_by_model(localInputsPointer, ageModel).Id
-	actualAge := ageModelId - 22 //CHANGEDTHISFROM 35
+	actualAge := ageModelId - 35
 
 	for _, tpByRAS := range GlobalTPsByRAS {
 		if tpByRAS.Model_id == modelId && tpByRAS.Race_state_id == raceStateId && tpByRAS.Age == actualAge && tpByRAS.Sex_state_id == sexStateId {

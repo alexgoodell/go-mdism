@@ -9,7 +9,7 @@ import (
 func main() {
 	betaGen := rng.NewBetaGenerator(time.Now().UnixNano())
 	for i := 0; i < 10000; i++ {
-		fmt.Println(betaGen.Beta(2, 5)) // alpha, beta
+		fmt.Println(betaGen.Beta(1, 1)) // alpha, beta
 	}
 
 }
