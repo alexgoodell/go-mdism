@@ -86,13 +86,13 @@ type StatePopulation struct {
 }
 
 type Query struct {
-	State_id_by_cycle_and_person_and_model [][][]int
-	States_ids_by_cycle_and_person         [][]int
-	Tps_id_by_from_state                   [][]int
-	Interactions_id_by_in_state_and_model  [][]int
-	State_populations_by_cycle             [][]int
-	Model_id_by_state                      []int
-	Other_death_state_by_model             []int
+	State_id_by_cycle_and_person_and_model                  [][][]int
+	States_ids_by_cycle_and_person                          [][]int
+	Tps_id_by_from_state                                    [][]int
+	Interactions_id_by_in_state_and_from_state_and_to_state [][][]int
+	State_populations_by_cycle                              [][]int
+	Model_id_by_state                                       []int
+	Other_death_state_by_model                              []int
 }
 
 type Input struct {
@@ -142,6 +142,9 @@ var inputsPath string
 var isProfile string
 
 var Timer *nitro.B
+
+var printCycle = 2
+var printPerson int
 
 func main() {
 
@@ -213,7 +216,7 @@ func main() {
 	if interventionIsOn {
 		unitFructoseState := get_state_by_id(&Inputs, 42)
 		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
-		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle)
+		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, false)
 	}
 
 	for _, newTp := range newTps {
@@ -401,6 +404,8 @@ func deepCopy(Inputs Input) Input {
 
 func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, person Person, theseMasterRecordsToAddPtr *[]MasterRecord, mrIndex int) {
 
+	doPrint := false
+
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
@@ -429,10 +434,37 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	if len(interactions) > 0 { // if there are interactions
 
+		if currentStateInThisModel.Id == 2 {
+			if printPerson == 0 {
+				printPerson = person.Id
+			}
+			if printPerson == person.Id {
+				if printCycle == cycle.Id {
+					// fmt.Println("======================================", " cycle: ", printCycle, "======================================")
+					// fmt.Println("before interaction: ")
+					// fmt.Println(transitionProbabilities)
+					// fmt.Println("interactions:", interactions)
+					// doPrint = true
+				}
+			}
+
+		}
+
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
-			transitionProbabilities = adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle)
+
+			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, doPrint)
+			transitionProbabilities = newTransitionProbabilities
 		} // end foreach interaction
+
+		if printPerson == person.Id {
+			// if printCycle == cycle.Id {
+			// 	fmt.Println("after interaction: ")
+			// 	fmt.Println(transitionProbabilities)
+			// 	doPrint = false
+			// 	printCycle++
+			// }
+		}
 
 	} // end if there are interactions
 
@@ -761,17 +793,20 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		Inputs.QueryData.Tps_id_by_from_state[i] = tPIdsToReturn
 	}
 
-	Inputs.QueryData.Interactions_id_by_in_state_and_model = make([][]int, len(Inputs.States), len(Inputs.States))
-	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_model {
-		Inputs.QueryData.Interactions_id_by_in_state_and_model[i] = make([]int, len(Inputs.Models), len(Inputs.Models))
-		for r := 0; r < len(Inputs.Models); r++ {
-			Inputs.QueryData.Interactions_id_by_in_state_and_model[i][r] = 99999999 // TODO placeholder value to represent no interaction
+	Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state = make([][][]int, len(Inputs.States), len(Inputs.States))
+	for i, _ := range Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state {
+		Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i] = make([][]int, len(Inputs.States), len(Inputs.States))
+		for r := 0; r < len(Inputs.States); r++ {
+			Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r] = make([]int, len(Inputs.States), len(Inputs.States))
+			for l := 0; l < len(Inputs.States); l++ {
+				Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r][l] = 99999999 // TODO placeholder value to represent no interaction
+			}
 		}
 	}
 
 	for _, interaction := range Inputs.Interactions {
 		// if person is in a state with an interaction that effects current model
-		Inputs.QueryData.Interactions_id_by_in_state_and_model[interaction.In_state_id][interaction.Effected_model_id] = interaction.Id
+		Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[interaction.In_state_id][interaction.From_state_id][interaction.To_state_id] = interaction.Id
 	}
 
 	Inputs.QueryData.Model_id_by_state = make([]int, len(Inputs.States), len(Inputs.States))
@@ -965,7 +1000,7 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 
 // --------------- transition probabilities
 
-func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, doPrint bool) []TransitionProbability {
 
 	// TODO if these ever change to pointerss, you'll need to deference them
 	adjustmentFactor := interaction.Adjustment
@@ -986,6 +1021,17 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
 	}
 
+	if doPrint {
+		// fmt.Println("---------- interaction ----------")
+		// fromState := get_state_by_id(localInputs, interaction.From_state_id)
+		// toState := get_state_by_id(localInputs, interaction.To_state_id)
+		// inState := get_state_by_id(localInputs, interaction.In_state_id)
+		// fmt.Println("in state: ", inState.Name, ", model: ", localInputs.Models[inState.Model_id].Name)
+		// fmt.Println("from state: ", fromState.Name)
+		// fmt.Println("to State: ", toState.Name)
+		// fmt.Println("adjustment: ", adjustmentFactor)
+	}
+
 	for i, _ := range theseTPs {
 		// & represents the address, so now tp is a pointer - needed because you want to change the
 		// underlying value of the elements of theseTPs, not just a copy of them
@@ -993,12 +1039,29 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		originalTpBase := tp.Tp_base
 		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
 			tp.Tp_base = tp.Tp_base * adjustmentFactor
-			if tp.Tp_base == originalTpBase && adjustmentFactor != 1 {
-				fmt.Println("error adjusting transition probabilities in adjust_transitions()")
-				fmt.Println("interaction id is: ", interaction.Id)
-				os.Exit(1)
+
+			if doPrint {
+				// fmt.Println("~~~~~~ adjustment ~~~~~~")
+				// fromState := get_state_by_id(localInputs, interaction.From_state_id)
+				// toState := get_state_by_id(localInputs, interaction.To_state_id)
+				// fmt.Println("from state: ", fromState.Name)
+				// fmt.Println("to State: ", toState.Name)
+				// fmt.Println("original TP base: ", originalTpBase)
+				// fmt.Println("adjustment: ", adjustmentFactor)
+				// fmt.Println("new TP base: ", tp.Tp_base)
+			}
+
+			if tp.Tp_base == originalTpBase && adjustmentFactor != 1 && originalTpBase != 0 {
+				// fmt.Println("error adjusting transition probabilities in adjust_transitions()")
+				// fmt.Println("interaction id is: ", interaction.Id)
+				// os.Exit(1)
 			}
 		}
+	}
+
+	if doPrint {
+		// fmt.Println("TP after an adjustment: -> ")
+		// fmt.Println(theseTPs)
 	}
 	// now, we need to make sure everything adds to one. to do so, we find what
 	// it currently sums to, and make a new adjustment factor. We can then
@@ -1158,12 +1221,15 @@ func (state *State) get_destination_probabilites(localInputs *Input) []Transitio
 // the persons current states based on all states that they are
 // in - it is a method of their current state in this model,
 // and accepts an array of all currents states they occupy
-func (inState *State) get_relevant_interactions(localInputs *Input, allStates []State) []Interaction {
-	modelId := inState.Model_id
+func (fromState *State) get_relevant_interactions(localInputs *Input, allStates []State) []Interaction {
 
 	var relevantInteractions []Interaction
+	var relevantInteractionIds []int
 	for _, alsoInState := range allStates {
-		relevantInteractionId := localInputs.QueryData.Interactions_id_by_in_state_and_model[alsoInState.Id][modelId]
+		relevantInteractionIds = append(relevantInteractionIds, localInputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[alsoInState.Id][fromState.Id]...)
+	}
+
+	for _, relevantInteractionId := range relevantInteractionIds {
 		if relevantInteractionId != 99999999 {
 			if relevantInteractionId == localInputs.Interactions[relevantInteractionId].Id {
 				relevantInteractions = append(relevantInteractions, localInputs.Interactions[relevantInteractionId])
@@ -1171,6 +1237,7 @@ func (inState *State) get_relevant_interactions(localInputs *Input, allStates []
 				fmt.Println("off-by-one error or similar in get_relevant_interactions")
 			}
 		}
+
 	}
 
 	return relevantInteractions
