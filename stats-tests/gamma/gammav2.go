@@ -3,24 +3,26 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"math/rand"
+	"github.com/leesper/go_rng" //imported as rng
 	"os"
 	"reflect"
 	"time"
 )
 
-type NormalNumbers struct {
+type GammaNumbers struct {
 	Value float64
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	invNormalNumbers := make([]NormalNumbers, 10000, 10000)
+	gammaGen := rng.NewGammaGenerator(time.Now().UnixNano())
+	fmt.Println(gammaGen.Gamma(13.7723, 0.12126))
+	InvGammaNumbers := make([]GammaNumbers, 10000, 10000)
+	alpha := 13.7723 //These are the variables that you variate in the PSA
+	beta := 0.12126
 	for i := 0; i < 10000; i++ {
-		invNormalNumbers[i].Value = rand.NormFloat64(8000, 500)
+		InvGammaNumbers[i].Value = gammaGen.Gamma(alpha, beta)
 	}
-
-	toCsv("NormalNumbers.csv", invNormalNumbers[1], invNormalNumbers)
+	toCsv("GammaNumbers.csv", InvGammaNumbers[1], InvGammaNumbers)
 
 }
 

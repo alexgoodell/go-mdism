@@ -16,8 +16,10 @@ type NormalNumbers struct {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	invNormalNumbers := make([]NormalNumbers, 10000, 10000)
+	mean := 8000 //These are the two input parameters for the PSA
+	standardDev := 500
 	for i := 0; i < 10000; i++ {
-		invNormalNumbers[i].Value = rand.NormFloat64(8000, 500)
+		invNormalNumbers[i].Value = mean + standardDev*rand.NormFloat64()
 	}
 
 	toCsv("NormalNumbers.csv", invNormalNumbers[1], invNormalNumbers)
