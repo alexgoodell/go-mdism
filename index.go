@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-var beginTime = time.Now()
+var beginTime = time.Now() //TODO: Test this
 
 type State struct {
 	Id                        int
@@ -319,11 +319,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	for _, masterRecord := range GlobalMasterRecords {
-<<<<<<< HEAD
-		//fmt.Println(masterRecord.Cycle_id, masterRecord.State_id, Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id])
-=======
-
->>>>>>> 948000ddb3d7759165527a56c4cc7c6c80431591
 		Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 	}
 
