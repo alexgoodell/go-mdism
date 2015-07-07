@@ -203,20 +203,21 @@ func main() {
 
 	interventionIsOn := false
 
-	interventionAsInteraction := Interaction{}
-	// changes % increase risk from 0.7 to 0.5
-	interventionAsInteraction.Adjustment = 0.80
-	interventionAsInteraction.From_state_id = 37
-	interventionAsInteraction.To_state_id = 38
+	// interventionAsInteraction := Interaction{}
+	// // changes % increase risk from 0.7 to 0.5
+	// interventionAsInteraction.Adjustment = 0.80
+	// interventionAsInteraction.From_state_id = 37
+	// interventionAsInteraction.To_state_id = 38
 
-	cycle := Cycle{}
+	// cycle := Cycle{}
 
 	var newTps []TransitionProbability
 	// TODO fix this hack
 	if interventionIsOn {
-		unitFructoseState := get_state_by_id(&Inputs, 37)
-		tPs := unitFructoseState.get_destination_probabilites(&Inputs)
-		newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, false)
+		// TODO: Re-implement intervention not using adjust_transitions because adjust_transitions now requires a person [Issue: https://github.com/alexgoodell/go-mdism/issues/24]
+		// unitFructoseState := get_state_by_id(&Inputs, 37)
+		// tPs := unitFructoseState.get_destination_probabilites(&Inputs)
+		// newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, person, false)
 	}
 
 	for _, newTp := range newTps {
@@ -449,7 +450,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
 
-			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, doPrint)
+			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, person, doPrint)
 			transitionProbabilities = newTransitionProbabilities
 		} // end foreach interaction
 
@@ -1117,7 +1118,7 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 
 // --------------- transition probabilities
 
-func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, doPrint bool) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person, doPrint bool) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
 
