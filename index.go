@@ -319,7 +319,11 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	for _, masterRecord := range GlobalMasterRecords {
+<<<<<<< HEAD
+		//fmt.Println(masterRecord.Cycle_id, masterRecord.State_id, Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id])
+=======
 
+>>>>>>> 948000ddb3d7759165527a56c4cc7c6c80431591
 		Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 	}
 
@@ -1132,10 +1136,25 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 	if cycle.Id > 1 && hasTimeEffect {
 		// these prepresent the remaining risk after N cycles. ie remaining risk
 		// is equal to original risk * 0.985 ^ number of years from original risk
+
+		/*ageModel := localInputs.Models[7]
+		ageModelStateId := person.get_state_by_model(localInputs, ageModel).Id // Shit, I have no access to person here. How do I find age?
+		actualAge := ageModelStateId - 22 //Fix this hack = hardcoded
+		*/
+
 		timeEffectByToState := make([]float64, 15, 15)
-		timeEffectByToState[8] = 0.985  //natural deaths
 		timeEffectByToState[13] = 0.985 //CHD incidence
 		timeEffectByToState[14] = 0.979 //CHD mortality
+		//if actualAge >= 20 && actualAge <= 30 {
+		//	timeEffectByToState[8] = 1.000 //natural deaths
+		//} else if actualAge > 30 && actualAge <= 55 {
+		timeEffectByToState[8] = 0.980
+		//} else if actualAge > 55 {
+		//	timeEffectByToState[8] = 0.970
+		//} else {
+		//	fmt.Println("Cannot determine regression rate of natural mortality ", timeEffectByToState[8])
+		//	os.Exit(1)
+		//}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
 	}
 
