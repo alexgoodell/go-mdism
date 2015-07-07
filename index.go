@@ -319,10 +319,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 	for _, masterRecord := range GlobalMasterRecords {
 
-		if masterRecord.Person_id > 100 {
-			//fmt.Println("Bingo", masterRecord.Person_id)
-		}
-		//fmt.Println(masterRecord.Cycle_id, masterRecord.State_id, Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id])
 		Inputs.QueryData.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 	}
 
@@ -847,7 +843,9 @@ func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, mas
 	// Below iteration finds the new states. This needs to be done here
 	// in case someone died - even if someone dies in the "last" model,
 	// that deaths forces a death in all other models
-	for _, model := range localInputsPointer.Models { // foreach model
+
+	shuffled := shuffle(localInputsPointer.Models)
+	for _, model := range shuffled { // foreach model
 		var newMasterRecord MasterRecord
 		newMasterRecord.Cycle_id = cycle.Id + 1
 		newMasterRecord.Person_id = person.Id
@@ -991,13 +989,27 @@ func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 
 // ----------- non-methods
 
+// func shuffle(models []Model) []Model {
+// 	//randomize order of models
+// 	for i := range models {
+// 		j := rand.Intn(i + 1)
+// 		models[i], models[j] = models[j], models[i]
+// 	}
+// 	return models
+// }
+
 func shuffle(models []Model) []Model {
-	//randomize order of models
-	for i := range models {
-		j := rand.Intn(i + 1)
-		models[i], models[j] = models[j], models[i]
+	modelsCopy := make([]Model, len(models), len(models))
+	//Println("og: ", models)
+	copy(modelsCopy, models)
+	N := len(modelsCopy)
+	for i := 0; i < N; i++ {
+		// choose index uniformly in [i, N-1]
+		r := i + rand.Intn(N-i)
+		modelsCopy[r], modelsCopy[i] = modelsCopy[i], modelsCopy[r]
 	}
-	return models
+	//fmt.Println("shuffled: ", modelsCopy)
+	return modelsCopy
 }
 
 // Since we are using an open cohort, we need to add people to the
