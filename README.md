@@ -19,16 +19,27 @@ go tool pprof --pdf (which go-mdism) tmp/cpu.pprof  > test.pdf
 ```
 
 ## Todo
-
-- [x] Checked all input files, and corrected where necessary.
-RAS - CHECK (deleted 18-20 years and checked all TPs)
-Cycles - CHECK (deleted cycle 26 = 2036)
-Models - CHECK
-States - CHECK
-TransitionProbabilities - CHECK (deleted that people could change between fruc high and fruc low (equal TP != equal # people), set TP from unin2 for each RAS determined disease to 100% stay at unin2, added liver death from nash and cirrhosis, and added prevalence of HCC at initialization)
-Interactions - CHECK (for some reason CHD death rates were not correct, and I made ORs normal again) 
--> for some reason it gives errors within the NAFLD model for TP = under 0 now. I doubt this is possible because the max multiplication in that model is 8.350. Since none of the baseline TPs exceed 0.02, it does not seem right that it gives a problem.
-I chose not to dive too deep into it, because it was already known that the interaction function is malfunctioning. -> I have commented the error out for now.
+Discuss:
+- How many cycles do we really need?
+	- And do we need to start calculating DALYs et cetera after 0 or 1? (line 491)
+	- And do we want to adjust the regression rate after cycle 1 or 2? (lne 1121)
+- When are we letting new people enter and how are we going to make sure they aren't 21 already? (line 281)(add age 19?)
+- Results (all seen from go point of view):
+	- NAFLD steatosis is a little low
+	- NAFLD mnatural mortality is high
+	- NAFLD otherDeath is low
+	- Too many people in the model
+	- Not enough cycles are modeled (one too few)
+	- T2D death is a little low
+	- T2D otherDeath is a little high (these two are quite small)
+	- CHD prevalence is low
+	- (Therefore) CHD death is also low
+	- CHD other death is a bit high
+	- Normal weight and overweight are very much lower
+	- Obesity is extremely high
+	- BMI otherdeath is quite accurate - this probably indicates that the difference in the ither models stem from the fact that these people die from natural causes before they can die of the disease. The total death rate is quite accurate.
+	- Age at uninitialized has 1 extra person? Why is that? Somewhere +1?
+- Turn slices into arrays? Fixed length is faster?
 
 # PSA
 - [ ] Set up PSA reporting - natural events, PSA switch etc - Alex to complete
