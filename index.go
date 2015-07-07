@@ -819,7 +819,7 @@ func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToA
 	// //fmt.Println("Person:", person.Id)
 	// for _, cycle := range localInputsPointer.Cycles { // foreach cycle
 	// 	//fmt.Println("Cycle: ", cycle.Name)
-	// 	//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models //TODO place back in not sure why broken.
+	// 	//shuffled := shuffle(localInputsPointer.Models) // randomize the order of the models
 	// 	for _, model := range localInputsPointer.Models { // foreach model
 	// 		//fmt.Println(model.Name)
 	// 		runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
@@ -906,7 +906,7 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		for r := 0; r < len(Inputs.States); r++ {
 			Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r] = make([]int, len(Inputs.States), len(Inputs.States))
 			for l := 0; l < len(Inputs.States); l++ {
-				Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r][l] = 99999999 // TODO placeholder value to represent no interaction
+				Inputs.QueryData.Interactions_id_by_in_state_and_from_state_and_to_state[i][r][l] = 99999999 // TODO Is the 9999 placeholder value to represent no interaction a good idea?
 			}
 		}
 	}
@@ -922,7 +922,7 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		Inputs.QueryData.Model_id_by_state[state.Id] = state.Model_id
 	}
 
-	/* TODO Fix this hack. We actually end up storing len(Cycles)+1 cycles,
+	/* TODO  Fix the cycle system. We actually end up storing len(Cycles)+1 cycles,
 	because we start on 0 and calculate the cycle ahead of us, so if we have
 	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
 
@@ -957,9 +957,7 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 }
 
 func initializeGlobalStatePopulations(Inputs Input) Input {
-	/* TODO Fix this hack. We actually end up storing len(Cycles)+1 cycles,
-	because we start on 0 and calculate the cycle ahead of us, so if we have
-	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
+	/* See cycle to do above */
 	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
 	GlobalStatePopulations = make([]StatePopulation, numberOfCalculatedCycles*len(Inputs.States))
 	q := 0
@@ -981,7 +979,7 @@ func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
 	for i := 0; i < numberOfIterations; i++ {
 		GlobalMasterRecordsByIPCM[i] = make([][][]int, numberOfPeople, numberOfPeople)
 		for p := 0; p < numberOfPeople; p++ {
-			GlobalMasterRecordsByIPCM[i][p] = make([][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1) // TODO cycles hack
+			GlobalMasterRecordsByIPCM[i][p] = make([][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1) // See cycles hack to do above
 			for q := 0; q < len(Inputs.Cycles)+1; q++ {
 				GlobalMasterRecordsByIPCM[i][p][q] = make([]int, len(Inputs.Models), len(Inputs.Models))
 			}
@@ -1014,13 +1012,13 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 		Inputs.People = append(Inputs.People, newPerson)
 		//fmt.Println("new person", newPerson.Id)
 		for _, model := range Inputs.Models {
-			// TODO fix hack here - this should be more systematic
+			// TODO Age system should be more systematic
 			// Place person into correct age category
 			uninitializedState := State{}
 			uninitializedState = model.get_uninitialized_state(Inputs)
 			if model.Name == "Age" {
 				// Start them at age 20
-				// TODO they will enter the model at age 21?
+				// TODO Do entering individuals actually enter at 21yo?
 				uninitializedState = get_state_by_id(Inputs, 42)
 			}
 			//fmt.Println("unit state", uninitializedState)
@@ -1109,10 +1107,10 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 
 func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, doPrint bool) []TransitionProbability {
 
-	// TODO if these ever change to pointerss, you'll need to deference them
 	adjustmentFactor := interaction.Adjustment
 
-	// TODO implement hook here
+	// TODO Implement hooks
+
 	// this adjusts a few transition probabilities which have a projected change over time
 	// 8  = natural death
 	// 13 = CHD
@@ -1192,7 +1190,7 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 	}
 
 	//check to make sure that people don't stay unitialized
-	// TODO what about unit 2 ?
+	// TODO Check for uninitialized 2
 	model := localInputs.Models[interaction.Effected_model_id]
 	unitState := model.get_uninitialized_state(localInputs)
 	if theseTPs[0].From_id == unitState.Id && recursiveTp != 0 {
@@ -1410,7 +1408,7 @@ func pick(probabilities []float64) int {
 			return i
 		}
 	}
-	// TODO(alex): figure this out - needed error of something
+	// TODO: Add error report here [Issue: https://github.com/alexgoodell/go-mdism/issues/4]
 	fmt.Println("problem with pick")
 	os.Exit(1)
 	return 0
