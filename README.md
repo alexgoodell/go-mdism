@@ -18,6 +18,7 @@ To visualize the profiles, you will need to install perftools (`brew install goo
 go tool pprof --pdf (which go-mdism) tmp/cpu.pprof  > test.pdf
 ```
 
+<<<<<<< HEAD
 ## Todo
 Discuss:
 - How many cycles do we really need?
@@ -99,3 +100,5 @@ The same goes for YLL values, if somebody by chance dies in two models at the sa
 - [x] Check all values of interactions and baseline TPs - especially the age corrected ones. Why is the incidence of CHD so high? Also check if formula of declining rates functions properly. Check values in RAS file. While doing that:
 	- [x] Introduce starting prevalence for HCC
 	- [x] Introduce chance to die of liver death from NASH and Cirrhosis (+ subtract from total deaths?)
+=======
+>>>>>>> 948000ddb3d7759165527a56c4cc7c6c80431591
