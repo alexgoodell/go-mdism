@@ -211,18 +211,24 @@ func main() {
 
 	// cycle := Cycle{}
 
-	var newTps []TransitionProbability
+	// var newTps []TransitionProbability
 	// TODO fix this hack
+	//Interaction 250 = unin to high fructose (gets lowered from 0.7 to 0.56 (=80%))
+
+	interventionFactor := 0.80 // This is the factor (or %) that you want to lower the high fructose TP by.
+	adjustedTpBase := interventionFactor * Inputs.TransitionProbabilities[250].Tp_base
 	if interventionIsOn {
+		Inputs.TransitionProbabilities[250].Tp_base = adjustedTpBase
+		Inputs.TransitionProbabilities[251].Tp_base = 1.00 - adjustedTpBase
 		// TODO: Re-implement intervention not using adjust_transitions because adjust_transitions now requires a person [Issue: https://github.com/alexgoodell/go-mdism/issues/24]
 		// unitFructoseState := get_state_by_id(&Inputs, 37)
 		// tPs := unitFructoseState.get_destination_probabilites(&Inputs)
 		// newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, person, false)
 	}
 
-	for _, newTp := range newTps {
-		Inputs.TransitionProbabilities[newTp.Id] = newTp
-	}
+	// for _, newTp := range newTps {
+	// 	Inputs.TransitionProbabilities[newTp.Id] = newTp
+	// }
 
 	// table tests here
 
@@ -245,7 +251,7 @@ func main() {
 
 func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
-	fmt.Println("Intialization complete, time elaspsed:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
 	beginTime = time.Now()
 
 	masterRecordsToAdd := make(chan []MasterRecord)
@@ -1132,24 +1138,23 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		// these prepresent the remaining risk after N cycles. ie remaining risk
 		// is equal to original risk * 0.985 ^ number of years from original risk
 
-		/*ageModel := localInputs.Models[7]
-		ageModelStateId := person.get_state_by_model(localInputs, ageModel).Id // Shit, I have no access to person here. How do I find age?
+		ageModel := localInputs.Models[7]
+		ageModelStateId := person.get_state_by_model(localInputs, ageModel).Id
 		actualAge := ageModelStateId - 22 //Fix this hack = hardcoded
-		*/
 
 		timeEffectByToState := make([]float64, 15, 15)
 		timeEffectByToState[13] = 0.985 //CHD incidence
 		timeEffectByToState[14] = 0.979 //CHD mortality
-		//if actualAge >= 20 && actualAge <= 30 {
-		//	timeEffectByToState[8] = 1.000 //natural deaths
-		//} else if actualAge > 30 && actualAge <= 55 {
-		timeEffectByToState[8] = 0.980
-		//} else if actualAge > 55 {
-		//	timeEffectByToState[8] = 0.970
-		//} else {
-		//	fmt.Println("Cannot determine regression rate of natural mortality ", timeEffectByToState[8])
-		//	os.Exit(1)
-		//}
+		if actualAge >= 20 && actualAge <= 30 {
+			timeEffectByToState[8] = 1.000 //natural deaths
+		} else if actualAge > 30 && actualAge <= 55 {
+			timeEffectByToState[8] = 0.980
+		} else if actualAge > 55 {
+			timeEffectByToState[8] = 0.970
+		} else {
+			fmt.Println("Cannot determine regression rate of natural mortality ", timeEffectByToState[8])
+			os.Exit(1)
+		}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
 	}
 
