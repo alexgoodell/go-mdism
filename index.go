@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-var beginTime = time.Now() //TODO: Test this
+var beginTime = time.Now() //TODO: Test this [Issue: https://github.com/alexgoodell/go-mdism/issues/32]
 
 type State struct {
 	Id                        int
@@ -138,8 +138,10 @@ var output_dir = "tmp"
 
 var numberOfPeople int
 var numberOfIterations int
+var numberOfPeopleEntering int
 var inputsPath string
 var isProfile string
+var reportingMode string
 
 var Timer *nitro.B
 
@@ -152,8 +154,11 @@ func main() {
 
 	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
+	// TODO: index error if number of people entering is <15000 [Issue: https://github.com/alexgoodell/go-mdism/issues/33]
+	flag.IntVar(&numberOfPeopleEntering, "entering", 15000, "number of people that will enter the run(s)")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
+	flag.StringVar(&reportingMode, "reporting_mode", "individual", "either individual or psa")
 	flag.Parse()
 
 	if isProfile != "false" {
@@ -189,7 +194,7 @@ func main() {
 	// TODO
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
-	numberOfPeopleEntering := 15000
+
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
@@ -373,8 +378,11 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
 	*/
 
-	//toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
-	toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+	if reportingMode == "individual" {
+		toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
+		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+
+	}
 
 	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
