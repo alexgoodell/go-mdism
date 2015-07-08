@@ -1,5 +1,10 @@
 // see readme for todos
 
+// style guide:
+// lowercase singular refers to local single
+// uppercase singular is type
+// uppercase plural is global object
+
 package main
 
 import (
@@ -76,13 +81,18 @@ type TransitionProbability struct {
 	Tp_base float64
 }
 
-//this struct will replicate the data found
-type StatePopulation struct {
-	Id         int
-	State_id   int
-	Cycle_id   int
-	Population int
-	Model_id   int
+type Cost struct {
+	Id       int
+	State_id int
+	Costs    float64
+	PSA_id   int
+}
+
+type DisabilityWeight struct {
+	Id                int
+	State_id          int
+	Disability_weight float64
+	PSA_id            int
 }
 
 type Query struct {
@@ -93,6 +103,9 @@ type Query struct {
 	State_populations_by_cycle                              [][]int
 	Model_id_by_state                                       []int
 	Other_death_state_by_model                              []int
+	Cost_by_state_id                                        []float64
+	Disability_weight_by_state_id                           []float64
+	Output_by_state_id_and_cycle_id_and_person_id           [][][]*OutputCPS
 }
 
 type Input struct {
@@ -105,6 +118,8 @@ type Input struct {
 	Interactions            []Interaction
 	Cycles                  []Cycle
 	MasterRecords           []MasterRecord
+	Costs                   []Cost
+	DisabilityWeights       []DisabilityWeight
 }
 
 type TPByRAS struct {
@@ -119,6 +134,38 @@ type TPByRAS struct {
 	Probability   float64
 }
 
+// ##################### Output structs ################ //
+
+//this struct will replicate the data found
+type StatePopulation struct {
+	Id         int
+	State_id   int
+	Cycle_id   int
+	Population int
+	Model_id   int
+}
+
+type OutputCPS struct {
+	Id        int
+	State_id  int
+	Cycle_id  int
+	Person_id int
+	Costs     float64
+	YLLs      float64
+	YLDs      float64
+}
+
+// I think it would make the most sense to generalize Query to a data storage
+// tool for all in-model uses, then use its data to export to these exportable formats
+
+type IndSimOutput struct {
+	MasterRecords    []MasterRecord
+	StatePopulations []StatePopulation
+	OutputCPSs       []OutputCPS
+}
+
+var IndSimOutputs IndSimOutput
+
 var GlobalTPsByRAS []TPByRAS
 
 // these are all global variables, which is why they are Capitalized
@@ -132,13 +179,11 @@ var GlobalYLLsByState = make([]float64, 150, 150)
 var GlobalCostsByState = make([]float64, 150, 150)
 var GlobalDALYsByState = make([]float64, 150, 150)
 
-var GlobalMasterRecordsByIPCM [][][][]int
-
 var output_dir = "tmp"
 
 var numberOfPeople int
 var numberOfIterations int
-var numberOfPeopleEntering int
+var numberOfPeopleEnteringPerYear int
 var inputsPath string
 var isProfile string
 var reportingMode string
@@ -155,7 +200,7 @@ func main() {
 	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	// TODO: index error if number of people entering is <15000 [Issue: https://github.com/alexgoodell/go-mdism/issues/33]
-	flag.IntVar(&numberOfPeopleEntering, "entering", 15000, "number of people that will enter the run(s)")
+	flag.IntVar(&numberOfPeopleEnteringPerYear, "entering", 416, "number of people that will enter the run(s)")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
 	flag.StringVar(&reportingMode, "reporting_mode", "individual", "either individual or psa")
@@ -195,6 +240,7 @@ func main() {
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
 
+	numberOfPeopleEntering := numberOfPeopleEnteringPerYear * (len(Inputs.Cycles) + 1)
 	//set up queryData
 	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
 
@@ -203,8 +249,6 @@ func main() {
 	Inputs = createInitialPeople(Inputs, numberOfPeople)
 
 	Inputs = initializeGlobalStatePopulations(Inputs)
-
-	setUpGlobalMasterRecordsByIPCM(Inputs)
 
 	interventionIsOn := false
 
@@ -262,8 +306,12 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	masterRecordsToAdd := make(chan []MasterRecord)
 
 	//create pointer to a new local set of inputs for each independent thread
+	// TODO: Not sure if we need to deepCopy local inputs. Two threads can work on [Issue: https://github.com/alexgoodell/go-mdism/issues/34]
+	// one global object seperately as long as the aren't changing the same values
+	// see http://play.golang.org/p/edEbU10Lq0
+
 	var localInputs Input
-	localInputs = deepCopy(Inputs)
+	localInputs = Inputs
 
 	switch concurrencyBy {
 
@@ -290,7 +338,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 			// need to create new people before calculating the year
 			// of they're unit states will be written over
 			if cycle.Id > 0 {
-				createNewPeople(&localInputs, cycle, 416) //=The number of created people per cycle
+				createNewPeople(&localInputs, cycle, numberOfPeopleEnteringPerYear) //=The number of created people per cycle
 			}
 
 			for _, person := range localInputs.People { // 	foreach person
@@ -301,10 +349,10 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 				mRstoAdd := <-masterRecordsToAdd
 				//TODO very slow!
 				GlobalMasterRecords = append(GlobalMasterRecords, mRstoAdd...)
-				for _, mRtoAdd := range mRstoAdd {
-					//GlobalMasterRecordsByIPCM[0][mRtoAdd.Person_id][mRtoAdd.Cycle_id][mRtoAdd.Model_id] = mRtoAdd.State_id
-					_ = mRtoAdd
-				}
+				// for _, mRtoAdd := range mRstoAdd {
+				// 	//GlobalMasterRecordsByIPCM[0][mRtoAdd.Person_id][mRtoAdd.Cycle_id][mRtoAdd.Model_id] = mRtoAdd.State_id
+				// 	_ = mRtoAdd
+				// }
 				_ = person // to avoid unused warning
 				_ = cycle  // to avoid unused warning
 			}
@@ -340,45 +388,23 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	}
 
 	//outputs
-	for i := 0; i < 150; i++ {
-		if GlobalYLDsByState[i] != 0 {
-			fmt.Println("Global YLDs: ", GlobalYLDsByState[i])
-		}
-		if GlobalYLLsByState[i] != 0 {
-			fmt.Println("Global YLLs: ", GlobalYLLsByState[i])
-		}
-		if GlobalCostsByState[i] != 0 {
-			fmt.Println("Global Costs: ", GlobalCostsByState[i])
-		}
-		if GlobalDALYsByState[i] != 0 {
-			fmt.Println("Global DALYs ", Inputs.States[i].Name, GlobalDALYsByState[i])
-		}
-	}
-
-	/*fmt.Println("Global YLDs Steatosis: ", GlobalYLDsByState[3])
-	fmt.Println("Global YLDs NASH: ", GlobalYLDsByState[4])
-	fmt.Println("Global YLDs Cirrhosis: ", GlobalYLDsByState[5])
-	fmt.Println("Global YLDs HCC: ", GlobalYLDsByState[6])
-	fmt.Println("Global YLDs CHD: ", GlobalYLDsByState[13])
-	fmt.Println("Global YLDs T2D: ", GlobalYLDsByState[19])
-	fmt.Println("Global YLDs Overweight: ", GlobalYLDsByState[25])
-	fmt.Println("Global YLDs Obesity: ", GlobalYLDsByState[26])
-	fmt.Println("Global YLLs Liver Death: ", GlobalYLLsByState[7])
-	fmt.Println("Global YLLs Natural Death: ", GlobalYLLsByState[8])
-	fmt.Println("Global YLLs CHD: ", GlobalYLLsByState[14])
-	fmt.Println("Global YLLs T2D: ", GlobalYLLsByState[20])
-	fmt.Println("GlobalDALYs: ", GlobalDALYs)
-	fmt.Println("Global costs Steatosis: ", GlobalCostsByState[3])
-	fmt.Println("Global costs NASH: ", GlobalCostsByState[4])
-	fmt.Println("Global costs Cirrhosis: ", GlobalCostsByState[5])
-	fmt.Println("Global costs HCC: ", GlobalCostsByState[6])
-	fmt.Println("Global costs CHD: ", GlobalCostsByState[13])
-	fmt.Println("Global costs T2D: ", GlobalCostsByState[19])
-	fmt.Println("Global costs Overweight: ", GlobalCostsByState[25])
-	fmt.Println("Global costs Obesity: ", GlobalCostsByState[26])
-	*/
+	// for i := 0; i < 150; i++ {
+	// 	if GlobalYLDsByState[i] != 0 {
+	// 		fmt.Println("Global YLDs: ", GlobalYLDsByState[i])
+	// 	}
+	// 	if GlobalYLLsByState[i] != 0 {
+	// 		fmt.Println("Global YLLs: ", GlobalYLLsByState[i])
+	// 	}
+	// 	if localInputs[i] != 0 {
+	// 		fmt.Println("Global Costs: ", GlobalCostsByState[i])
+	// 	}
+	// 	if GlobalDALYsByState[i] != 0 {
+	// 		fmt.Println("Global DALYs ", Inputs.States[i].Name, GlobalDALYsByState[i])
+	// 	}
+	// }
 
 	if reportingMode == "individual" {
+		toCsv("output"+"/output_cps.csv", IndSimOutputs.OutputCPSs[0], IndSimOutputs.OutputCPSs)
 		toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -488,66 +514,59 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	//Cost calculations
 	discountValue := math.Pow(0.97, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
-	stateCosts := make([]float64, 150, 150)
-	stateCosts[3] = 150.00
-	stateCosts[4] = 262.00
-	stateCosts[5] = 5330.00
-	stateCosts[6] = 37951.00
-	stateCosts[13] = 8000.00
-	stateCosts[19] = 7888.00
-	stateCosts[25] = 350.00
-	stateCosts[26] = 852.00
-
 	if cycle.Id > 0 {
-		GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
+
+		//GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
+		outputCPS := localInputsPointer.QueryData.Output_by_state_id_and_cycle_id_and_person_id[new_state.Id][cycle.Id+1][person.Id]
+
+		costs := localInputsPointer.QueryData.Cost_by_state_id[new_state.Id]
+		outputCPS.Costs += costs
+
+		//localInputsPointer.QueryData.Cost_by_state_id_and_cycle_id_and_person_id[new_state.Id][cycle.Id+1] +=
 
 		// years of life lost from disability
-		stateSpecificYLDs := new_state.Disability_weight // (1 - discountValue) * (1 - math.Exp(-(1 - discountValue)))
+		stateSpecificYLDs := localInputsPointer.QueryData.Disability_weight_by_state_id[new_state.Id]
 		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discountValue, stateSpecificYLDs, new_state.Disability_weight)
 			os.Exit(1)
 		}
-		//Saving YLD for each personcyclemodel to GlobalYLD
-		GlobalYLDsByState[new_state.Id] += stateSpecificYLDs
-		GlobalDALYsByState[new_state.Id] += stateSpecificYLDs
-	}
+		outputCPS.YLDs += stateSpecificYLDs
 
-	//fmt.Println("model Id", model.Id)
-	justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
+		//fmt.Println("model Id", model.Id)
+		justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
 
-	justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
+		justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 
-	//stateSpecificYLLs := make([]float64, 150, 150)
+		//stateSpecificYLLs := make([]float64, 150, 150)
 
-	if justDiedOfDiseaseSpecific /*|| justDiedOfNaturalCauses*/ {
+		if justDiedOfDiseaseSpecific {
 
-		stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
-		GlobalYLLsByState[new_state.Id] += stateSpecificYLLs
-		GlobalDALYsByState[new_state.Id] += stateSpecificYLLs
-	}
-
-	if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
-		//fmt.Println("death sync in model ", model.Id)
-		// Sync deaths. Put person in "other death"
-		for _, sub_model := range localInputsPointer.Models {
-			//skip current model because should show disease-specific death
-			if sub_model.Id != model.Id {
-
-				otherDeathState := getOtherDeathStateByModel(localInputsPointer, sub_model)
-				//fmt.Println("updated model ", sub_model.Id, " with otherdeathstate ", otherDeathState)
-				// add new records for all the deaths for this cycle and next
-				// TODO add toQueryData adds to the next cycle not the currrent cycle
-				// make this more clear
-				prev_cycle := Cycle{}
-				prev_cycle.Id = cycle.Id - 1
-				addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
-				addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
-			}
+			stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
+			outputCPS.YLLs += stateSpecificYLLs
 		}
 
-	}
+		if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
+			//fmt.Println("death sync in model ", model.Id)
+			// Sync deaths. Put person in "other death"
+			for _, sub_model := range localInputsPointer.Models {
+				//skip current model because should show disease-specific death
+				if sub_model.Id != model.Id {
 
+					otherDeathState := getOtherDeathStateByModel(localInputsPointer, sub_model)
+					//fmt.Println("updated model ", sub_model.Id, " with otherdeathstate ", otherDeathState)
+					// add new records for all the deaths for this cycle and next
+					// TODO add toQueryData adds to the next cycle not the currrent cycle
+					// make this more clear
+					prev_cycle := Cycle{}
+					prev_cycle.Id = cycle.Id - 1
+					addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
+					addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
+				}
+			}
+
+		}
+	}
 	// check to make sure they are not mis-assigned
 	if new_state.Is_other_death && !currentStateInThisModel.Is_other_death {
 		fmt.Println("Should not be assigned other death here")
@@ -851,14 +870,15 @@ func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, mas
 	mrSize := len(localInputsPointer.Models)
 	theseMasterRecordsToAdd := make([]MasterRecord, mrSize, mrSize)
 	mrIndex := 0
-	for _, model := range localInputsPointer.Models { // foreach model
+	shuffled := shuffle(localInputsPointer.Models)
+	for _, model := range shuffled { // foreach model
+		// TODO: runCyclePersonModel can be concurrent? [Issue: https://github.com/alexgoodell/go-mdism/issues/35]
 		runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
 	}
 	// Below iteration finds the new states. This needs to be done here
 	// in case someone died - even if someone dies in the "last" model,
 	// that deaths forces a death in all other models
 
-	shuffled := shuffle(localInputsPointer.Models)
 	for _, model := range shuffled { // foreach model
 		var newMasterRecord MasterRecord
 		newMasterRecord.Cycle_id = cycle.Id + 1
@@ -945,6 +965,8 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		Inputs.QueryData.State_populations_by_cycle[c] = make([]int, len(Inputs.States), len(Inputs.States))
 	}
 
+	// ############## Other death state by model id ##################
+
 	Inputs.QueryData.Other_death_state_by_model = make([]int, len(Inputs.Models), len(Inputs.Models))
 	for _, model := range Inputs.Models {
 		// find other death state by iteration
@@ -964,7 +986,54 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 
 	}
 
-	Timer.Step("set up query data")
+	// ############## Costs by state id ##################
+
+	// fill in structure of query data with blanks
+	Inputs.QueryData.Cost_by_state_id = make([]float64, len(Inputs.States), len(Inputs.States))
+	for i := 0; i < len(Inputs.States); i++ {
+		Inputs.QueryData.Cost_by_state_id[i] = 0
+	}
+
+	// put input from costs.csv (stored in Inputs.Costs) to fill in query data
+	for _, cost := range Inputs.Costs {
+		Inputs.QueryData.Cost_by_state_id[cost.State_id] = cost.Costs
+	}
+
+	// ############## Disability weights by state id ##################
+
+	// fill in structure of query data with blanks
+	Inputs.QueryData.Disability_weight_by_state_id = make([]float64, len(Inputs.States), len(Inputs.States))
+	for i := 0; i < len(Inputs.States); i++ {
+		Inputs.QueryData.Disability_weight_by_state_id[i] = 0
+	}
+
+	// put input from costs.csv (stored in Inputs.Costs) to fill in query data
+	for _, dw := range Inputs.DisabilityWeights {
+		Inputs.QueryData.Disability_weight_by_state_id[dw.State_id] = dw.Disability_weight
+	}
+
+	// ############## Costs by state id and cycle id (output) ##################
+
+	length := (len(Inputs.Cycles) + 1) * len(Inputs.States) * numberOfPeople
+	//fmt.Println(length)
+	t := 0
+	IndSimOutputs.OutputCPSs = make([]OutputCPS, length, length)
+	Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id = make([][][]*OutputCPS, len(Inputs.States), len(Inputs.States))
+	for i := 0; i < len(Inputs.States); i++ {
+		Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i] = make([][]*OutputCPS, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
+		for p := 0; p < len(Inputs.Cycles)+1; p++ {
+			Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i][p] = make([]*OutputCPS, numberOfPeople, numberOfPeople)
+			for q := 0; q < numberOfPeople; q++ {
+				var outputCPS OutputCPS
+				outputCPS.Cycle_id = p
+				outputCPS.Person_id = q
+				outputCPS.State_id = i
+				Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i][p][q] = &IndSimOutputs.OutputCPSs[t]
+				t++
+			}
+		}
+	}
+
 	return Inputs
 }
 
@@ -984,21 +1053,6 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 		}
 	}
 	return Inputs
-}
-func setUpGlobalMasterRecordsByIPCM(Inputs Input) {
-
-	GlobalMasterRecordsByIPCM = make([][][][]int, numberOfIterations, numberOfIterations)
-	for i := 0; i < numberOfIterations; i++ {
-		GlobalMasterRecordsByIPCM[i] = make([][][]int, numberOfPeople, numberOfPeople)
-		for p := 0; p < numberOfPeople; p++ {
-			GlobalMasterRecordsByIPCM[i][p] = make([][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1) // See cycles hack to do above
-			for q := 0; q < len(Inputs.Cycles)+1; q++ {
-				GlobalMasterRecordsByIPCM[i][p][q] = make([]int, len(Inputs.Models), len(Inputs.Models))
-			}
-		}
-	}
-
-	Timer.Step("set up master data")
 }
 
 // ----------- non-methods
@@ -1681,6 +1735,38 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 	for i, ptr := range tpbrsPtr {
 		GlobalTPsByRAS[i] = *ptr.(*TPByRAS)
 	}
+
+	// ####################### Costs #######################
+
+	filename = "inputs/" + inputsPath + "/costs.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+
+	Inputs.Costs = make([]Cost, numberOfRecords, numberOfRecords)
+	var costsPtr []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		costsPtr = append(costsPtr, new(Cost))
+	}
+	ptrs = fromCsv(filename, Inputs.Costs[0], costsPtr)
+	for i, ptr := range costsPtr {
+		Inputs.Costs[i] = *ptr.(*Cost)
+	}
+
+	// ####################### Disability Weights #######################
+
+	filename = "inputs/" + inputsPath + "/disability-weights.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+
+	Inputs.DisabilityWeights = make([]DisabilityWeight, numberOfRecords, numberOfRecords)
+	var dwPtrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		dwPtrs = append(dwPtrs, new(DisabilityWeight))
+	}
+	ptrs = fromCsv(filename, Inputs.DisabilityWeights[0], dwPtrs)
+	for i, ptr := range dwPtrs {
+		Inputs.DisabilityWeights[i] = *ptr.(*DisabilityWeight)
+	}
+
+	fmt.Println(Inputs.DisabilityWeights)
 
 	return Inputs
 }
