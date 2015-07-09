@@ -390,6 +390,12 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(model, cycle)
 
+	//otherDeathState := getOtherDeathStateByModel(model)
+
+	// if currentStateInThisModel == otherDeathState {
+	// 	fmt.Println(person.Id, " has died in ", model.Name)
+	// }
+
 	// get the transition probabilities from the given state
 	transitionProbabilities := currentStateInThisModel.get_destination_probabilites()
 
@@ -462,31 +468,34 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 		// Sync deaths with other models
 		if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
+			// fmt.Println("death in ", person.Id, model.Name)
 			// Sync deaths. Put person in "other death"
 			for _, sub_model := range Inputs.Models {
+
 				//skip current model because should show disease-specific death
 				if sub_model.Id != model.Id {
 
 					otherDeathState := getOtherDeathStateByModel(sub_model)
+					// fmt.Println("moving ", person.Id, " to state, ", otherDeathState)
 					// add new records for all the deaths for this cycle and next
 					// TODO add toQuery adds to the next cycle not the currrent cycle
 					// make this more clear
 
 					// Set that they have died "other death" in models that are not this one
 					// For the current cycle
-					mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id]
+					mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id]
 					mr := &Inputs.MasterRecords[mrId]
 					mr.State_id = otherDeathState.Id
 
-					Query.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id] = otherDeathState.Id
+					Query.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id] = otherDeathState.Id
 
 					// For the next cycle - in case this model has already
 					// passed and they were assigned a new state
-					mrId = Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+					mrId = Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][sub_model.Id]
 					mr = &Inputs.MasterRecords[mrId]
 					mr.State_id = otherDeathState.Id
 
-					Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = otherDeathState.Id
+					Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][sub_model.Id] = otherDeathState.Id
 				}
 			}
 
