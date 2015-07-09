@@ -78,6 +78,7 @@ type Interaction struct {
 	To_state_id       int
 	Adjustment        float64
 	Effected_model_id int
+	PSA_id            int
 }
 
 type TransitionProbability struct {
@@ -85,6 +86,7 @@ type TransitionProbability struct {
 	From_id int
 	To_id   int
 	Tp_base float64
+	PSA_id  int
 }
 
 type Cost struct {
@@ -353,7 +355,7 @@ func runModel(concurrencyBy string) {
 	formatOutputs()
 
 	if reportingMode == "individual" {
-		toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
+		//toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 		toCsv(output_dir+"/output_by_cycle_and_state.csv", Outputs.OutputsByCycleState[0], Outputs.OutputsByCycleState)
 	}
