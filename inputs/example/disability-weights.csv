@@ -1,4 +1,4 @@
-Id,State_id,Disability_weight,PSA_id
+Id,In_state,Disability_weight,PSA_id
 0,3,0,1
 1,4,0.15,1
 2,5,0.2,1
