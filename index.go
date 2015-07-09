@@ -37,8 +37,6 @@ type State struct {
 	Model_id                  int
 	Name                      string
 	Is_uninitialized_state    bool
-	Disability_weight         float64
-	Cost_per_cycle            float64
 	Is_disease_specific_death bool
 	Is_other_death            bool
 	Is_natural_causes_death   bool
@@ -50,10 +48,14 @@ type Model struct {
 }
 
 type MasterRecord struct {
-	Cycle_id  int
-	Person_id int
-	State_id  int
-	Model_id  int
+	Cycle_id               int
+	Person_id              int
+	State_id               int
+	Model_id               int
+	YLDs                   float64
+	YLLs                   float64
+	Costs                  float64
+	Has_entered_simulation bool
 }
 
 type Cycle struct {
@@ -105,11 +107,11 @@ type Query struct {
 	Other_death_state_by_model                              []int
 	Cost_by_state_id                                        []float64
 	Disability_weight_by_state_id                           []float64
-	Output_by_state_id_and_cycle_id_and_person_id           [][][]*OutputCPS
+	Master_record_id_by_cycle_and_person_and_model          [][][]int
 }
 
 type Input struct {
-	CurrentCycle            int
+	//	CurrentCycle            int
 	QueryData               Query
 	Models                  []Model
 	People                  []Person
@@ -145,23 +147,12 @@ type StatePopulation struct {
 	Model_id   int
 }
 
-type OutputCPS struct {
-	Id        int
-	State_id  int
-	Cycle_id  int
-	Person_id int
-	Costs     float64
-	YLLs      float64
-	YLDs      float64
-}
-
 // I think it would make the most sense to generalize Query to a data storage
 // tool for all in-model uses, then use its data to export to these exportable formats
 
 type IndSimOutput struct {
 	MasterRecords    []MasterRecord
 	StatePopulations []StatePopulation
-	OutputCPSs       []OutputCPS
 }
 
 var IndSimOutputs IndSimOutput
@@ -182,22 +173,22 @@ var GlobalDALYsByState = make([]float64, 150, 150)
 var output_dir = "tmp"
 
 var numberOfPeople int
+var numberOfPeopleStarting int
 var numberOfIterations int
 var numberOfPeopleEnteringPerYear int
+var numberOfPeopleEntering int
+
 var inputsPath string
 var isProfile string
 var reportingMode string
 
 var Timer *nitro.B
 
-var printCycle = 2
-var printPerson int
-
 func main() {
 
 	Timer = nitro.Initalize()
 
-	flag.IntVar(&numberOfPeople, "people", 22400, "number of people to run")
+	flag.IntVar(&numberOfPeopleStarting, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
 	// TODO: index error if number of people entering is <15000 [Issue: https://github.com/alexgoodell/go-mdism/issues/33]
 	flag.IntVar(&numberOfPeopleEnteringPerYear, "entering", 416, "number of people that will enter the run(s)")
@@ -229,7 +220,12 @@ func main() {
 	fmt.Println("using ", runtime.NumCPU(), " cores")
 	// Seed the random function
 
-	fmt.Println("and ", numberOfPeople, "individuals")
+	// TODO: remove hardcoded cycles [Issue: https://github.com/alexgoodell/go-mdism/issues/40]
+	numberOfPeopleEntering = numberOfPeopleEnteringPerYear * (26 + 1)
+	numberOfPeople = numberOfPeopleEntering + numberOfPeopleStarting
+
+	fmt.Println("and ", numberOfPeopleStarting, "initial individuals")
+	fmt.Println("and ", numberOfPeopleEntering, "individuals entering")
 	fmt.Println("and ", numberOfIterations, "iterations")
 	fmt.Println("and ", inputsPath, " as inputs")
 
@@ -240,13 +236,12 @@ func main() {
 	// assume same amount of people will enter over 20 years as are currently
 	// in model
 
-	numberOfPeopleEntering := numberOfPeopleEnteringPerYear * (len(Inputs.Cycles) + 1)
 	//set up queryData
-	Inputs = setUpQueryData(Inputs, numberOfPeople, numberOfPeopleEntering)
+	Inputs = setUpQueryData(Inputs)
 
 	// create people will generate individuals and add their data to the master
 	// records
-	Inputs = createInitialPeople(Inputs, numberOfPeople)
+	Inputs = createInitialPeople(Inputs)
 
 	Inputs = initializeGlobalStatePopulations(Inputs)
 
@@ -283,22 +278,13 @@ func main() {
 
 	concurrencyBy := "person-within-cycle"
 
-	iterationChan := make(chan string)
-
-	for i := 0; i < numberOfIterations; i++ {
-		go runModel(Inputs, concurrencyBy, iterationChan)
-	}
-
-	for i := 0; i < numberOfIterations; i++ {
-		toPrint := <-iterationChan
-		fmt.Println(toPrint)
-	}
+	runModel(Inputs, concurrencyBy)
 
 	Timer.Step("main")
 
 }
 
-func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
+func runModel(Inputs Input, concurrencyBy string) {
 
 	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
 	beginTime = time.Now()
@@ -306,7 +292,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	masterRecordsToAdd := make(chan []MasterRecord)
 
 	//create pointer to a new local set of inputs for each independent thread
-	// TODO: Not sure if we need to deepCopy local inputs. Two threads can work on [Issue: https://github.com/alexgoodell/go-mdism/issues/34]
+	// TODO: Not sure if we need to deepCopy local inputs. Two threads can work on [Issue: https://github.com/alexgoodell/go-mdism/issues/39]
 	// one global object seperately as long as the aren't changing the same values
 	// see http://play.golang.org/p/edEbU10Lq0
 
@@ -318,7 +304,7 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	case "person":
 
 		for _, person := range Inputs.People { // foreach cycle
-			go runFullModelForOnePerson(localInputs, person, masterRecordsToAdd)
+			go runFullModelForOnePerson(Inputs, person, masterRecordsToAdd)
 		} // end foreach cycle
 
 		for _, person := range Inputs.People {
@@ -337,27 +323,30 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 
 			// need to create new people before calculating the year
 			// of they're unit states will be written over
+			// TODO: Add people back [Issue: https://github.com/alexgoodell/go-mdism/issues/41]
 			if cycle.Id > 0 {
 				createNewPeople(&localInputs, cycle, numberOfPeopleEnteringPerYear) //=The number of created people per cycle
 			}
 
+			cycleForOnePersonChan := make(chan string)
 			for _, person := range localInputs.People { // 	foreach person
-				go runOneCycleForOnePerson(&localInputs, cycle, person, masterRecordsToAdd)
+				go runOneCycleForOnePerson(&Inputs, cycle, person, cycleForOnePersonChan)
 			}
 
 			for _, person := range localInputs.People { // 	foreach person
-				mRstoAdd := <-masterRecordsToAdd
+				chanString := <-cycleForOnePersonChan
 				//TODO very slow!
-				GlobalMasterRecords = append(GlobalMasterRecords, mRstoAdd...)
+				//GlobalMasterRecords = append(GlobalMasterRecords, mRstoAdd...)
 				// for _, mRtoAdd := range mRstoAdd {
 				// 	//GlobalMasterRecordsByIPCM[0][mRtoAdd.Person_id][mRtoAdd.Cycle_id][mRtoAdd.Model_id] = mRtoAdd.State_id
 				// 	_ = mRtoAdd
 				// }
 				_ = person // to avoid unused warning
 				_ = cycle  // to avoid unused warning
+				_ = chanString
 			}
 
-			localInputs.CurrentCycle++
+			//localInputs.CurrentCycle++
 			//fmt.Println("total num people, a or d, in sim", len(localInputs.People))
 			//createNewPeople(&Inputs, cycle, 100)
 		}
@@ -374,6 +363,10 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//GlobalDALYs += sumSlices(GlobalYLDsByState, GlobalYLLsByState)
 	//after total YLD and YLL is calculated, add everything into total DALYs
 	//(cannot specify this per disease, since YLL for all states in NAFLD is split into natural death and liver death)
+
+	GlobalMasterRecords = localInputs.MasterRecords
+
+	GlobalMasterRecords = removeUnborns(GlobalMasterRecords)
 
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
@@ -404,7 +397,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	// }
 
 	if reportingMode == "individual" {
-		toCsv("output"+"/output_cps.csv", IndSimOutputs.OutputCPSs[0], IndSimOutputs.OutputCPSs)
 		toCsv(output_dir+"/master.csv", GlobalMasterRecords[0], GlobalMasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -413,8 +405,6 @@ func runModel(Inputs Input, concurrencyBy string, iterationChan chan string) {
 	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
-
-	iterationChan <- "Done"
 
 }
 
@@ -438,19 +428,17 @@ func deepCopy(Inputs Input) Input {
 	return cpy
 }
 
-func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, person Person, theseMasterRecordsToAddPtr *[]MasterRecord, mrIndex int) {
-
-	doPrint := false
+func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, person Person) {
 
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
-	currentStateInThisModel := person.get_state_by_model(localInputsPointer, model)
+	currentStateInThisModel := person.get_state_by_model(localInputsPointer, model, cycle)
 
 	// get the transition probabilities from the given state
 	transitionProbabilities := currentStateInThisModel.get_destination_probabilites(localInputsPointer)
 
 	// get all states this person is in in current cycle
-	states := person.get_states(localInputsPointer)
+	states := person.get_states(localInputsPointer, cycle)
 
 	// if current state is "unitialized 2", this means that the transition
 	// probabilities rely on information about the person's sex, race, and
@@ -458,7 +446,7 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	// TODO add in CHD
 	if currentStateInThisModel.Id == 11 || currentStateInThisModel.Id == 17 || currentStateInThisModel.Id == 23 {
-		transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person)
+		transitionProbabilities = getTransitionProbByRAS(localInputsPointer, currentStateInThisModel, states, person, cycle)
 	}
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
@@ -470,37 +458,12 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 	if len(interactions) > 0 { // if there are interactions
 
-		if currentStateInThisModel.Id == 2 {
-			if printPerson == 0 {
-				printPerson = person.Id
-			}
-			if printPerson == person.Id {
-				if printCycle == cycle.Id {
-					// fmt.Println("======================================", " cycle: ", printCycle, "======================================")
-					// fmt.Println("before interaction: ")
-					// fmt.Println(transitionProbabilities)
-					// fmt.Println("interactions:", interactions)
-					// doPrint = true
-				}
-			}
-
-		}
-
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
 
-			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, person, doPrint)
+			newTransitionProbabilities := adjust_transitions(localInputsPointer, transitionProbabilities, interaction, cycle, person)
 			transitionProbabilities = newTransitionProbabilities
 		} // end foreach interaction
-
-		if printPerson == person.Id {
-			// if printCycle == cycle.Id {
-			// 	fmt.Println("after interaction: ")
-			// 	fmt.Println(transitionProbabilities)
-			// 	doPrint = false
-			// 	printCycle++
-			// }
-		}
 
 	} // end if there are interactions
 
@@ -517,10 +480,11 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 	if cycle.Id > 0 {
 
 		//GlobalCostsByState[new_state.Id] += stateCosts[new_state.Id] * discountValue
-		outputCPS := localInputsPointer.QueryData.Output_by_state_id_and_cycle_id_and_person_id[new_state.Id][cycle.Id+1][person.Id]
 
 		costs := localInputsPointer.QueryData.Cost_by_state_id[new_state.Id]
-		outputCPS.Costs += costs
+		mrId := localInputsPointer.QueryData.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+		mr := &localInputsPointer.MasterRecords[mrId]
+		mr.Costs += costs
 
 		//localInputsPointer.QueryData.Cost_by_state_id_and_cycle_id_and_person_id[new_state.Id][cycle.Id+1] +=
 
@@ -528,10 +492,10 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		stateSpecificYLDs := localInputsPointer.QueryData.Disability_weight_by_state_id[new_state.Id]
 		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
-			fmt.Println(discountValue, stateSpecificYLDs, new_state.Disability_weight)
+			fmt.Println(discountValue) //stateSpecificYLDs, new_state.Disability_weight)
 			os.Exit(1)
 		}
-		outputCPS.YLDs += stateSpecificYLDs
+		mr.YLDs += stateSpecificYLDs
 
 		//fmt.Println("model Id", model.Id)
 		justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
@@ -542,8 +506,8 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 
 		if justDiedOfDiseaseSpecific {
 
-			stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person)
-			outputCPS.YLLs += stateSpecificYLLs
+			stateSpecificYLLs := getYLLFromDeath(localInputsPointer, person, cycle)
+			mr.YLLs += stateSpecificYLLs
 		}
 
 		if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
@@ -558,10 +522,25 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 					// add new records for all the deaths for this cycle and next
 					// TODO add toQueryData adds to the next cycle not the currrent cycle
 					// make this more clear
-					prev_cycle := Cycle{}
-					prev_cycle.Id = cycle.Id - 1
-					addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
-					addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
+
+					// Set that they have died "other death" in models that are not this one
+					// For the current cycle
+					mrId := localInputsPointer.QueryData.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id]
+					mr := &localInputsPointer.MasterRecords[mrId]
+					mr.State_id = otherDeathState.Id
+
+					localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id] = otherDeathState.Id
+
+					// For the next cycle - in case this model has already
+					// passed and they were assigned a new state
+					mrId = localInputsPointer.QueryData.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+					mr = &localInputsPointer.MasterRecords[mrId]
+					mr.State_id = otherDeathState.Id
+
+					localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = otherDeathState.Id
+
+					//addToQueryDataMasterRecord(localInputsPointer, prev_cycle, person, otherDeathState)
+					//addToQueryDataMasterRecord(localInputsPointer, cycle, person, otherDeathState)
 				}
 			}
 
@@ -578,13 +557,25 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		os.Exit(1)
 	}
 
-	if localInputsPointer.CurrentCycle != cycle.Id {
-		fmt.Println("cycle mismatch!", localInputsPointer.CurrentCycle, cycle.Id)
-		os.Exit(1)
-	}
+	// if localInputsPointer.CurrentCycle != cycle.Id {
+	// 	fmt.Println("cycle mismatch!", localInputsPointer.CurrentCycle, cycle.Id)
+	// 	os.Exit(1)
+	// }
 
 	// store new state in master object
-	err := addToQueryDataMasterRecord(localInputsPointer, cycle, person, new_state)
+	// err := addToQueryDataMasterRecord(localInputsPointer, cycle, person, new_state)
+
+	//Store in two places, the master record and ...
+	//fmt.Println("c p m", cycle.Id, person.Id, model.Id)
+	//fmt.Println(len(localInputsPointer.QueryData.Master_record_id_by_cycle_and_person_and_model))
+	//os.Exit(1)
+	mrId := localInputsPointer.QueryData.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+	mr := &localInputsPointer.MasterRecords[mrId]
+	mr.State_id = new_state.Id
+	mr.Has_entered_simulation = true
+
+	/// ... the state holder
+	localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = new_state.Id
 
 	check_new_state_id := localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
 
@@ -593,10 +584,6 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 		os.Exit(1)
 	}
 
-	if err != false {
-		fmt.Println("problem adding master record")
-		os.Exit(1)
-	}
 }
 
 /*func sumSlices(x []float64, y []float64) float64 {
@@ -615,12 +602,12 @@ func runCyclePersonModel(localInputsPointer *Input, cycle Cycle, model Model, pe
 }
 */
 
-func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
+func getYLLFromDeath(localInputsPointer *Input, person Person, cycle Cycle) float64 {
 
 	//TODO sloppy need to make imported table
 
 	agesModel := localInputsPointer.Models[7] //CHANGEDTHISFROM10
-	stateInAge := person.get_state_by_model(localInputsPointer, agesModel)
+	stateInAge := person.get_state_by_model(localInputsPointer, agesModel, cycle)
 	//TODO fix this age hack - not sustainable, what happens is the state IDs change?
 	age := stateInAge.Id - 22 //CHANGEDTHISFROM35
 
@@ -812,7 +799,7 @@ func getYLLFromDeath(localInputsPointer *Input, person Person) float64 {
 	getLifeexpectancyMALE[110] = 1.000
 
 	sexModel := localInputsPointer.Models[5] //Fix this hack - what happens when models change
-	stateInSexModel := person.get_state_by_model(localInputsPointer, sexModel)
+	stateInSexModel := person.get_state_by_model(localInputsPointer, sexModel, cycle)
 	sexOfPerson := stateInSexModel.Id
 	lifeExpectancy := 0.00
 
@@ -863,33 +850,32 @@ func runFullModelForOnePerson(localInputs Input, person Person, masterRecordsToA
 	// masterRecordsToAdd <- theseMasterRecordsToAdd
 }
 
-func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, masterRecordsToAdd chan []MasterRecord) {
+func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, cycleForOnePersonChan chan string) {
 
 	localInputsPointer := localInputs
 	//small MR size bc just for one person
-	mrSize := len(localInputsPointer.Models)
-	theseMasterRecordsToAdd := make([]MasterRecord, mrSize, mrSize)
-	mrIndex := 0
-	shuffled := shuffle(localInputsPointer.Models)
-	for _, model := range shuffled { // foreach model
-		// TODO: runCyclePersonModel can be concurrent? [Issue: https://github.com/alexgoodell/go-mdism/issues/35]
-		runCyclePersonModel(localInputsPointer, cycle, model, person, &theseMasterRecordsToAdd, mrIndex)
+
+	// TODO: Add shuffles back in [Issue: https://github.com/alexgoodell/go-mdism/issues/38]
+	//shuffled := shuffle(localInputsPointer.Models)
+	for _, model := range localInputs.Models { // foreach model
+		// cannot be made concurrent, because if they die in one model
+		runCyclePersonModel(localInputsPointer, cycle, model, person)
 	}
 	// Below iteration finds the new states. This needs to be done here
 	// in case someone died - even if someone dies in the "last" model,
 	// that deaths forces a death in all other models
 
-	for _, model := range shuffled { // foreach model
-		var newMasterRecord MasterRecord
-		newMasterRecord.Cycle_id = cycle.Id + 1
-		newMasterRecord.Person_id = person.Id
-		newMasterRecord.State_id = localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
-		newMasterRecord.Model_id = model.Id
-		theseMasterRecordsToAdd[mrIndex] = newMasterRecord
-		mrIndex++
-	}
+	//for _, model := range shuffled { // foreach model
+	// var newMasterRecord MasterRecord
+	// newMasterRecord.Cycle_id = cycle.Id + 1
+	// newMasterRecord.Person_id = person.Id
+	// newMasterRecord.State_id = localInputsPointer.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
+	// newMasterRecord.Model_id = model.Id
+	// theseMasterRecordsToAdd[mrIndex] = newMasterRecord
+	// mrIndex++
+	//}
 
-	masterRecordsToAdd <- theseMasterRecordsToAdd
+	cycleForOnePersonChan <- "Done"
 
 }
 
@@ -902,11 +888,10 @@ func runOneCycleForOnePerson(localInputs *Input, cycle Cycle, person Person, mas
 // 	} // end foreach model
 // }
 
-func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int) Input {
+func setUpQueryData(Inputs Input) Input {
 	// Need to have lengths to be able to access them
 	//Cycles
 
-	numberOfPeople = numberOfPeople + numberOfPeopleEntering
 	fmt.Println("Total num", numberOfPeople)
 
 	Inputs.QueryData.State_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
@@ -1012,28 +997,6 @@ func setUpQueryData(Inputs Input, numberOfPeople int, numberOfPeopleEntering int
 		Inputs.QueryData.Disability_weight_by_state_id[dw.State_id] = dw.Disability_weight
 	}
 
-	// ############## Costs by state id and cycle id (output) ##################
-
-	length := (len(Inputs.Cycles) + 1) * len(Inputs.States) * numberOfPeople
-	//fmt.Println(length)
-	t := 0
-	IndSimOutputs.OutputCPSs = make([]OutputCPS, length, length)
-	Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id = make([][][]*OutputCPS, len(Inputs.States), len(Inputs.States))
-	for i := 0; i < len(Inputs.States); i++ {
-		Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i] = make([][]*OutputCPS, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
-		for p := 0; p < len(Inputs.Cycles)+1; p++ {
-			Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i][p] = make([]*OutputCPS, numberOfPeople, numberOfPeople)
-			for q := 0; q < numberOfPeople; q++ {
-				var outputCPS OutputCPS
-				outputCPS.Cycle_id = p
-				outputCPS.Person_id = q
-				outputCPS.State_id = i
-				Inputs.QueryData.Output_by_state_id_and_cycle_id_and_person_id[i][p][q] = &IndSimOutputs.OutputCPSs[t]
-				t++
-			}
-		}
-	}
-
 	return Inputs
 }
 
@@ -1107,20 +1070,21 @@ func createNewPeople(Inputs *Input, cycle Cycle, number int) {
 			mr.State_id = uninitializedState.Id
 			mr.Model_id = model.Id
 			mr.Person_id = newPerson.Id
+			mr.Has_entered_simulation = true
 
-			qd := Inputs.QueryData.State_id_by_cycle_and_person_and_model
+			Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
+			mrId := Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id]
+			Inputs.MasterRecords[mrId] = mr
 
-			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
-
-			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
+			//Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
 		}
 	}
 }
 
 // create people will generate individuals and add their data to the master
 // records
-func createInitialPeople(Inputs Input, number int) Input {
-	for i := 0; i < number; i++ {
+func createInitialPeople(Inputs Input) Input {
+	for i := 0; i < numberOfPeopleStarting; i++ {
 		Inputs.People = append(Inputs.People, Person{i})
 	}
 
@@ -1132,18 +1096,21 @@ func createInitialPeople(Inputs Input, number int) Input {
 			mr.State_id = uninitializedState.Id
 			mr.Model_id = model.Id
 			mr.Person_id = person.Id
+			mr.Has_entered_simulation = true
 			// generate a hash key for a map, allows easy access to states
 			// by hashing cycle, person and model.
-			qd := Inputs.QueryData.State_id_by_cycle_and_person_and_model
 
-			qd[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
+			Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id] = mr.State_id
+
+			mrId := Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id]
+			Inputs.MasterRecords[mrId] = mr
 
 			// this inputs will go into the threads of the model
-			Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
+			// Inputs.MasterRecords = append(Inputs.MasterRecords, mr)
 
 			// this inputs is the master inputs and is used to display data
 			// at the end of the cycle
-			GlobalMasterRecords = append(Inputs.MasterRecords, mr)
+			// GlobalMasterRecords = append(Inputs.MasterRecords, mr)
 
 			// fmt.Println("setting c p m", mr.Cycle_id, mr.Person_id, mr.Model_id, "to", Inputs.QueryData.State_id_by_cycle_and_person_and_model[mr.Cycle_id][mr.Person_id][mr.Model_id])
 
@@ -1153,13 +1120,10 @@ func createInitialPeople(Inputs Input, number int) Input {
 		}
 	}
 
-	Timer.Step("set up people")
-
 	return Inputs
 
 }
 
-// get state by id
 func get_state_by_id(localInputs *Input, stateId int) State {
 
 	theState := localInputs.States[stateId]
@@ -1171,21 +1135,14 @@ func get_state_by_id(localInputs *Input, stateId int) State {
 	fmt.Println("Cannot find state by id ", stateId)
 	os.Exit(1)
 	return theState
-	// var state State
-	// for _, state := range States {
-	// 	if state.Id == stateId {
-	// 		return state
-	// 	}
-	// }
 
-	// return state
 }
 
 // ------------------------------------------- methods
 
 // --------------- transition probabilities
 
-func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person, doPrint bool) []TransitionProbability {
+func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
 
@@ -1201,7 +1158,7 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		// is equal to original risk * 0.985 ^ number of years from original risk
 
 		ageModel := localInputs.Models[7]
-		ageModelStateId := person.get_state_by_model(localInputs, ageModel).Id
+		ageModelStateId := person.get_state_by_model(localInputs, ageModel, cycle).Id
 		actualAge := ageModelStateId - 22 //Fix this hack = hardcoded
 
 		timeEffectByToState := make([]float64, 15, 15)
@@ -1220,17 +1177,6 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
 	}
 
-	if doPrint {
-		// fmt.Println("---------- interaction ----------")
-		// fromState := get_state_by_id(localInputs, interaction.From_state_id)
-		// toState := get_state_by_id(localInputs, interaction.To_state_id)
-		// inState := get_state_by_id(localInputs, interaction.In_state_id)
-		// fmt.Println("in state: ", inState.Name, ", model: ", localInputs.Models[inState.Model_id].Name)
-		// fmt.Println("from state: ", fromState.Name)
-		// fmt.Println("to State: ", toState.Name)
-		// fmt.Println("adjustment: ", adjustmentFactor)
-	}
-
 	for i, _ := range theseTPs {
 		// & represents the address, so now tp is a pointer - needed because you want to change the
 		// underlying value of the elements of theseTPs, not just a copy of them
@@ -1238,17 +1184,6 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		originalTpBase := tp.Tp_base
 		if tp.From_id == interaction.From_state_id && tp.To_id == interaction.To_state_id {
 			tp.Tp_base = tp.Tp_base * adjustmentFactor
-
-			if doPrint {
-				// fmt.Println("~~~~~~ adjustment ~~~~~~")
-				// fromState := get_state_by_id(localInputs, interaction.From_state_id)
-				// toState := get_state_by_id(localInputs, interaction.To_state_id)
-				// fmt.Println("from state: ", fromState.Name)
-				// fmt.Println("to State: ", toState.Name)
-				// fmt.Println("original TP base: ", originalTpBase)
-				// fmt.Println("adjustment: ", adjustmentFactor)
-				// fmt.Println("new TP base: ", tp.Tp_base)
-			}
 
 			if tp.Tp_base == originalTpBase && adjustmentFactor != 1 && originalTpBase != 0 {
 				// fmt.Println("error adjusting transition probabilities in adjust_transitions()")
@@ -1258,10 +1193,6 @@ func adjust_transitions(localInputs *Input, theseTPs []TransitionProbability, in
 		}
 	}
 
-	if doPrint {
-		// fmt.Println("TP after an adjustment: -> ")
-		// fmt.Println(theseTPs)
-	}
 	// now, we need to make sure everything adds to one. to do so, we find what
 	// it currently sums to, and make a new adjustment factor. We can then
 	// adjust every transition probability by that amount.
@@ -1331,14 +1262,14 @@ func pause() {
 // --------------- person
 
 // get the current state of the person in this model (should be the uninitialized state for cycle 0)
-func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model) State {
+func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model, cycle Cycle) State {
 	thisModelId := thisModel.Id
 	var stateToReturn State
 	var stateToReturnId int
 
-	stateToReturnId = localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPerson.Id][thisModelId]
+	stateToReturnId = localInputs.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id][thisPerson.Id][thisModelId]
 
-	if localInputs.CurrentCycle != 0 && stateToReturnId == 0 {
+	if cycle.Id != 0 && stateToReturnId == 0 {
 		//fmt.Println("unint state after cycle 0!")
 	}
 
@@ -1352,12 +1283,12 @@ func (thisPerson *Person) get_state_by_model(localInputs *Input, thisModel Model
 }
 
 // get all states this person is in at the current cycle
-func (thisPerson *Person) get_states(localInputs *Input) []State {
+func (thisPerson *Person) get_states(localInputs *Input, cycle Cycle) []State {
 	thisPersonId := thisPerson.Id
 
 	//fmt.Println("getting all states of cycle and person", localInputs.CurrentCycle, thisPersonId)
 
-	statesToReturnIds := localInputs.QueryData.State_id_by_cycle_and_person_and_model[localInputs.CurrentCycle][thisPersonId]
+	statesToReturnIds := localInputs.QueryData.State_id_by_cycle_and_person_and_model[cycle.Id][thisPersonId]
 
 	statesToReturn := make([]State, len(statesToReturnIds), len(statesToReturnIds))
 
@@ -1365,7 +1296,7 @@ func (thisPerson *Person) get_states(localInputs *Input) []State {
 		if localInputs.States[statesToReturnId].Id == statesToReturnId {
 			statesToReturn[i] = localInputs.States[statesToReturnId]
 		} else {
-			fmt.Println("cannot find states via get_states, cycle & person id =", localInputs.CurrentCycle, thisPersonId)
+			fmt.Println("cannot find states via get_states, cycle & person id =", cycle.Id, thisPersonId)
 			fmt.Println("looking for id", statesToReturnId, "but found", localInputs.States[statesToReturnId].Id)
 			os.Exit(1)
 		}
@@ -1449,20 +1380,20 @@ func (fromState *State) get_relevant_interactions(localInputs *Input, allStates 
 
 // store new state in master object for n+1 cycle (note that the cycle is
 // auto - incremented within this function)
-func addToQueryDataMasterRecord(localInputs *Input, cycle Cycle, person Person, newState State) bool {
-	ogLen := len(localInputs.MasterRecords)
-	var newMasterRecord MasterRecord
-	newMasterRecord.Cycle_id = cycle.Id + 1
-	newMasterRecord.Person_id = person.Id
-	newMasterRecord.State_id = newState.Id
-	newMasterRecord.Model_id = newState.Model_id
+// func addToQueryDataMasterRecord(localInputs *Input, cycle Cycle, person Person, newState State) bool {
+// 	ogLen := len(localInputs.MasterRecords)
+// 	var newMasterRecord MasterRecord
+// 	newMasterRecord.Cycle_id = cycle.Id + 1
+// 	newMasterRecord.Person_id = person.Id
+// 	newMasterRecord.State_id = newState.Id
+// 	newMasterRecord.Model_id = newState.Model_id
 
-	localInputs.QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
+// 	localInputs.QueryData.State_id_by_cycle_and_person_and_model[newMasterRecord.Cycle_id][newMasterRecord.Person_id][newMasterRecord.Model_id] = newMasterRecord.State_id
 
-	_ = ogLen
+// 	_ = ogLen
 
-	return false
-}
+// 	return false
+// }
 
 // Using  the final transition probabilities, pickState assigns a new state to
 // a person. It is given many states and returns one.
@@ -1638,9 +1569,6 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 
 func initializeInputs(Inputs Input, inputsPath string) Input {
 
-	//get the correct csvs
-	Inputs.CurrentCycle = 0
-
 	// ####################### Models #######################
 
 	// initialize inputs, needed for fromCsv function
@@ -1768,23 +1696,58 @@ func initializeInputs(Inputs Input, inputsPath string) Input {
 
 	fmt.Println(Inputs.DisabilityWeights)
 
+	// ####################### Master Records & Accessor
+
+	length := numberOfPeople * (len(Inputs.Cycles) + 1) * len(Inputs.Models)
+	Inputs.MasterRecords = make([]MasterRecord, length, length)
+
+	i := 0
+	Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
+	for c, _ := range Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model {
+		//People
+		Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[c] = make([][]int, numberOfPeople, numberOfPeople)
+		for p, _ := range Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[c] {
+			Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[c][p] = make([]int, len(Inputs.Models), len(Inputs.Models))
+			for m, _ := range Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[c][p] {
+				var masterRecord MasterRecord
+				masterRecord.Cycle_id = c
+				masterRecord.Person_id = p
+				masterRecord.Model_id = m
+				masterRecord.Has_entered_simulation = false
+				Inputs.MasterRecords[i] = masterRecord
+				Inputs.QueryData.Master_record_id_by_cycle_and_person_and_model[c][p][m] = i
+				i++
+			}
+		}
+	}
+
 	return Inputs
 }
 
-func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel State, states []State, person Person) []TransitionProbability {
+func removeUnborns(masterRecords []MasterRecord) []MasterRecord {
+	var masterRecordsToReturn []MasterRecord
+	for _, masterRecord := range masterRecords {
+		if masterRecord.Has_entered_simulation == true {
+			masterRecordsToReturn = append(masterRecordsToReturn, masterRecord)
+		}
+	}
+	return masterRecordsToReturn
+}
+
+func getTransitionProbByRAS(localInputsPointer *Input, currentStateInThisModel State, states []State, person Person, cycle Cycle) []TransitionProbability {
 
 	var tpsToReturn []TransitionProbability
 
 	modelId := currentStateInThisModel.Model_id
 
 	raceModel := localInputsPointer.Models[4]
-	raceStateId := person.get_state_by_model(localInputsPointer, raceModel).Id
+	raceStateId := person.get_state_by_model(localInputsPointer, raceModel, cycle).Id
 
 	sexModel := localInputsPointer.Models[5]
-	sexStateId := person.get_state_by_model(localInputsPointer, sexModel).Id
+	sexStateId := person.get_state_by_model(localInputsPointer, sexModel, cycle).Id
 
 	ageModel := localInputsPointer.Models[7]
-	ageModelId := person.get_state_by_model(localInputsPointer, ageModel).Id
+	ageModelId := person.get_state_by_model(localInputsPointer, ageModel, cycle).Id
 	actualAge := ageModelId - 22
 
 	for _, tpByRAS := range GlobalTPsByRAS {
