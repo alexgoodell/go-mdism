@@ -342,7 +342,7 @@ func runModel(concurrencyBy string) {
 	}
 
 	if reportingMode == "individual" {
-		toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
+		//toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 	}
 
@@ -401,17 +401,17 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// ------ health metrics ---------
 
 	//Cost calculations
-	discountValue := math.Pow(0.97, float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
+	discountValue := math.Pow((1 / 1.03), float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
 
 	if cycle.Id > 0 {
 
-		costs := Query.Cost_by_state_id[new_state.Id]
+		costs := Query.Cost_by_state_id[new_state.Id] * discountValue
 		mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
 		mr := &Inputs.MasterRecords[mrId]
 		mr.Costs += costs
 
 		// years of life lost from disability
-		stateSpecificYLDs := Query.Disability_weight_by_state_id[new_state.Id]
+		stateSpecificYLDs := Query.Disability_weight_by_state_id[new_state.Id] * discountValue
 		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discountValue) //stateSpecificYLDs, new_state.Disability_weight)
@@ -423,7 +423,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 		justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
 		justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 		if justDiedOfDiseaseSpecific {
-			stateSpecificYLLs := getYLLFromDeath(person, cycle)
+			stateSpecificYLLs := getYLLFromDeath(person, cycle) * discountValue
 			mr.YLLs += stateSpecificYLLs
 		}
 
