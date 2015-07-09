@@ -1,61 +1,62 @@
 Id,Variable,Input_file,Distribution,Min,Max,Alpha,Beta,Mean,SD
-0,DALY value for T2D,disability-weights,Beta,0.02475,0.04125,2,5,0.033,
-1,DALY value for CHD,disability-weights,Beta,0.0495,0.0825,2,5,0.066,
-2,DALY value for Obesity,disability-weights,Beta,0.009,0.015,2,5,0.012,
-3,DALY value for NASH,disability-weights,Beta,0.1125,0.1875,2,5,0.15,
-4,DALY value for Cirrhosis,disability-weights,Beta,0.15,0.25,2,5,0.2,
-5,DALY value for HCC,disability-weights,Beta,0.2205,0.3675,2,5,0.294,
-6,Yearly direct costs for Steatosis,costs,Gamma,,,307.2619457,25.67190669,150,450
-7,Yearly direct costs for NASH,costs,Gamma,,,110.8033241,72.2,262,760
-8,Yearly direct costs for Cirrhosis,costs,Gamma,,,34.02777778,10.28571429,5330,60
-9,Yearly direct costs for HCC,costs,Gamma,,,40.42682112,21.07511737,37951,134
-10,Yearly direct costs for CHD,costs,Gamma,,,5.493164063,27.30666667,8000,64
-11,Yearly direct costs for T2D,costs,Gamma,,,9.500899654,27.57633588,7888,85
-12,Yearly direct costs for Overweight,costs,Gamma,,,244.3124844,21.8163227,350,341
-13,Yearly direct costs for Obesity,costs,Gamma,,,136.6098048,277.8058286,852,3247
-14,Baseline TP NAFLD: non-NAFLD -> steatosis,transition-probabilities,Beta,,,,,0.01,
-15,Baseline TP NAFLD: non-NAFLD -> NASH,transition-probabilities,Beta,,,,,0.0003,
-16,Baseline TP NAFLD: each NAFLD state -> natural death,transition-probabilities,Beta,,,,,0.01,
-17,Baseline TP NAFLD: steatosis -> non-NAFLD,transition-probabilities,Beta,,,,,0.02,
-18,Baseline TP NAFLD: steatosis -> NASH,transition-probabilities,Beta,,,,,0.006,
-19,Baseline TP NAFLD: steatosis -> cirrhosis,transition-probabilities,Beta,,,,,0.0002,
-20,Baseline TP NAFLD: NASH -> non-NAFLD,transition-probabilities,Beta,,,,,0.001,
-21,Baseline TP NAFLD: NASH -> steatosis,transition-probabilities,Beta,,,,,0.02,
-22,Baseline TP NAFLD: NASH -> cirrhosis,transition-probabilities,Beta,,,,,0.002,
-23,Baseline TP NAFLD: NASH -> HCC,transition-probabilities,Beta,,,,,0.0001,
-24,Baseline TP NAFLD: NASH -> Liver death,transition-probabilities,Beta,,,,,0.0038,
-25,Baseline TP NAFLD: cirrhosis -> HCC,transition-probabilities,Beta,,,,,0.02,
-26,Baseline TP NAFLD: cirrhosis -> Liver death,transition-probabilities,Beta,,,,,0.034,
-27,Baseline TP NAFLD: HCC -> Liver death,transition-probabilities,Beta,,,,,0.5,
-28,Baseline TP CHD: Non-CHD -> CHD,transition-probabilities,Beta,,,,,0.005,
-29,Baseline TP CHD: CHD -> CHD death,transition-probabilities,Beta,,,,,0.01,
-30,Baseline TP T2D: non-T2D -> T2D,transition-probabilities,Beta,,,,,0.01,
-31,Baseline TP T2D: T2D -> T2D death,transition-probabilities,Beta,,,,,0.01,
-32,Baseline transition BMI: Healthy -> overweight,transition-probabilities,Beta,0.0375,0.0625,2,5,0.05,0.005
-33,Baseline transition BMI: Healthy -> Obese,transition-probabilities,Beta,0.0045,0.0075,2,5,0.006,0.0006
-34,Baseline transition BMI: Overweight -> Healthy,transition-probabilities,Beta,0.0225,0.0375,2,5,0.03,0.003
-35,Baseline transition BMI: Overweight -> Obese,transition-probabilities,Beta,0.018,0.03,2,5,0.024,0.0024
-36,Baseline transition BMI: Obese-> Healthy,transition-probabilities,Beta,0.0015,0.0025,2,5,0.002,0.0002
-37,Baseline transition BMI: Obese -> overweight,transition-probabilities,Beta,0.015,0.025,2,5,0.02,0.002
-38,Effect ethnicity NH-Black on all NAFLD transitions,interactions,Gamma,,0.70 – 1.25,13.8384,0.067204301,0.93,0.25
-39,Effect ethnicity Hispanic on all NAFLD transitions,interactions,Gamma,,1.26 – 2.22,13.77234568,0.121257485,1.67,0.45
-40,Effect BMI Overweight on all NAFLD transitions,interactions,Gamma,,,13.81959896,0.1302498,1.8,0.4842
-41,Effect BMI Obese on all NAFLD transitions,interactions,Gamma,,,13.9229227,0.17956,2.5,0.67
-42,Effect fructose on all NAFLD transitions,interactions,Gamma,,,13.71742112,0.1458,2,0.54
-43,Effect NAFLD on transition Healthy -> CHD,interactions,Gamma,,,,,2.75,0.51
-44,Effect NAFLD on transition Healthy -> Diabetic,interactions,Gamma,,1.71 - 6.60,10.76660156,0.292571429,3.15,0.96
-45,Effect NAFLD on all BMI transitions,interactions,Gamma,,,,,2,0.58
-46,Effect fructose on all BMI transitions,interactions,Gamma,,,,,2.1,
-47,Effect overweight on transition non-CHD -> CHD,interactions,Gamma,,,,,1.7,
-48,Effect obesity on transition non-CHD -> CHD,interactions,Gamma,,,,,1.91,
-49,Effect overweight on transition non-T2D -> T2D,interactions,Gamma,,,,,2,
-50,Effect obesity on transition non-T2D -> T2D,interactions,Gamma,,,,,2.44,
-51,CHD incidence regression rate/year,regression-rates,Normal,0.75,1.25,,,0.985,
-52,CHD death rate regression rate/year,regression-rates,Normal,0.75,1.25,,,0.979,
-53,Natural death rate regression rate/year (20-30),regression-rates,Normal,0.75,1.25,,,1,
-54,Natural death rate regression rate/year (30-55),regression-rates,Normal,,,,,0.98,
-55,Natural death rate regression rate/year (55+),regression-rates,Normal,,,,,0.97,
-56,Steatosis prevalence year 0,ras,Beta,,,,,,
-57,NASH prevalence year 0,ras,Beta,,,,,,
-58,Cirrhosis prevalence year 0,ras,Beta,0.0045,0.0075,2,5,0.006,
-59,Base-case percentage above fruc cut-off,ras,Beta,0.525,0.875,2,5,0.7,
+0,Not varied in PSA,All,None,,,,,,
+1,DALY value for T2D,disability-weights,Beta,0.02475,0.04125,2,5,0.033,
+2,DALY value for CHD,disability-weights,Beta,0.0495,0.0825,2,5,0.066,
+3,DALY value for Obesity,disability-weights,Beta,0.009,0.015,2,5,0.012,
+4,DALY value for NASH,disability-weights,Beta,0.1125,0.1875,2,5,0.15,
+5,DALY value for Cirrhosis,disability-weights,Beta,0.15,0.25,2,5,0.2,
+6,DALY value for HCC,disability-weights,Beta,0.2205,0.3675,2,5,0.294,
+7,Yearly direct costs for Steatosis,costs,Gamma,,,307.2619457,25.67190669,150,450
+8,Yearly direct costs for NASH,costs,Gamma,,,110.8033241,72.2,262,760
+9,Yearly direct costs for Cirrhosis,costs,Gamma,,,34.02777778,10.28571429,5330,60
+10,Yearly direct costs for HCC,costs,Gamma,,,40.42682112,21.07511737,37951,134
+11,Yearly direct costs for CHD,costs,Gamma,,,5.493164063,27.30666667,8000,64
+12,Yearly direct costs for T2D,costs,Gamma,,,9.500899654,27.57633588,7888,85
+13,Yearly direct costs for Overweight,costs,Gamma,,,244.3124844,21.8163227,350,341
+14,Yearly direct costs for Obesity,costs,Gamma,,,136.6098048,277.8058286,852,3247
+15,Baseline TP NAFLD: non-NAFLD -> steatosis,transition-probabilities,Beta,,,,,0.01,
+16,Baseline TP NAFLD: non-NAFLD -> NASH,transition-probabilities,Beta,,,,,0.0003,
+17,Baseline TP NAFLD: each NAFLD state -> natural death,transition-probabilities,Beta,,,,,0.01,
+18,Baseline TP NAFLD: steatosis -> non-NAFLD,transition-probabilities,Beta,,,,,0.02,
+19,Baseline TP NAFLD: steatosis -> NASH,transition-probabilities,Beta,,,,,0.006,
+20,Baseline TP NAFLD: steatosis -> cirrhosis,transition-probabilities,Beta,,,,,0.0002,
+21,Baseline TP NAFLD: NASH -> non-NAFLD,transition-probabilities,Beta,,,,,0.001,
+22,Baseline TP NAFLD: NASH -> steatosis,transition-probabilities,Beta,,,,,0.02,
+23,Baseline TP NAFLD: NASH -> cirrhosis,transition-probabilities,Beta,,,,,0.002,
+24,Baseline TP NAFLD: NASH -> HCC,transition-probabilities,Beta,,,,,0.0001,
+25,Baseline TP NAFLD: NASH -> Liver death,transition-probabilities,Beta,,,,,0.0038,
+26,Baseline TP NAFLD: cirrhosis -> HCC,transition-probabilities,Beta,,,,,0.02,
+27,Baseline TP NAFLD: cirrhosis -> Liver death,transition-probabilities,Beta,,,,,0.034,
+28,Baseline TP NAFLD: HCC -> Liver death,transition-probabilities,Beta,,,,,0.5,
+29,Baseline TP CHD: Non-CHD -> CHD,transition-probabilities,Beta,,,,,0.005,
+30,Baseline TP CHD: CHD -> CHD death,transition-probabilities,Beta,,,,,0.01,
+31,Baseline TP T2D: non-T2D -> T2D,transition-probabilities,Beta,,,,,0.01,
+32,Baseline TP T2D: T2D -> T2D death,transition-probabilities,Beta,,,,,0.01,
+33,Baseline transition BMI: Healthy -> overweight,transition-probabilities,Beta,0.0375,0.0625,2,5,0.05,0.005
+34,Baseline transition BMI: Healthy -> Obese,transition-probabilities,Beta,0.0045,0.0075,2,5,0.006,0.0006
+35,Baseline transition BMI: Overweight -> Healthy,transition-probabilities,Beta,0.0225,0.0375,2,5,0.03,0.003
+36,Baseline transition BMI: Overweight -> Obese,transition-probabilities,Beta,0.018,0.03,2,5,0.024,0.0024
+37,Baseline transition BMI: Obese-> Healthy,transition-probabilities,Beta,0.0015,0.0025,2,5,0.002,0.0002
+38,Baseline transition BMI: Obese -> overweight,transition-probabilities,Beta,0.015,0.025,2,5,0.02,0.002
+39,Effect ethnicity NH-Black on all NAFLD transitions,interactions,Gamma,,0.70 – 1.25,13.8384,0.067204301,0.93,0.25
+40,Effect ethnicity Hispanic on all NAFLD transitions,interactions,Gamma,,1.26 – 2.22,13.77234568,0.121257485,1.67,0.45
+41,Effect BMI Overweight on all NAFLD transitions,interactions,Gamma,,,13.81959896,0.1302498,1.8,0.4842
+42,Effect BMI Obese on all NAFLD transitions,interactions,Gamma,,,13.9229227,0.17956,2.5,0.67
+43,Effect fructose on all NAFLD transitions,interactions,Gamma,,,13.71742112,0.1458,2,0.54
+44,Effect NAFLD on transition Healthy -> CHD,interactions,Gamma,,,,,2.75,0.51
+45,Effect NAFLD on transition Healthy -> Diabetic,interactions,Gamma,,1.71 - 6.60,10.76660156,0.292571429,3.15,0.96
+46,Effect NAFLD on all BMI transitions,interactions,Gamma,,,,,2,0.58
+47,Effect fructose on all BMI transitions,interactions,Gamma,,,,,2.1,
+48,Effect overweight on transition non-CHD -> CHD,interactions,Gamma,,,,,1.7,
+49,Effect obesity on transition non-CHD -> CHD,interactions,Gamma,,,,,1.91,
+50,Effect overweight on transition non-T2D -> T2D,interactions,Gamma,,,,,2,
+51,Effect obesity on transition non-T2D -> T2D,interactions,Gamma,,,,,2.44,
+52,CHD incidence regression rate/year,regression-rates,Normal,0.75,1.25,,,0.985,
+53,CHD death rate regression rate/year,regression-rates,Normal,0.75,1.25,,,0.979,
+54,Natural death rate regression rate/year (20-30),regression-rates,Normal,0.75,1.25,,,1,
+55,Natural death rate regression rate/year (30-55),regression-rates,Normal,,,,,0.98,
+56,Natural death rate regression rate/year (55+),regression-rates,Normal,,,,,0.97,
+57,Steatosis prevalence year 0,ras,Beta,,,,,,
+58,NASH prevalence year 0,ras,Beta,,,,,,
+59,Cirrhosis prevalence year 0,ras,Beta,0.0045,0.0075,2,5,0.006,
+60,Base-case percentage above fruc cut-off,ras,Beta,0.525,0.875,2,5,0.7,
