@@ -175,23 +175,12 @@ type StatePopulation struct {
 	Model_id   int
 }
 
-// I think it would make the most sense to generalize Query to a data storage
-// tool for all in-model uses, then use its data to export to these exportable formats
-
-var Query Query_t
-
-var GlobalTPsByRAS []TPByRAS
-
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
 
-var GlobalMasterRecords = []MasterRecord{}
-var GlobalStatePopulations = []StatePopulation{}
+var Query Query_t
 
-var GlobalYLDsByState = make([]float64, 150, 150)
-var GlobalYLLsByState = make([]float64, 150, 150)
-var GlobalCostsByState = make([]float64, 150, 150)
-var GlobalDALYsByState = make([]float64, 150, 150)
+var GlobalStatePopulations = []StatePopulation{}
 
 var output_dir = "tmp"
 
