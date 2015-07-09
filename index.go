@@ -163,7 +163,7 @@ type TPByRAS struct {
 	To_state_name string
 	Sex_state_id  int
 	Race_state_id int
-	Age           int
+	Age_state_id  int
 	Probability   float64
 }
 
@@ -657,7 +657,7 @@ func (Query *Query_t) setUp() {
 	Query.TP_by_RAS = make(map[RASkey][]TPByRAS)
 	for _, ras := range Inputs.TPByRASs {
 		var key RASkey
-		key.Age_state_id = ras.Age + 22 // TODO: fix hardcoded ages [Issue: https://github.com/alexgoodell/go-mdism/issues/42]
+		key.Age_state_id = ras.Age_state_id
 		key.Race_state_id = ras.Race_state_id
 		key.Sex_state_id = ras.Sex_state_id
 		key.Model_id = ras.Model_id
@@ -1456,6 +1456,11 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 	ageModel := Query.getModelByName("Age")
 	ageState := person.get_state_by_model(ageModel, cycle)
 
+	if ageState.Name == "Unitialized2" {
+		//Use the 20yo transition probabilities for the 19yos (ie uninit 2)
+		ageState = Query.getStateByName("Age of 20")
+	}
+
 	RASs := Query.getTpByRAS(raceState, ageState, sexState, model)
 
 	for _, ras := range RASs {
@@ -1467,6 +1472,7 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 
 	if len(tpsToReturn) < 1 {
 		fmt.Println("No TPs found with getTransitionProbByRAS for m r a s")
+		fmt.Println(raceState, ageState, sexState, model)
 		os.Exit(1)
 	}
 
