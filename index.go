@@ -429,10 +429,12 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
 		// Sync deaths with other models
 		if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
+
 			// Sync deaths. Put person in "other death"
 			for _, sub_model := range Inputs.Models {
 				//skip current model because should show disease-specific death
 				if sub_model.Id != model.Id {
+
 					otherDeathState := getOtherDeathStateByModel(sub_model)
 					// add new records for all the deaths for this cycle and next
 					// TODO add toQuery adds to the next cycle not the currrent cycle
@@ -441,7 +443,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 					// Set that they have died "other death" in models that are not this one
 					// For the current cycle
 					mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id]
-					mr := Inputs.MasterRecords[mrId]
+					mr := &Inputs.MasterRecords[mrId]
 					mr.State_id = otherDeathState.Id
 
 					Query.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][model.Id] = otherDeathState.Id
@@ -449,7 +451,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 					// For the next cycle - in case this model has already
 					// passed and they were assigned a new state
 					mrId = Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
-					mr = Inputs.MasterRecords[mrId]
+					mr = &Inputs.MasterRecords[mrId]
 					mr.State_id = otherDeathState.Id
 
 					Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] = otherDeathState.Id
