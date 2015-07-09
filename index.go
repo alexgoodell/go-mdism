@@ -127,6 +127,7 @@ type Query_t struct {
 	Life_expectancy_by_sex_and_age                 map[SexAge]float64
 	TP_by_RAS                                      map[RASkey][]TPByRAS
 	Unintialized_state_by_model                    []int
+	Outputs_id_by_cycle_and_state                  [][]int
 
 	// Unexported and used by the "getters"
 	model_id_by_name map[string]int
@@ -175,6 +176,19 @@ type StatePopulation struct {
 	Model_id   int
 }
 
+type OutputByCycleState struct {
+	Id       int
+	YLLs     float64
+	YLDs     float64
+	Costs    float64
+	Cycle_id int
+	State_id int
+}
+
+type Output struct {
+	OutputsByCycleState []OutputByCycleState
+}
+
 // these are all global variables, which is why they are Capitalized
 // current refers to the current cycle, which is used to calculate the next cycle
 
@@ -184,6 +198,7 @@ var GlobalStatePopulations = []StatePopulation{}
 
 var output_dir = "tmp"
 
+// TODO: Capitalize global variables [Issue: https://github.com/alexgoodell/go-mdism/issues/46]
 var numberOfPeople int
 var numberOfPeopleStarting int
 var numberOfIterations int
@@ -195,6 +210,7 @@ var isProfile string
 var reportingMode string
 
 var Inputs Input
+var Outputs Output
 
 func main() {
 
@@ -333,22 +349,38 @@ func runModel(concurrencyBy string) {
 
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
-	for _, masterRecord := range Inputs.MasterRecords {
-		Query.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
-	}
-
-	for s, statePopulation := range GlobalStatePopulations {
-		GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
-	}
+	formatOutputs()
 
 	if reportingMode == "individual" {
 		//toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+		toCsv(output_dir+"/output_by_cycle_and_state.csv", Outputs.OutputsByCycleState[0], Outputs.OutputsByCycleState)
 	}
 
 	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
+
+}
+
+func formatOutputs() {
+	for _, masterRecord := range Inputs.MasterRecords {
+		Query.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
+
+		outputCSId := Query.Outputs_id_by_cycle_and_state[masterRecord.Cycle_id][masterRecord.State_id]
+		outputCS := &Outputs.OutputsByCycleState[outputCSId]
+		if outputCS.Cycle_id != masterRecord.Cycle_id || outputCS.State_id != masterRecord.State_id {
+			fmt.Println("problem formating ouput by state cycle")
+			os.Exit(1)
+		}
+		outputCS.Costs += masterRecord.Costs
+		outputCS.YLDs += masterRecord.YLDs
+		outputCS.YLLs += masterRecord.YLLs
+	}
+
+	for s, statePopulation := range GlobalStatePopulations {
+		GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
+	}
 
 }
 
@@ -580,6 +612,26 @@ func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State
 
 func (Query *Query_t) setUp() {
 
+	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
+
+	Query.Outputs_id_by_cycle_and_state = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
+
+	Outputs.OutputsByCycleState = make([]OutputByCycleState, numberOfCalculatedCycles*len(Inputs.States), numberOfCalculatedCycles*len(Inputs.States))
+	i := 0
+	for c := 0; c < numberOfCalculatedCycles; c++ {
+		Query.Outputs_id_by_cycle_and_state[c] = make([]int, len(Inputs.States), len(Inputs.States))
+		for s, _ := range Inputs.States {
+			var outputCS OutputByCycleState
+			outputCS.Id = i
+			outputCS.State_id = s
+			outputCS.Cycle_id = c
+			Outputs.OutputsByCycleState[i] = outputCS
+
+			Query.Outputs_id_by_cycle_and_state[c][s] = i
+			i++
+		}
+	}
+
 	Query.Unintialized_state_by_model = make([]int, len(Inputs.Models), len(Inputs.Models))
 	for _, state := range Inputs.States {
 		if state.Is_uninitialized_state == true {
@@ -656,8 +708,6 @@ func (Query *Query_t) setUp() {
 	/* TODO  Fix the cycle system. We actually end up storing len(Cycles)+1 cycles,
 	because we start on 0 and calculate the cycle ahead of us, so if we have
 	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
-
-	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
 
 	Query.State_populations_by_cycle = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
 	for c := 0; c < numberOfCalculatedCycles; c++ {
