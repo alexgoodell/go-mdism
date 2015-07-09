@@ -172,6 +172,7 @@ type TPByRAS struct {
 //this struct will replicate the data found
 type StatePopulation struct {
 	Id         int
+	State_name string
 	State_id   int
 	Cycle_id   int
 	Population int
@@ -392,7 +393,10 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(model, cycle)
 
-	//otherDeathState := getOtherDeathStateByModel(model)
+	otherDeathState := getOtherDeathStateByModel(model)
+	if Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
+		return
+	}
 
 	// if currentStateInThisModel == otherDeathState {
 	// 	fmt.Println(person.Id, " has died in ", model.Name)
@@ -470,7 +474,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 		// Sync deaths with other models
 		if justDiedOfDiseaseSpecific || justDiedOfNaturalCauses {
 
-			// fmt.Println("death in ", person.Id, model.Name)
+			//fmt.Println("death in ", person.Id, " at cycle ", cycle.Id, " bc ", model.Name)
 			// Sync deaths. Put person in "other death"
 			for _, sub_model := range Inputs.Models {
 
@@ -485,11 +489,11 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
 					// Set that they have died "other death" in models that are not this one
 					// For the current cycle
-					mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id]
-					mr := &Inputs.MasterRecords[mrId]
-					mr.State_id = otherDeathState.Id
+					// mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id]
+					// mr := &Inputs.MasterRecords[mrId]
+					// mr.State_id = otherDeathState.Id
 
-					Query.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id] = otherDeathState.Id
+					// Query.State_id_by_cycle_and_person_and_model[cycle.Id][person.Id][sub_model.Id] = otherDeathState.Id
 
 					// For the next cycle - in case this model has already
 					// passed and they were assigned a new state
@@ -780,7 +784,8 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 	GlobalStatePopulations = make([]StatePopulation, numberOfCalculatedCycles*len(Inputs.States))
 	q := 0
 	for c := 0; c < numberOfCalculatedCycles; c++ {
-		for s, _ := range Inputs.States {
+		for s, state := range Inputs.States {
+			GlobalStatePopulations[q].State_name = state.Name
 			GlobalStatePopulations[q].Cycle_id = c
 			GlobalStatePopulations[q].Id = q
 			GlobalStatePopulations[q].Population = 0
