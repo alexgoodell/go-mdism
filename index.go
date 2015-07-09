@@ -183,6 +183,7 @@ type OutputByCycleState struct {
 	Id       int
 	YLLs     float64
 	YLDs     float64
+	DALYs    float64
 	Costs    float64
 	Cycle_id int
 	State_id int
@@ -190,6 +191,48 @@ type OutputByCycleState struct {
 
 type Output struct {
 	OutputsByCycleState []OutputByCycleState
+	OutputsByCycle      []OutputByCycle
+}
+
+type OutputByCycle struct {
+	// Cycle_id             int
+
+	// Steatosis_prev       int
+	// NASH_prev            int
+	// Cirrhosis_prev       int
+	// HCC_prev             int
+	// Liver_death_prev     int
+	// Natural_death_prev   int
+	// CHD_prev             int
+	// CHD_death_prev       int
+	// T2DM_prev            int
+	// T2DM_death_prev      int
+	// Overweight_prev      int
+	// Obese_prev           int
+
+	// T2DM_diagnosis_event int
+	// T2DM_death_event     int
+	// CHD_diagnosis_event  int
+	// CHD_death_event      int
+	// HCC_diagnosis_event  int
+	// HCC_death_event      int
+
+	// Steatosis_DALYs
+	// NASH_DALYs
+	// Cirrhosis_DALYs
+	// HCC_DALYs
+	// CHD_DALYs
+	// T2D_DALYs
+	// Overweight_DALYs
+	// Obesity_DALYs
+	// Steatosis_Costs
+	// NASH_Costs
+	// Cirrhosis_Costs
+	// HCC_Costs
+	// CHD_Costs
+	// T2D_Costs
+	// Overweight_Costs
+	// Obesity_Costs
 }
 
 // these are all global variables, which is why they are Capitalized
@@ -379,6 +422,7 @@ func formatOutputs() {
 		outputCS.Costs += masterRecord.Costs
 		outputCS.YLDs += masterRecord.YLDs
 		outputCS.YLLs += masterRecord.YLLs
+		outputCS.DALYs += masterRecord.YLDs + masterRecord.YLLs
 	}
 
 	for s, statePopulation := range GlobalStatePopulations {
