@@ -49,8 +49,15 @@ func (fromState State) get_relevant_interactions(allStates []State) []Interactio
 		relevantInteractions = append(relevantInteractions, Inputs.Interactions[interactionId])
 	}
 
-	// fmt.Println(relevantInteractions)
-	// pause()
+	var toState []int
+	if len(relevantInteractions) > 0 {
+		for relevantInteractionId := range relevantInteractions {
+			toState = append(toState, Inputs.Interactions[relevantInteractionId].To_state_id)
+		}
+		fmt.Println(toState)
+		pause()
+	}
+	_ = toState
 
 	// :i is faster than append()
 	return relevantInteractions
@@ -125,6 +132,12 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 			interactionIdsToReturn = append(interactionIdsToReturn, interaction.Id)
 		}
 	}
+
+	// if len(interactionIdsToReturn) > 0 {
+	// 	//fmt.Println(interactionIdsToReturn[0:1])
+	// 	return interactionIdsToReturn[0:1]
+	// }
+
 	return interactionIdsToReturn
 }
 
