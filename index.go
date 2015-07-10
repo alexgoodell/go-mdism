@@ -15,221 +15,18 @@ import (
 	//"io"
 	// 	"net/http"
 	"encoding/csv"
-	"github.com/davecheney/profile"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"reflect"
 	"runtime"
+
+	"github.com/davecheney/profile"
 	// "runtime/pprof"
 	"strconv"
 	"time"
 )
-
-var beginTime = time.Now() //TODO: Test this [Issue: https://github.com/alexgoodell/go-mdism/issues/32]
-
-type State struct {
-	Id                        int
-	Model_id                  int
-	Name                      string
-	Is_uninitialized_state    bool
-	Is_uninitialized_2_state  bool
-	Is_disease_specific_death bool
-	Is_other_death            bool
-	Is_natural_causes_death   bool
-}
-
-type Model struct {
-	Id   int
-	Name string
-}
-
-type LifeExpectancy struct {
-	Id              int
-	Age_state_id    int
-	Sex_state_id    int
-	Life_expectancy float64
-}
-
-type MasterRecord struct {
-	Cycle_id               int
-	Person_id              int
-	State_id               int
-	Model_id               int
-	YLDs                   float64
-	YLLs                   float64
-	Costs                  float64
-	Has_entered_simulation bool
-}
-
-type Cycle struct {
-	Id   int
-	Name string
-}
-
-type Person struct {
-	Id int
-}
-
-type Interaction struct {
-	Id                int
-	In_state_id       int
-	From_state_id     int
-	To_state_id       int
-	Adjustment        float64
-	Effected_model_id int
-	PSA_id            int
-}
-
-type TransitionProbability struct {
-	Id      int
-	From_id int
-	To_id   int
-	Tp_base float64
-	PSA_id  int
-}
-
-type Cost struct {
-	Id       int
-	State_id int
-	Costs    float64
-	PSA_id   int
-}
-
-type DisabilityWeight struct {
-	Id                int
-	State_id          int
-	Disability_weight float64
-	PSA_id            int
-}
-
-type InteractionKey struct {
-	In_state_id   int
-	From_state_id int
-}
-
-type RASkey struct {
-	Race_state_id int
-	Age_state_id  int
-	Sex_state_id  int
-	Model_id      int
-}
-
-type Query_t struct {
-	State_id_by_cycle_and_person_and_model         [][][]int
-	States_ids_by_cycle_and_person                 [][]int
-	Tps_id_by_from_state                           [][]int
-	interaction_id_by_in_state_and_from_state      map[InteractionKey]int
-	State_populations_by_cycle                     [][]int
-	Model_id_by_state                              []int
-	Other_death_state_by_model                     []int
-	Cost_by_state_id                               []float64
-	Disability_weight_by_state_id                  []float64
-	Master_record_id_by_cycle_and_person_and_model [][][]int
-	Life_expectancy_by_sex_and_age                 map[SexAge]float64
-	TP_by_RAS                                      map[RASkey][]TPByRAS
-	Unintialized_state_by_model                    []int
-	Outputs_id_by_cycle_and_state                  [][]int
-
-	// Unexported and used by the "getters"
-	model_id_by_name map[string]int
-	state_id_by_name map[string]int
-}
-
-type SexAge struct {
-	Sex, Age int
-}
-
-type Input struct {
-	//	CurrentCycle            int
-	Models                  []Model
-	People                  []Person
-	States                  []State
-	TransitionProbabilities []TransitionProbability
-	Interactions            []Interaction
-	Cycles                  []Cycle
-	MasterRecords           []MasterRecord
-	Costs                   []Cost
-	DisabilityWeights       []DisabilityWeight
-	LifeExpectancies        []LifeExpectancy
-	TPByRASs                []TPByRAS
-}
-
-type TPByRAS struct {
-	Id            int
-	Model_id      int
-	Model_name    string
-	To_state_id   int
-	To_state_name string
-	Sex_state_id  int
-	Race_state_id int
-	Age_state_id  int
-	Probability   float64
-}
-
-// ##################### Output structs ################ //
-
-//this struct will replicate the data found
-type StatePopulation struct {
-	Id         int
-	State_name string
-	State_id   int
-	Cycle_id   int
-	Population int
-	Model_id   int
-}
-
-type OutputByCycleState struct {
-	Id         int
-	YLLs       float64
-	YLDs       float64
-	DALYs      float64
-	Costs      float64
-	Cycle_id   int
-	State_id   int
-	Population int
-	State_name string
-}
-
-type Output struct {
-	OutputsByCycleStateFull []OutputByCycleState
-	OutputsByCycleStatePsa  []OutputByCycleState
-	OutputsByCycle          []OutputByCycle
-}
-
-type OutputByCycle struct {
-	Cycle_id             int
-	T2DM_diagnosis_event int
-	T2DM_death_event     int
-	CHD_diagnosis_event  int
-	CHD_death_event      int
-	HCC_diagnosis_event  int
-	HCC_death_event      int
-}
-
-// these are all global variables, which is why they are Capitalized
-// current refers to the current cycle, which is used to calculate the next cycle
-
-var Query Query_t
-
-var GlobalStatePopulations = []StatePopulation{}
-
-var output_dir = "tmp"
-
-// TODO: Capitalize global variables [Issue: https://github.com/alexgoodell/go-mdism/issues/46]
-var numberOfPeople int
-var numberOfPeopleStarting int
-var numberOfIterations int
-var numberOfPeopleEnteringPerYear int
-var numberOfPeopleEntering int
-
-var inputsPath string
-var isProfile string
-var reportingMode string
-
-var Inputs Input
-var Outputs Output
 
 func main() {
 
@@ -315,6 +112,8 @@ func main() {
 
 func runModel(concurrencyBy string) {
 
+	rand.Seed(1)
+
 	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
 	beginTime = time.Now()
 
@@ -371,14 +170,17 @@ func runModel(concurrencyBy string) {
 	formatOutputs()
 
 	if reportingMode == "individual" {
-		//toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
+		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 		toCsv(output_dir+"/output_by_cycle_and_state_full.csv", Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
-		toCsv(output_dir+"/output_by_cycle_and_state_psa.csv", Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
-		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
-	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
+	if reportingMode == "psa" {
+		toCsv(output_dir+"/output_by_cycle_and_state_psa.csv", Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
+
+	}
+
+	toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
@@ -484,14 +286,14 @@ func formatOutputs() {
 
 func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
+	otherDeathState := getOtherDeathStateByModel(model)
+	if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
+		return
+	}
+
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
 	currentStateInThisModel := person.get_state_by_model(model, cycle)
-
-	otherDeathState := getOtherDeathStateByModel(model)
-	if Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
-		return
-	}
 
 	// if currentStateInThisModel == otherDeathState {
 	// 	fmt.Println(person.Id, " has died in ", model.Name)
@@ -513,7 +315,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
 	if isCHDuninit || isT2DMuninit || isBMIuninit {
 		transitionProbabilities = getTransitionProbByRAS(currentStateInThisModel, states, person, cycle)
-
 	}
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -579,7 +380,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 				if sub_model.Id != model.Id {
 
 					otherDeathState := getOtherDeathStateByModel(sub_model)
-					// fmt.Println("moving ", person.Id, " to state, ", otherDeathState)
+					//fmt.Println("moving ", person.Id, " to state, ", otherDeathState, " in model ", sub_model.Name)
 					// add new records for all the deaths for this cycle and next
 					// TODO add toQuery adds to the next cycle not the currrent cycle
 					// make this more clear
@@ -597,6 +398,15 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 					mrId = Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][sub_model.Id]
 					mr = &Inputs.MasterRecords[mrId]
 					mr.State_id = otherDeathState.Id
+					//once they've been assigned a death state, need to clear
+					// their other information (in case another model filled in
+					// the data for the state they would have done to. But they've
+					// died, so we need to clear the YLLs, YLDs, and Costs
+					mr.YLDs = 0
+					mr.YLLs = 0
+					mr.Costs = 0
+					mr.Has_entered_simulation = true
+					mr.State_name = "Other death"
 
 					Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][sub_model.Id] = otherDeathState.Id
 				}
@@ -633,20 +443,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
 }
 
-func getYLLFromDeath(person Person, cycle Cycle) float64 {
-	agesModel := Query.getModelByName("Age")
-	ageState := person.get_state_by_model(agesModel, cycle)
-	sexModel := Query.getModelByName("Sex")
-	sexState := person.get_state_by_model(sexModel, cycle)
-	return Query.getLifeExpectancyBySexAge(sexState, ageState)
-}
-
-func getOtherDeathStateByModel(model Model) State {
-	otherDeathStateId := Query.Other_death_state_by_model[model.Id]
-	otherDeathState := get_state_by_id(otherDeathStateId)
-	return otherDeathState
-}
-
 // This represents running the full model for one person
 func runFullModelForOnePerson(person Person, generalChan chan string) {
 	for _, cycle := range Inputs.Cycles {
@@ -665,62 +461,6 @@ func runOneCycleForOnePerson(cycle Cycle, person Person, generalChan chan string
 		runCyclePersonModel(cycle, model, person)
 	}
 	generalChan <- "Done"
-}
-
-func (Query *Query_t) getModelByName(name string) Model {
-	modelId := Query.model_id_by_name[name]
-	model := Inputs.Models[modelId]
-	if model.Name != name {
-		fmt.Println("problem getting model by name: ", name, " does not exist")
-		os.Exit(1)
-	}
-	return model
-}
-
-func (Query *Query_t) getStateByName(name string) State {
-	stateId := Query.state_id_by_name[name]
-	state := Inputs.States[stateId]
-	if state.Name != name {
-		fmt.Println("problem getting state by name: ", name, " does not exist")
-		os.Exit(1)
-	}
-	return state
-}
-
-func (Query *Query_t) getLifeExpectancyBySexAge(sex State, age State) float64 {
-	//Use struct as map key
-	key := SexAge{sex.Id, age.Id}
-	le := Query.Life_expectancy_by_sex_and_age[key]
-	return le
-}
-
-func (Query *Query_t) getInteractionId(inState State, fromState State) (int, bool) {
-	//Use struct as map key
-	var key InteractionKey
-	isInteraction := false
-	key.In_state_id = inState.Id
-	key.From_state_id = fromState.Id
-	interactionId := Query.interaction_id_by_in_state_and_from_state[key]
-	interaction := &Inputs.Interactions[interactionId]
-	if interaction.From_state_id == fromState.Id && interaction.In_state_id == inState.Id {
-		isInteraction = true
-	}
-	return interaction.Id, isInteraction
-}
-
-func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
-	var key RASkey
-	key.Age_state_id = ageState.Id
-	key.Race_state_id = raceState.Id
-	key.Sex_state_id = sexState.Id
-	key.Model_id = model.Id
-	RASs := Query.TP_by_RAS[key]
-
-	// if ras.Model_id != model.Id || ras.Age+22 != ageState.Id || ras.Race_state_id != raceState.Id || ras.Sex_state_id != sexState.Id {
-	// 	fmt.Println("cannot find by RAS")
-	// 	os.Exit(1)
-	// }
-	return RASs
 }
 
 func (Query *Query_t) setUp() {
@@ -973,20 +713,6 @@ func createInitialPeople(Inputs Input) Input {
 
 }
 
-func get_state_by_id(stateId int) State {
-
-	theState := Inputs.States[stateId]
-
-	if theState.Id == stateId {
-		return theState
-	}
-
-	fmt.Println("Cannot find state by id ", stateId)
-	os.Exit(1)
-	return theState
-
-}
-
 // ------------------------------------------- methods
 
 // --------------- transition probabilities
@@ -1137,57 +863,6 @@ func (thisPerson *Person) get_states(cycle Cycle) []State {
 	}
 }
 
-//  --------------- model
-
-// gets the uninitialized state for a model (the state individuals start in)
-func (model *Model) get_uninitialized_state() State {
-	stateId := Query.Unintialized_state_by_model[model.Id]
-	state := Inputs.States[stateId]
-	return state
-}
-
-//  --------------- state
-
-// get the transition probabilities *from* the given state. It's called
-// destination because we're finding the chances of moving to each destination
-func (state *State) get_destination_probabilites() []TransitionProbability {
-	var tPIdsToReturn []int
-	tPIdsToReturn = Query.Tps_id_by_from_state[state.Id]
-	tPsToReturn := make([]TransitionProbability, len(tPIdsToReturn), len(tPIdsToReturn))
-	for i, id := range tPIdsToReturn {
-		tPsToReturn[i] = Inputs.TransitionProbabilities[id]
-	}
-	if len(tPsToReturn) > 0 {
-		return tPsToReturn
-	} else {
-		fmt.Println("cannot find destination probabilities via get_destination_probabilites")
-		os.Exit(1)
-		return tPsToReturn
-	}
-}
-
-// get any interactions that will effect the transtion from
-// the persons current states based on all states that they are
-// in - it is a method of their current state in this model,
-// and accepts an array of all currents states they occupy
-func (fromState State) get_relevant_interactions(allStates []State) []Interaction {
-
-	i := 0
-	relevantInteractions := make([]Interaction, len(Inputs.Models), len(Inputs.Models))
-	for _, inState := range allStates {
-		interactionId, isInteraction := Query.getInteractionId(inState, fromState)
-		if isInteraction {
-			//fmt.Println(interactionId)
-			interaction := Inputs.Interactions[interactionId]
-			relevantInteractions[i] = interaction
-			i++
-		}
-	}
-	// :i is faster than append()
-	return relevantInteractions[:i]
-
-}
-
 // Using  the final transition probabilities, pickState assigns a new state to
 // a person. It is given many states and returns one.
 func pickState(tPs []TransitionProbability) State {
@@ -1230,49 +905,6 @@ func pick(probabilities []float64) int {
 	fmt.Println("problem with pick")
 	os.Exit(1)
 	return 0
-}
-
-// Exports sets of data to CSVs. I particular, it will print any array of structs
-// and automatically uses the struct field names as headers! wow.
-// It takes a filename, as well one copy of the struct, and the array of structs
-// itself.
-func toCsv(filename string, record interface{}, records interface{}) error {
-	fmt.Println("Beginning export process to ", filename)
-	//create or open file
-	os.Create(filename)
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	// new Csv wriier
-	writer := csv.NewWriter(file)
-	// use the single record to determine the fields of the struct
-	val := reflect.Indirect(reflect.ValueOf(record))
-	numberOfFields := val.Type().NumField()
-	var fieldNames []string
-	for i := 0; i < numberOfFields; i++ {
-		fieldNames = append(fieldNames, val.Type().Field(i).Name)
-	}
-	// print field names of struct
-	err = writer.Write(fieldNames)
-	// print the values from the array of structs
-	val2 := reflect.ValueOf(records)
-	for i := 0; i < val2.Len(); i++ {
-		var line []string
-		for p := 0; p < numberOfFields; p++ {
-			//convert interface to string
-			line = append(line, fmt.Sprintf("%v", val2.Index(i).Field(p).Interface()))
-		}
-		err = writer.Write(line)
-	}
-	if err != nil {
-		fmt.Println("error")
-		os.Exit(1)
-	}
-	fmt.Println("Exported to ", filename)
-	writer.Flush()
-	return err
 }
 
 func getNumberOfRecords(filename string) int {
@@ -1358,177 +990,6 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 		}
 	}
 	return toReturn
-}
-
-func initializeInputs(inputsPath string) {
-
-	// ####################### Life Expectancy #######################
-
-	// initialize inputs, needed for fromCsv function
-	filename := "inputs/" + inputsPath + "/life-expectancies.csv"
-	numberOfRecords := getNumberOfRecords(filename)
-	Inputs.LifeExpectancies = make([]LifeExpectancy, numberOfRecords, numberOfRecords)
-	var LEptrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		LEptrs = append(LEptrs, new(LifeExpectancy))
-	}
-	LEptrs = fromCsv(filename, Inputs.LifeExpectancies[0], LEptrs)
-	for i, ptr := range LEptrs {
-		Inputs.LifeExpectancies[i] = *ptr.(*LifeExpectancy)
-	}
-	fmt.Println("complete")
-
-	// ####################### Models #######################
-
-	// initialize inputs, needed for fromCsv function
-	filename = "inputs/" + inputsPath + "/models.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-	Inputs.Models = make([]Model, numberOfRecords, numberOfRecords)
-	var ptrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		ptrs = append(ptrs, new(Model))
-	}
-	ptrs = fromCsv(filename, Inputs.Models[0], ptrs)
-	for i, ptr := range ptrs {
-		Inputs.Models[i] = *ptr.(*Model)
-	}
-	fmt.Println("complete")
-
-	// ####################### States #######################
-
-	// initialize inputs, needed for fromCsv function
-	filename = "inputs/" + inputsPath + "/states.csv"
-	fmt.Println(filename)
-	numberOfRecords = getNumberOfRecords(filename)
-	Inputs.States = make([]State, numberOfRecords, numberOfRecords)
-	var statePtrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		statePtrs = append(statePtrs, new(State))
-	}
-	ptrs = fromCsv(filename, Inputs.States[0], statePtrs)
-	for i, ptr := range statePtrs {
-		Inputs.States[i] = *ptr.(*State)
-	}
-
-	// ####################### Transition Probabilities #######################
-
-	// initialize inputs, needed for fromCsv function
-	filename = "inputs/" + inputsPath + "/transition-probabilities.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.TransitionProbabilities = make([]TransitionProbability, numberOfRecords, numberOfRecords)
-	var tpPtrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		tpPtrs = append(tpPtrs, new(TransitionProbability))
-	}
-	ptrs = fromCsv(filename, Inputs.TransitionProbabilities[0], tpPtrs)
-	for i, ptr := range tpPtrs {
-		Inputs.TransitionProbabilities[i] = *ptr.(*TransitionProbability)
-	}
-
-	// ####################### Interactions #######################
-
-	// initialize inputs, needed for fromCsv function
-	filename = "inputs/" + inputsPath + "/interactions.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.Interactions = make([]Interaction, numberOfRecords, numberOfRecords)
-	var interactionPtrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		interactionPtrs = append(interactionPtrs, new(Interaction))
-	}
-	ptrs = fromCsv(filename, Inputs.Interactions[0], interactionPtrs)
-	for i, ptr := range interactionPtrs {
-		Inputs.Interactions[i] = *ptr.(*Interaction)
-	}
-
-	// ####################### Cycles #######################
-
-	//initialize inputs, needed for fromCsv function
-	filename = "inputs/" + inputsPath + "/cycles.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.Cycles = make([]Cycle, numberOfRecords, numberOfRecords)
-	var cyclePtrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		cyclePtrs = append(cyclePtrs, new(Cycle))
-	}
-	ptrs = fromCsv(filename, Inputs.Cycles[0], cyclePtrs)
-	for i, ptr := range cyclePtrs {
-		Inputs.Cycles[i] = *ptr.(*Cycle)
-	}
-
-	// ####################### TPs By RAS #######################
-
-	filename = "inputs/" + inputsPath + "/ras.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.TPByRASs = make([]TPByRAS, numberOfRecords, numberOfRecords)
-	var tpbrsPtr []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		tpbrsPtr = append(tpbrsPtr, new(TPByRAS))
-	}
-	ptrs = fromCsv(filename, Inputs.TPByRASs[0], tpbrsPtr)
-	for i, ptr := range tpbrsPtr {
-		Inputs.TPByRASs[i] = *ptr.(*TPByRAS)
-	}
-
-	// ####################### Costs #######################
-
-	filename = "inputs/" + inputsPath + "/costs.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.Costs = make([]Cost, numberOfRecords, numberOfRecords)
-	var costsPtr []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		costsPtr = append(costsPtr, new(Cost))
-	}
-	ptrs = fromCsv(filename, Inputs.Costs[0], costsPtr)
-	for i, ptr := range costsPtr {
-		Inputs.Costs[i] = *ptr.(*Cost)
-	}
-
-	// ####################### Disability Weights #######################
-
-	filename = "inputs/" + inputsPath + "/disability-weights.csv"
-	numberOfRecords = getNumberOfRecords(filename)
-
-	Inputs.DisabilityWeights = make([]DisabilityWeight, numberOfRecords, numberOfRecords)
-	var dwPtrs []interface{}
-	for i := 0; i < numberOfRecords; i++ {
-		dwPtrs = append(dwPtrs, new(DisabilityWeight))
-	}
-	ptrs = fromCsv(filename, Inputs.DisabilityWeights[0], dwPtrs)
-	for i, ptr := range dwPtrs {
-		Inputs.DisabilityWeights[i] = *ptr.(*DisabilityWeight)
-	}
-
-	fmt.Println(Inputs.DisabilityWeights)
-
-	// ####################### Master Records & Accessor
-
-	length := numberOfPeople * (len(Inputs.Cycles) + 1) * len(Inputs.Models)
-	Inputs.MasterRecords = make([]MasterRecord, length, length)
-
-	i := 0
-	Query.Master_record_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
-	for c, _ := range Query.Master_record_id_by_cycle_and_person_and_model {
-		//People
-		Query.Master_record_id_by_cycle_and_person_and_model[c] = make([][]int, numberOfPeople, numberOfPeople)
-		for p, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c] {
-			Query.Master_record_id_by_cycle_and_person_and_model[c][p] = make([]int, len(Inputs.Models), len(Inputs.Models))
-			for m, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c][p] {
-				var masterRecord MasterRecord
-				masterRecord.Cycle_id = c
-				masterRecord.Person_id = p
-				masterRecord.Model_id = m
-				masterRecord.Has_entered_simulation = false
-				Inputs.MasterRecords[i] = masterRecord
-				Query.Master_record_id_by_cycle_and_person_and_model[c][p][m] = i
-				i++
-			}
-		}
-	}
 }
 
 func removeUnborns() {
