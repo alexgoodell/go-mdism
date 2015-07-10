@@ -84,6 +84,9 @@ func main() {
 
 	interventionIsOn := false
 
+	fmt.Println(Query.interaction_id_by_in_state_and_from_state)
+	pause()
+
 	// TODO fix this hack
 	//Interaction 250 = unin to high fructose (gets lowered from 0.7 to 0.56 (=80%))
 
@@ -325,12 +328,16 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// and accepts an array of all currents states they occupy
 	interactions := currentStateInThisModel.get_relevant_interactions(states)
 
+	var toStates []int
 	if len(interactions) > 0 { // if there are interactions
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
 			newTransitionProbabilities := adjust_transitions(transitionProbabilities, interaction, cycle, person)
 			transitionProbabilities = newTransitionProbabilities
+			toStates = append(toStates, interaction.To_state_id)
 		} // end foreach interaction
+		fmt.Println(toStates)
+		pause()
 	} // end if there are interactions
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -546,7 +553,7 @@ func (Query *Query_t) setUp() {
 		Query.Tps_id_by_from_state[i] = tPIdsToReturn
 	}
 
-	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/50]
+	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/51]
 	Query.interaction_id_by_in_state_and_from_state = make(map[InteractionKey][]int)
 	for _, interaction := range Inputs.Interactions {
 		var interactionKey InteractionKey
