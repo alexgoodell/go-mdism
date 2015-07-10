@@ -546,12 +546,13 @@ func (Query *Query_t) setUp() {
 		Query.Tps_id_by_from_state[i] = tPIdsToReturn
 	}
 
-	Query.interaction_id_by_in_state_and_from_state = make(map[InteractionKey]int)
+	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/50]
+	Query.interaction_id_by_in_state_and_from_state = make(map[InteractionKey][]int)
 	for _, interaction := range Inputs.Interactions {
 		var interactionKey InteractionKey
 		interactionKey.From_state_id = interaction.From_state_id
 		interactionKey.In_state_id = interaction.In_state_id
-		Query.interaction_id_by_in_state_and_from_state[interactionKey] = interaction.Id
+		Query.interaction_id_by_in_state_and_from_state[interactionKey] = append(Query.interaction_id_by_in_state_and_from_state[interactionKey], interaction.Id)
 	}
 
 	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
