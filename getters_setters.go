@@ -54,8 +54,8 @@ func (fromState State) get_relevant_interactions(allStates []State) []Interactio
 		for relevantInteractionId := range relevantInteractions {
 			toState = append(toState, Inputs.Interactions[relevantInteractionId].To_state_id)
 		}
-		fmt.Println(toState)
-		pause()
+		//fmt.Println(toState)
+		//pause()
 	}
 	_ = toState
 
