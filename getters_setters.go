@@ -40,19 +40,20 @@ func (state *State) get_destination_probabilites() []TransitionProbability {
 // and accepts an array of all currents states they occupy
 func (fromState State) get_relevant_interactions(allStates []State) []Interaction {
 
-	i := 0
-	relevantInteractions := make([]Interaction, len(Inputs.Models), len(Inputs.Models))
+	var relevantInteractions []Interaction
+	var interactionIds []int
 	for _, inState := range allStates {
-		interactionId, isInteraction := Query.getInteractionId(inState, fromState)
-		if isInteraction {
-			//fmt.Println(interactionId)
-			interaction := Inputs.Interactions[interactionId]
-			relevantInteractions[i] = interaction
-			i++
-		}
+		interactionIds = append(interactionIds, Query.getInteractionIds(inState, fromState)...)
 	}
+	for _, interactionId := range interactionIds {
+		relevantInteractions = append(relevantInteractions, Inputs.Interactions[interactionId])
+	}
+
+	// fmt.Println(relevantInteractions)
+	// pause()
+
 	// :i is faster than append()
-	return relevantInteractions[:i]
+	return relevantInteractions
 
 }
 
@@ -111,18 +112,20 @@ func (Query *Query_t) getLifeExpectancyBySexAge(sex State, age State) float64 {
 	return le
 }
 
-func (Query *Query_t) getInteractionId(inState State, fromState State) (int, bool) {
+func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 	//Use struct as map key
 	var key InteractionKey
-	isInteraction := false
+	var interactionIdsToReturn []int
 	key.In_state_id = inState.Id
 	key.From_state_id = fromState.Id
-	interactionId := Query.interaction_id_by_in_state_and_from_state[key]
-	interaction := &Inputs.Interactions[interactionId]
-	if interaction.From_state_id == fromState.Id && interaction.In_state_id == inState.Id {
-		isInteraction = true
+	interactionIds := Query.interaction_id_by_in_state_and_from_state[key]
+	for _, interactionId := range interactionIds {
+		interaction := &Inputs.Interactions[interactionId]
+		if interaction.From_state_id == fromState.Id && interaction.In_state_id == inState.Id {
+			interactionIdsToReturn = append(interactionIdsToReturn, interaction.Id)
+		}
 	}
-	return interaction.Id, isInteraction
+	return interactionIdsToReturn
 }
 
 func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
