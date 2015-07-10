@@ -34,6 +34,7 @@ type State struct {
 	Model_id                  int
 	Name                      string
 	Is_uninitialized_state    bool
+	Is_uninitialized_2_state  bool
 	Is_disease_specific_death bool
 	Is_other_death            bool
 	Is_natural_causes_death   bool
@@ -180,59 +181,31 @@ type StatePopulation struct {
 }
 
 type OutputByCycleState struct {
-	Id       int
-	YLLs     float64
-	YLDs     float64
-	DALYs    float64
-	Costs    float64
-	Cycle_id int
-	State_id int
+	Id         int
+	YLLs       float64
+	YLDs       float64
+	DALYs      float64
+	Costs      float64
+	Cycle_id   int
+	State_id   int
+	Population int
+	State_name string
 }
 
 type Output struct {
-	OutputsByCycleState []OutputByCycleState
-	OutputsByCycle      []OutputByCycle
+	OutputsByCycleStateFull []OutputByCycleState
+	OutputsByCycleStatePsa  []OutputByCycleState
+	OutputsByCycle          []OutputByCycle
 }
 
 type OutputByCycle struct {
-	// Cycle_id             int
-
-	// Steatosis_prev       int
-	// NASH_prev            int
-	// Cirrhosis_prev       int
-	// HCC_prev             int
-	// Liver_death_prev     int
-	// Natural_death_prev   int
-	// CHD_prev             int
-	// CHD_death_prev       int
-	// T2DM_prev            int
-	// T2DM_death_prev      int
-	// Overweight_prev      int
-	// Obese_prev           int
-
-	// T2DM_diagnosis_event int
-	// T2DM_death_event     int
-	// CHD_diagnosis_event  int
-	// CHD_death_event      int
-	// HCC_diagnosis_event  int
-	// HCC_death_event      int
-
-	// Steatosis_DALYs
-	// NASH_DALYs
-	// Cirrhosis_DALYs
-	// HCC_DALYs
-	// CHD_DALYs
-	// T2D_DALYs
-	// Overweight_DALYs
-	// Obesity_DALYs
-	// Steatosis_Costs
-	// NASH_Costs
-	// Cirrhosis_Costs
-	// HCC_Costs
-	// CHD_Costs
-	// T2D_Costs
-	// Overweight_Costs
-	// Obesity_Costs
+	Cycle_id             int
+	T2DM_diagnosis_event int
+	T2DM_death_event     int
+	CHD_diagnosis_event  int
+	CHD_death_event      int
+	HCC_diagnosis_event  int
+	HCC_death_event      int
 }
 
 // these are all global variables, which is why they are Capitalized
@@ -400,7 +373,9 @@ func runModel(concurrencyBy string) {
 	if reportingMode == "individual" {
 		//toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
-		toCsv(output_dir+"/output_by_cycle_and_state.csv", Outputs.OutputsByCycleState[0], Outputs.OutputsByCycleState)
+		toCsv(output_dir+"/output_by_cycle_and_state_full.csv", Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
+		toCsv(output_dir+"/output_by_cycle_and_state_psa.csv", Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
+		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
 	//toCsv(output_dir+"/states.csv", Inputs.States[0], Inputs.States)
@@ -410,11 +385,20 @@ func runModel(concurrencyBy string) {
 }
 
 func formatOutputs() {
+
 	for _, masterRecord := range Inputs.MasterRecords {
+		//TODO: Remove state populations set up, output by cycle state is replacing [Issue: https://github.com/alexgoodell/go-mdism/issues/47]
 		Query.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 
+		var oldStateId int
+		if masterRecord.Cycle_id > 0 {
+			oldStateId = Query.State_id_by_cycle_and_person_and_model[masterRecord.Cycle_id-1][masterRecord.Person_id][masterRecord.Model_id]
+		}
+
+		currentStateId := masterRecord.State_id
+
 		outputCSId := Query.Outputs_id_by_cycle_and_state[masterRecord.Cycle_id][masterRecord.State_id]
-		outputCS := &Outputs.OutputsByCycleState[outputCSId]
+		outputCS := &Outputs.OutputsByCycleStateFull[outputCSId]
 		if outputCS.Cycle_id != masterRecord.Cycle_id || outputCS.State_id != masterRecord.State_id {
 			fmt.Println("problem formating ouput by state cycle")
 			os.Exit(1)
@@ -423,11 +407,78 @@ func formatOutputs() {
 		outputCS.YLDs += masterRecord.YLDs
 		outputCS.YLLs += masterRecord.YLLs
 		outputCS.DALYs += masterRecord.YLDs + masterRecord.YLLs
+		outputCS.Population += 1
+
+		/// per cycle outputs
+
+		outputByCycle := &Outputs.OutputsByCycle[masterRecord.Cycle_id]
+		outputByCycle.Cycle_id = masterRecord.Cycle_id
+		evMapper := make(map[string]*int)
+		evMapper["T2DM"] = &outputByCycle.T2DM_diagnosis_event
+		evMapper["T2DM death"] = &outputByCycle.T2DM_death_event
+		evMapper["CHD"] = &outputByCycle.CHD_diagnosis_event
+		evMapper["CHD death"] = &outputByCycle.CHD_death_event
+		evMapper["HCC"] = &outputByCycle.HCC_diagnosis_event
+		evMapper["HCC death"] = &outputByCycle.HCC_death_event
+
+		eventStateNames := []string{"T2DM", "T2DM death", "CHD", "CHD death", "HCC"}
+		for _, eventStateName := range eventStateNames {
+			eventStateId := Query.getStateByName(eventStateName).Id
+
+			oldState := Inputs.States[oldStateId]
+
+			// Find if they just transfered to the state of interest
+			if currentStateId == eventStateId && oldStateId != eventStateId && !oldState.Is_uninitialized_2_state {
+
+				*evMapper[eventStateName] += 1
+			}
+			//HCC is handled differently, because there is no "HCC death" state. So,
+			// we are looking for people who's last state was HCC and are now in the
+			// "liver death" group
+			hccStateId := Query.getStateByName("HCC").Id
+			liverDeathStateId := Query.getStateByName("Liver death").Id
+			if currentStateId == liverDeathStateId && oldStateId == hccStateId {
+				*evMapper["HCC death"] += 1
+			}
+		}
+
+	}
+
+	for _, outputCS := range Outputs.OutputsByCycleStateFull {
+		stateNamesForPSA := []string{
+			"Steatosis",
+			"NASH", "Cirrhosis",
+			"HCC", "Liver death",
+			"Natural death", "CHD",
+			"CHD death", "T2DM", "T2DM death",
+			"Overweight", "Obese"}
+
+		for _, stateName := range stateNamesForPSA {
+			stateId := Query.getStateByName(stateName).Id
+			if stateId == outputCS.State_id {
+				Outputs.OutputsByCycleStatePsa = append(Outputs.OutputsByCycleStatePsa, outputCS)
+			}
+		}
 	}
 
 	for s, statePopulation := range GlobalStatePopulations {
 		GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
 	}
+
+	// for PSA reporting
+
+	// Steatosis_prev       int
+	// NASH_prev            int
+	// Cirrhosis_prev       int
+	// HCC_prev             int
+	// Liver_death_prev     int
+	// Natural_death_prev   int
+	// CHD_prev             int
+	// CHD_death_prev       int
+	// T2DM_prev            int
+	// T2DM_death_prev      int
+	// Overweight_prev      int
+	// Obese_prev           int
 
 }
 
@@ -456,9 +507,9 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// probabilities rely on information about the person's sex, race, and
 	// age. So a different set of transition probabilties must be used
 
-	isCHDuninit := currentStateInThisModel == Query.getStateByName("Unitialized2-CHD")
-	isT2DMuninit := currentStateInThisModel == Query.getStateByName("Unitialized2-T2DM")
-	isBMIuninit := currentStateInThisModel == Query.getStateByName("Unitialized2-BMI")
+	isCHDuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("CHD").Id
+	isT2DMuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("T2DM").Id
+	isBMIuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("BMI").Id
 
 	if isCHDuninit || isT2DMuninit || isBMIuninit {
 		transitionProbabilities = getTransitionProbByRAS(currentStateInThisModel, states, person, cycle)
@@ -511,7 +562,9 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 		justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
 		justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 		if justDiedOfDiseaseSpecific {
+			//fmt.Println("Just died of ", model.Name)
 			stateSpecificYLLs := getYLLFromDeath(person, cycle) * discountValue
+			//fmt.Println("incurring ", stateSpecificYLLs, " YLLs ")
 			mr.YLLs += stateSpecificYLLs
 		}
 
@@ -618,7 +671,7 @@ func (Query *Query_t) getModelByName(name string) Model {
 	modelId := Query.model_id_by_name[name]
 	model := Inputs.Models[modelId]
 	if model.Name != name {
-		fmt.Println("problem getting model by name")
+		fmt.Println("problem getting model by name: ", name, " does not exist")
 		os.Exit(1)
 	}
 	return model
@@ -628,7 +681,7 @@ func (Query *Query_t) getStateByName(name string) State {
 	stateId := Query.state_id_by_name[name]
 	state := Inputs.States[stateId]
 	if state.Name != name {
-		fmt.Println("problem getting state by name")
+		fmt.Println("problem getting state by name: ", name, " does not exist")
 		os.Exit(1)
 	}
 	return state
@@ -637,7 +690,8 @@ func (Query *Query_t) getStateByName(name string) State {
 func (Query *Query_t) getLifeExpectancyBySexAge(sex State, age State) float64 {
 	//Use struct as map key
 	key := SexAge{sex.Id, age.Id}
-	return Query.Life_expectancy_by_sex_and_age[key]
+	le := Query.Life_expectancy_by_sex_and_age[key]
+	return le
 }
 
 func (Query *Query_t) getInteractionId(inState State, fromState State) (int, bool) {
@@ -673,18 +727,22 @@ func (Query *Query_t) setUp() {
 
 	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
 
+	Outputs.OutputsByCycle = make([]OutputByCycle, numberOfCalculatedCycles, numberOfCalculatedCycles)
+
 	Query.Outputs_id_by_cycle_and_state = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
 
-	Outputs.OutputsByCycleState = make([]OutputByCycleState, numberOfCalculatedCycles*len(Inputs.States), numberOfCalculatedCycles*len(Inputs.States))
+	Outputs.OutputsByCycleStateFull = make([]OutputByCycleState, numberOfCalculatedCycles*len(Inputs.States), numberOfCalculatedCycles*len(Inputs.States))
 	i := 0
 	for c := 0; c < numberOfCalculatedCycles; c++ {
 		Query.Outputs_id_by_cycle_and_state[c] = make([]int, len(Inputs.States), len(Inputs.States))
-		for s, _ := range Inputs.States {
+		for s, state := range Inputs.States {
 			var outputCS OutputByCycleState
 			outputCS.Id = i
 			outputCS.State_id = s
 			outputCS.Cycle_id = c
-			Outputs.OutputsByCycleState[i] = outputCS
+			outputCS.State_name = state.Name
+			outputCS.Population = 0
+			Outputs.OutputsByCycleStateFull[i] = outputCS
 
 			Query.Outputs_id_by_cycle_and_state[c][s] = i
 			i++
