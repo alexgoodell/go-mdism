@@ -669,7 +669,7 @@ func createNewPeople(cycle Cycle, number int) {
 			if model.Name == "Age" {
 				// Start them at age 20
 				// TODO Do entering individuals actually enter at 21yo?
-				uninitializedState = Query.getStateByName("Age of 20")
+				uninitializedState = Query.getStateByName("Unitialized2")
 			}
 			var mr MasterRecord
 			mr.Cycle_id = cycle.Id
