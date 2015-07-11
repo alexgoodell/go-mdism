@@ -84,8 +84,8 @@ func main() {
 
 	interventionIsOn := false
 
-	fmt.Println(Query.interaction_id_by_in_state_and_from_state)
-	pause()
+	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
+	//pause()
 
 	// TODO fix this hack
 	//Interaction 250 = unin to high fructose (gets lowered from 0.7 to 0.56 (=80%))
@@ -151,6 +151,17 @@ func runModel(concurrencyBy string) {
 			// of they're unit states will be written over
 			if cycle.Id > 0 {
 				createNewPeople(cycle, numberOfPeopleEnteringPerYear) //=The number of created people per cycle
+			}
+
+			// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
+			// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
+			//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
+			//times if there was more than 1 interaction.
+			if cycle.Id > 2 {
+				Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+				Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+				Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+				Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
 			}
 
 			for _, person := range Inputs.People { // 	foreach person
@@ -336,8 +347,8 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 			transitionProbabilities = newTransitionProbabilities
 			toStates = append(toStates, interaction.To_state_id)
 		} // end foreach interaction
-		fmt.Println(toStates)
-		pause()
+		//fmt.Println(toStates)
+		//pause()
 	} // end if there are interactions
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
@@ -728,21 +739,20 @@ func createInitialPeople(Inputs Input) Input {
 func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
-
+	/*if person.Id == 20000 && cycle.Id == 10 {
+		fmt.Println(adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
+	}*/
 	// TODO Implement hooks
 	// this adjusts a few transition probabilities which have a projected change over time
-	hasTimeEffect := interaction.To_state_id == 13 || interaction.To_state_id == 14 || interaction.To_state_id == 8
-	if cycle.Id > 1 && hasTimeEffect {
+	if cycle.Id > 2 && interaction.To_state_id == 8 {
 		// these prepresent the remaining risk after N cycles. ie remaining risk
 		// is equal to original risk * 0.985 ^ number of years from original risk
 
 		ageModel := Query.getModelByName("Age")
 		ageModelStateId := person.get_state_by_model(ageModel, cycle).Id
-		actualAge := ageModelStateId - 22 //Fix this hack = hardcoded
+		actualAge := ageModelStateId - 23 //Fix this hack = hardcoded
 
 		timeEffectByToState := make([]float64, 15, 15)
-		timeEffectByToState[13] = 0.985 //CHD incidence
-		timeEffectByToState[14] = 0.979 //CHD mortality
 		if actualAge >= 20 && actualAge <= 30 {
 			timeEffectByToState[8] = 1.000 //natural deaths
 		} else if actualAge > 30 && actualAge <= 55 {
@@ -754,6 +764,9 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 			os.Exit(1)
 		}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
+		//if person.Id == 20000 && cycle.Id == 10 {
+		//	fmt.Println("After Regression", adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
+		//}
 	}
 
 	for i, _ := range theseTPs {
