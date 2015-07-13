@@ -145,6 +145,7 @@ type TPByRAS struct {
 	Race_state_id int
 	Age_state_id  int
 	Probability   float64
+	PSA_id        int
 }
 
 // ##################### Output structs ################ //
