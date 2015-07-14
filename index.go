@@ -80,7 +80,7 @@ func main() {
 	// records
 	Inputs = createInitialPeople(Inputs)
 
-	Inputs = initializeGlobalStatePopulations(Inputs)
+	//Inputs = initializeGlobalStatePopulations(Inputs)
 
 	interventionIsOn := false
 
@@ -277,9 +277,9 @@ func formatOutputs() {
 		}
 	}
 
-	for s, statePopulation := range GlobalStatePopulations {
-		GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
-	}
+	// for s, statePopulation := range GlobalStatePopulations {
+	// 	GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
+	// }
 
 	// for PSA reporting
 
@@ -649,9 +649,9 @@ func (Query *Query_t) setUp() {
 
 }
 
-func initializeGlobalStatePopulations(Inputs Input) Input {
-	/* See cycle to do above */
-	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
+/*func initializeGlobalStatePopulations(Inputs Input) Input {
+/* See cycle to do above */
+/*numberOfCalculatedCycles := len(Inputs.Cycles) + 1
 	GlobalStatePopulations = make([]StatePopulation, numberOfCalculatedCycles*len(Inputs.States))
 	q := 0
 	for c := 0; c < numberOfCalculatedCycles; c++ {
@@ -667,6 +667,7 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 	}
 	return Inputs
 }
+*/
 
 func shuffle(models []Model) []Model {
 	modelsCopy := make([]Model, len(models), len(models))

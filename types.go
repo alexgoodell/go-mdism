@@ -151,7 +151,7 @@ type TPByRAS struct {
 // ##################### Output structs ################ //
 
 //this struct will replicate the data found
-type StatePopulation struct {
+/*type StatePopulation struct {
 	Id         int
 	State_name string
 	State_id   int
@@ -159,6 +159,7 @@ type StatePopulation struct {
 	Population int
 	Model_id   int
 }
+*/
 
 type OutputByCycleState struct {
 	Id         int

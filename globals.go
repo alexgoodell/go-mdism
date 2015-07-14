@@ -9,7 +9,7 @@ var beginTime = time.Now() //TODO: Test this [Issue: https://github.com/alexgood
 
 var Query Query_t
 
-var GlobalStatePopulations = []StatePopulation{}
+//var GlobalStatePopulations = []StatePopulation{}
 
 var output_dir = "tmp"
 
