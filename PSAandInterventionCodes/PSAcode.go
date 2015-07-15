@@ -10,7 +10,7 @@ import (
 )
 
 //Initialize the structure of the psa input file
-type psaInputs struct {
+type PsaInputs struct {
 	Id           int
 	Variable     string
 	Input_file   string
@@ -52,7 +52,7 @@ func InitializePSA(inputsPath string) {
 	filename = "inputs/" + inputsPath + "/psa.csv"
 	numberOfRecords = getNumberOfRecords(filename)
 
-	Inputs.psa = make([]psaInputs, numberOfRecords, numberOfRecords)
+	Inputs.Psa = make([]psaInputs, numberOfRecords, numberOfRecords)
 	var psaPtr []interface{}
 	for i := 0; i < numberOfRecords; i++ {
 		psaPtr = append(psaPtr, new(psaInputs))

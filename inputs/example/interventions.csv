@@ -1,4 +1,4 @@
-Id,Name,Fructose_reduction
-1,Control,0
-2,Low intervention,0.2
-3,High intervention,1
+Id,Name
+0,control
+1,reduction by 0.2
+2,reduction by 0.5
