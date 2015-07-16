@@ -145,12 +145,13 @@ type TPByRAS struct {
 	Race_state_id int
 	Age_state_id  int
 	Probability   float64
+	PSA_id        int
 }
 
 // ##################### Output structs ################ //
 
 //this struct will replicate the data found
-type StatePopulation struct {
+/*type StatePopulation struct {
 	Id         int
 	State_name string
 	State_id   int
@@ -158,6 +159,7 @@ type StatePopulation struct {
 	Population int
 	Model_id   int
 }
+*/
 
 type OutputByCycleState struct {
 	Id         int

@@ -80,12 +80,12 @@ func main() {
 	// records
 	Inputs = createInitialPeople(Inputs)
 
-	Inputs = initializeGlobalStatePopulations(Inputs)
+	//Inputs = initializeGlobalStatePopulations(Inputs)
 
 	interventionIsOn := false
 
-	fmt.Println(Query.interaction_id_by_in_state_and_from_state)
-	pause()
+	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
+	//pause()
 
 	// TODO fix this hack
 	//Interaction 250 = unin to high fructose (gets lowered from 0.7 to 0.56 (=80%))
@@ -153,6 +153,17 @@ func runModel(concurrencyBy string) {
 				createNewPeople(cycle, numberOfPeopleEnteringPerYear) //=The number of created people per cycle
 			}
 
+			// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
+			// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
+			//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
+			//times if there was more than 1 interaction.
+			if cycle.Id > 2 {
+				Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+				Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+				Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+				Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
+			}
+
 			for _, person := range Inputs.People { // 	foreach person
 				go runOneCycleForOnePerson(cycle, person, generalChan)
 			}
@@ -174,7 +185,7 @@ func runModel(concurrencyBy string) {
 
 	if reportingMode == "individual" {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
-		toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
+		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 		toCsv(output_dir+"/output_by_cycle_and_state_full.csv", Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
 	}
 
@@ -266,9 +277,9 @@ func formatOutputs() {
 		}
 	}
 
-	for s, statePopulation := range GlobalStatePopulations {
-		GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
-	}
+	// for s, statePopulation := range GlobalStatePopulations {
+	// 	GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
+	// }
 
 	// for PSA reporting
 
@@ -315,8 +326,10 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	isCHDuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("CHD").Id
 	isT2DMuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("T2DM").Id
 	isBMIuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("BMI").Id
+	isNAFLDuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("NAFLD").Id
+	isFrucuninit := currentStateInThisModel.Is_uninitialized_2_state && model.Id == Query.getModelByName("Fructose").Id
 
-	if isCHDuninit || isT2DMuninit || isBMIuninit {
+	if isCHDuninit || isT2DMuninit || isBMIuninit || isNAFLDuninit || isFrucuninit {
 		transitionProbabilities = getTransitionProbByRAS(currentStateInThisModel, states, person, cycle)
 	}
 
@@ -345,32 +358,40 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// ------ health metrics ---------
 
 	//Cost calculations
-	discountValue := math.Pow((1 / 1.03), float64(cycle.Id)) //OR: LocalInputsPointer.CurrentCycle ?
+	discountValue := math.Pow((1 / 1.03), float64(cycle.Id-6)) //OR: LocalInputsPointer.CurrentCycle ?
 
 	if cycle.Id > 0 {
 
 		costs := Query.Cost_by_state_id[new_state.Id] * discountValue
 		mrId := Query.Master_record_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id]
 		mr := &Inputs.MasterRecords[mrId]
-		mr.Costs += costs
+		if cycle.Id > 5 {
+			mr.Costs += costs
+		}
 
 		// years of life lost from disability
+
 		stateSpecificYLDs := Query.Disability_weight_by_state_id[new_state.Id] * discountValue
 		if math.IsNaN(stateSpecificYLDs) {
 			fmt.Println("problem w discount. discount, disyld, dw:")
 			fmt.Println(discountValue) //stateSpecificYLDs, new_state.Disability_weight)
 			os.Exit(1)
 		}
-		mr.YLDs += stateSpecificYLDs
+		if cycle.Id > 5 {
+			mr.YLDs += stateSpecificYLDs
+		}
 
 		// mortality
 		justDiedOfDiseaseSpecific := new_state.Is_disease_specific_death && !currentStateInThisModel.Is_disease_specific_death
 		justDiedOfNaturalCauses := new_state.Is_natural_causes_death && !currentStateInThisModel.Is_natural_causes_death
 		if justDiedOfDiseaseSpecific {
 			//fmt.Println("Just died of ", model.Name)
+
 			stateSpecificYLLs := getYLLFromDeath(person, cycle) * discountValue
 			//fmt.Println("incurring ", stateSpecificYLLs, " YLLs ")
-			mr.YLLs += stateSpecificYLLs
+			if cycle.Id > 5 {
+				mr.YLLs += stateSpecificYLLs
+			}
 		}
 
 		// Sync deaths with other models
@@ -625,9 +646,9 @@ func (Query *Query_t) setUp() {
 
 }
 
-func initializeGlobalStatePopulations(Inputs Input) Input {
-	/* See cycle to do above */
-	numberOfCalculatedCycles := len(Inputs.Cycles) + 1
+/*func initializeGlobalStatePopulations(Inputs Input) Input {
+/* See cycle to do above */
+/*numberOfCalculatedCycles := len(Inputs.Cycles) + 1
 	GlobalStatePopulations = make([]StatePopulation, numberOfCalculatedCycles*len(Inputs.States))
 	q := 0
 	for c := 0; c < numberOfCalculatedCycles; c++ {
@@ -643,6 +664,7 @@ func initializeGlobalStatePopulations(Inputs Input) Input {
 	}
 	return Inputs
 }
+*/
 
 func shuffle(models []Model) []Model {
 	modelsCopy := make([]Model, len(models), len(models))
@@ -674,7 +696,7 @@ func createNewPeople(cycle Cycle, number int) {
 			if model.Name == "Age" {
 				// Start them at age 20
 				// TODO Do entering individuals actually enter at 21yo?
-				uninitializedState = Query.getStateByName("Unitialized2")
+				uninitializedState = Query.getStateByName("Age of 19")
 			}
 			var mr MasterRecord
 			mr.Cycle_id = cycle.Id
@@ -725,21 +747,20 @@ func createInitialPeople(Inputs Input) Input {
 func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
-
+	/*if person.Id == 20000 && cycle.Id == 10 {
+		fmt.Println(adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
+	}*/
 	// TODO Implement hooks
 	// this adjusts a few transition probabilities which have a projected change over time
-	hasTimeEffect := interaction.To_state_id == 13 || interaction.To_state_id == 14 || interaction.To_state_id == 8
-	if cycle.Id > 1 && hasTimeEffect {
+	if cycle.Id > 2 && interaction.To_state_id == 8 {
 		// these prepresent the remaining risk after N cycles. ie remaining risk
 		// is equal to original risk * 0.985 ^ number of years from original risk
 
 		ageModel := Query.getModelByName("Age")
 		ageModelStateId := person.get_state_by_model(ageModel, cycle).Id
-		actualAge := ageModelStateId - 22 //Fix this hack = hardcoded
+		actualAge := ageModelStateId - 24 //Fix this hack = hardcoded
 
 		timeEffectByToState := make([]float64, 15, 15)
-		timeEffectByToState[13] = 0.985 //CHD incidence
-		timeEffectByToState[14] = 0.979 //CHD mortality
 		if actualAge >= 20 && actualAge <= 30 {
 			timeEffectByToState[8] = 1.000 //natural deaths
 		} else if actualAge > 30 && actualAge <= 55 {
@@ -751,6 +772,9 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 			os.Exit(1)
 		}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
+		//if person.Id == 20000 && cycle.Id == 10 {
+		//	fmt.Println("After Regression", adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
+		//}
 	}
 
 	for i, _ := range theseTPs {
@@ -1024,7 +1048,7 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 	ageModel := Query.getModelByName("Age")
 	ageState := person.get_state_by_model(ageModel, cycle)
 
-	if ageState.Name == "Unitialized2" {
+	if ageState.Name == "Age of 19" {
 		//Use the 20yo transition probabilities for the 19yos (ie uninit 2)
 		ageState = Query.getStateByName("Age of 20")
 	}
