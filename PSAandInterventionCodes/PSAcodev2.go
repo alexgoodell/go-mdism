@@ -162,19 +162,22 @@ func runPsa(Inputs Input) {
 			for fromState := 0; fromState < 43; fromState++ { //Do this for all relevant from states.
 				// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 				// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
-				sumThisFromState := 0.00
+				sumThisFromState := make([]float64, 150, 150)           // Need to make this len(Inputs.States) as well.
 				for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 					if eachTP.From_id == fromState && eachTP.From_id != eachTP.To_id {
-						// If the from ID equals the from state we are assessing right now (r) and the TP is not for staying in the same state
-						sumThisFromState += eachTP.Tp_base
-						// Add the TPbase of this specific TP to the sum
+						// If the from ID equals the from state we are assessing right now and the TP is not for staying in the same state
+						sumThisFromState[fromState] += eachTP.Tp_base
+						// Add the TPbase of this specific TP to the sum (of all of the TPs from this state)
 					}
+				} //Now that we have all the sums per each state in a slice, we are going to subtract this from the remaining.
+				for _, eachTP := range Inputs.TransitionProbabilities {
 					if eachTP.From_id == fromState && eachTP.From_id == eachTP.To_id {
 						// If we come to the TP of this specific fromstate, and this TP is for staying in that state
-						eachTP.Tp_base = 1.00 - sumThisFromState
+						eachTP.Tp_base = 1.00 - sumThisFromState[fromState]
 						// correct the TP_base by the sum you found from the other TPs.
 					}
 				}
+
 				//Some checks here? Check_sum?
 			}
 
@@ -231,13 +234,13 @@ func runPsa(Inputs Input) {
 			// I realise these things are hard coded now, but maybe we can get uninstates with a function and then add 1 each time?
 			for fromState := 0; fromState < 45; fromState++ { //Problem is that from state is the UNIN state, not the STAY state. WHAT TO DO?
 				//Maybe we can set the from state in the ras file as the stay state? It is technically incorrect, but would probably work.
-				for rasSex := 33; rasSex < 36; rasSex++ { //For each possible combination of RAS Sex
+				for rasSex := 33; rasSex < 36; rasSex++ { //For each possible combination of ras Sex
 					for rasEthnicity := 28; rasEthnicity < 33; rasEthnicity++ { //For each combo of ras ethnicity
 						for rasAge := 42; rasAge < 135; rasAge++ { // For each combo of ras age
 							sumThisFromState := 0.00
 							for _, eachTP := range Inputs.TPByRASs { //For each of the TPByRASs
 								if eachTP.From_state_id == fromState && eachTP.From_state_id != eachTP.To_state_id && eachTP.Sex_state_id == rasSex && eachTP.Race_state_id == rasEthnicity && eachTP.Age_state_id == rasAge {
-									// If the from ID equals the from state we are assessing right now (r) and the TP is not for staying in the same state
+									// If the from ID equals the from state we are assessing right now, and it matches the specific r a and s, and the TP is not for staying in the same state
 									sumThisFromState += eachTP.Probability
 									// Add the probability of this specific TP to the sum
 								}

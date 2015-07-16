@@ -143,8 +143,14 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 				for _, eachTPByRas := range Inputs.TPByRASs {
 					if eachInterventionValue.To_state_id == eachTPByRas.To_state_id && eachInterventionValue.Age_state_id == eachTPByRas.Age_state_id && eachInterventionValue.Sex_state_id == eachTPByRas.Sex_state_id && eachInterventionValue.Race_state_id == eachTPByRas.Race_state_id {
 						eachTPByRas.Probability = eachTPByRas.Probability * eachInterventionValue.Adjustment_factor
-						rasTPHighRiskId := eachTPByRas.Id
-						Inputs.TPByRASs[rasTPHighRiskId+546].Probability = 1.00 - eachTPByRas.Probability //Get the corresponding low-risk state. HARDCODE = Wrong
+						//rasTPHighRiskId := eachTPByRas.Id
+						//Inputs.TPByRASs[rasTPHighRiskId+546].Probability = 1.00 - eachTPByRas.Probability //Get the corresponding low-risk state. HARDCODE = Wrong
+						for _, eachRasLowRiskTP := range Inputs.TPByRASs {
+							eachRasLowRiskTPId := eachRasLowRiskTP.Id
+							if Inputs.TPByRASs[eachRasLowRiskTPId].To_state_id != eachTPByRas.To_state_id && eachTPByRas.Age_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Age_state_id && eachTPByRas.Sex_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Sex_state_id && eachTPByRas.Race_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Race_state_id && eachTPByRas.Model_id == Inputs.TPByRASs[eachRasLowRiskTPId].Model_id {
+								Inputs.TPByRASs[eachRasLowRiskTPId].Probability = 1.00 - eachTPByRas.Probability
+							}
+						}
 					}
 				}
 			}
