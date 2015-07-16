@@ -62,17 +62,17 @@ type RegressionRate struct {
 }
 
 type TPByRAS struct {
-	Id            int
-	Model_id      int
-	Model_name    string
-	From_state_id int
-	To_state_id   int
-	To_state_name string
-	Sex_state_id  int
-	Race_state_id int
-	Age_state_id  int
-	Probability   float64
-	PSA_id        int
+	Id                  int
+	Model_id            int
+	Model_name          string
+	No_disease_state_id int
+	To_state_id         int
+	To_state_name       string
+	Sex_state_id        int
+	Race_state_id       int
+	Age_state_id        int
+	Probability         float64
+	PSA_id              int
 }
 
 type Input struct {
@@ -231,26 +231,32 @@ func runPsa(Inputs Input) {
 				}
 			}
 
-			// I realise these things are hard coded now, but maybe we can get uninstates with a function and then add 1 each time?
-			for fromState := 0; fromState < 45; fromState++ { //Problem is that from state is the UNIN state, not the STAY state. WHAT TO DO?
+			// I realise these things are hard coded now, but how would we set these ranges otherwise?
+			for noDiseaseState := 0; noDiseaseState < 45; noDiseaseState++ { //In the ras file, No_disease_state_id == id for the non-disease state.
 				//Maybe we can set the from state in the ras file as the stay state? It is technically incorrect, but would probably work.
 				for rasSex := 33; rasSex < 36; rasSex++ { //For each possible combination of ras Sex
 					for rasEthnicity := 28; rasEthnicity < 33; rasEthnicity++ { //For each combo of ras ethnicity
 						for rasAge := 42; rasAge < 135; rasAge++ { // For each combo of ras age
-							sumThisFromState := 0.00
+							//We need to get the sum of all of the transitions from a specific state (within the corresponding age, sex and ethnicity)
+							sumThisModel := make([]float64, 50, 50)  //len(Inputs.Models) ??
 							for _, eachTP := range Inputs.TPByRASs { //For each of the TPByRASs
-								if eachTP.From_state_id == fromState && eachTP.From_state_id != eachTP.To_state_id && eachTP.Sex_state_id == rasSex && eachTP.Race_state_id == rasEthnicity && eachTP.Age_state_id == rasAge {
-									// If the from ID equals the from state we are assessing right now, and it matches the specific r a and s, and the TP is not for staying in the same state
-									sumThisFromState += eachTP.Probability
+								// If the from ID equals the from state we are assessing right now, and it matches the specific r a and s, and the TP is not for staying in the same state
+								if eachTP.No_disease_state_id == noDiseaseState && eachTP.No_disease_state_id != eachTP.To_state_id && eachTP.Sex_state_id == rasSex && eachTP.Race_state_id == rasEthnicity && eachTP.Age_state_id == rasAge {
 									// Add the probability of this specific TP to the sum
+									sumThisModel[noDiseaseState] += eachTP.Probability
+
 								}
-								if eachTP.From_state_id == fromState && eachTP.From_state_id == eachTP.To_state_id && eachTP.Sex_state_id == rasSex && eachTP.Race_state_id == rasEthnicity && eachTP.Age_state_id == rasAge {
-									// If we come to the TP of this specific fromstate, and this TP is for staying in that state
-									eachTP.Probability = 1.00 - sumThisFromState
+							}
+							for _, eachTP := range Inputs.TPByRASs { //For each of the TPByRASs
+								// If we come to the TP of this specific fromstate, and this TP is for staying in that state
+								if eachTP.No_disease_state_id == noDiseaseState && eachTP.No_disease_state_id == eachTP.To_state_id && eachTP.Sex_state_id == rasSex && eachTP.Race_state_id == rasEthnicity && eachTP.Age_state_id == rasAge {
 									// correct the TP_base by the sum you found from the other TPs.
+									eachTP.Probability = 1.00 - sumThisModel[noDiseaseState]
+
 								}
 							}
 							//Some checks here? Check_sum?
+
 						}
 					}
 				}
