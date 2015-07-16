@@ -24,9 +24,9 @@ type LifeExpectancy struct {
 }
 
 type Intervention struct {
-	Id                 int
-	Name               string
-	Fructose_reduction float64
+	Id                  int
+	Name                string
+	Fructose_adjustment float64
 }
 
 type MasterRecord struct {
