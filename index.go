@@ -11,6 +11,7 @@ import (
 	// "encoding/json"
 	"flag"
 	"fmt"
+	"sync"
 	//"github.com/alexgoodell/go-mdism/modules/sugar"
 	//"io"
 	// 	"net/http"
@@ -87,6 +88,7 @@ func main() {
 
 	isRunIntervention := true
 	reportingMode = "individual"
+	randId := 0
 
 	switch isRunIntervention {
 
@@ -112,12 +114,17 @@ func main() {
 
 			fmt.Println("Using this many people: ", len(Inputs.People))
 
-			runModel(concurrencyBy, eachIntervention.Name)
+			count = 0
+
+			runModel(concurrencyBy, eachIntervention.Name, randId)
+
+			fmt.Println("count is", count)
+
 		}
 
 	case false:
 
-		runModel(concurrencyBy, "Base case")
+		//runModel(concurrencyBy, "Base case")
 
 	}
 
@@ -125,7 +132,11 @@ func main() {
 
 }
 
-func runModel(concurrencyBy string, interventionName string) {
+var count int
+
+func runModel(concurrencyBy string, interventionName string, randId int) {
+
+	var mutex = &sync.Mutex{}
 
 	msg := "Running " + interventionName + " simulation..."
 	msg = ansi.Color(msg, "red+bh")
@@ -179,7 +190,7 @@ func runModel(concurrencyBy string, interventionName string) {
 			//times if there was more than 1 interaction.
 
 			for _, person := range Inputs.People { // 	foreach person
-				go runOneCycleForOnePerson(cycle, person, generalChan)
+				go runOneCycleForOnePerson(cycle, person, generalChan, mutex)
 			}
 
 			for _, person := range Inputs.People { // 	foreach person
@@ -188,8 +199,12 @@ func runModel(concurrencyBy string, interventionName string) {
 				_ = cycle      // to avoid unused warning
 				_ = chanString // to avoid unused warning
 			}
+
+			randId = randId + numberOfPeople*len(Inputs.Cycles)
 		}
 	} // end case
+
+	fmt.Println("Used random this many times: ", randomController.getCounter(mutex))
 
 	removeUnborns()
 
@@ -342,16 +357,20 @@ func formatOutputs() {
 
 }
 
-func runCyclePersonModel(cycle Cycle, model Model, person Person) {
+func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mutex) {
+
+	count++
+
+	random := randomController.next(mutex)
 
 	if person.Id == 1 {
 		bar.Increment()
 	}
 
-	// otherDeathState := getOtherDeathStateByModel(model)
-	// if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
-	// 	return
-	// }
+	otherDeathState := getOtherDeathStateByModel(model)
+	if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
+		return
+	}
 
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
@@ -397,6 +416,35 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 		} // end foreach interaction
 	} // end if there are interactions
 
+	// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
+	// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
+	//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
+	//times if there was more than 1 interaction.
+	if cycle.Id > 2 {
+		y := float64(cycle.Id - 2)
+
+		for q := 0; q < len(transitionProbabilities); q++ {
+			switch transitionProbabilities[q].Id {
+
+			case 115:
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * math.Pow(0.985, y)
+			case 122:
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * math.Pow(0.979, y)
+			case 114:
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base*math.Pow(0.985, y)
+			case 121:
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base*math.Pow(0.979, y)
+
+			}
+		}
+
+	}
+
+	Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+	Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+	Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+	Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
+
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 	// if cycle.Id > 2 { // TODO: FIX THIS! [Issue: https://github.com/alexgoodell/go-mdism/issues/56]
@@ -407,7 +455,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// }
 
 	// using  final transition probabilities, assign new state to person
-	new_state := pickState(transitionProbabilities)
+	new_state := pickState(transitionProbabilities, random)
 
 	// ------ health metrics ---------
 
@@ -525,19 +573,22 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 // This represents running the full model for one person
 func runFullModelForOnePerson(person Person, generalChan chan string) {
 	for _, cycle := range Inputs.Cycles {
-		shuffled := shuffle(Inputs.Models)
+		shuffled := Inputs.Models //needs shuffle
 		for _, model := range shuffled {
-			runCyclePersonModel(cycle, model, person)
+			//runCyclePersonModel(cycle, model, person)
+			_ = cycle
+			_ = person
+			_ = model
 		}
 	}
 	generalChan <- "Done"
 }
 
-func runOneCycleForOnePerson(cycle Cycle, person Person, generalChan chan string) {
-	shuffled := shuffle(Inputs.Models)
+func runOneCycleForOnePerson(cycle Cycle, person Person, generalChan chan string, mutex *sync.Mutex) {
+	shuffled := shuffle(Inputs.Models, mutex)
 	for _, model := range shuffled { // foreach model
 		// cannot be made concurrent, because if they die in one model
-		runCyclePersonModel(cycle, model, person)
+		runCyclePersonModel(cycle, model, person, mutex)
 	}
 	generalChan <- "Done"
 }
@@ -721,14 +772,20 @@ func (Query *Query_t) setUp() {
 }
 */
 
-func shuffle(models []Model) []Model {
+func random_int(max int, mutex *sync.Mutex) int {
+	random := randomController.next(mutex)
+	random = random * float64(max)
+	return int(random)
+}
+
+func shuffle(models []Model, mutex *sync.Mutex) []Model {
 	modelsCopy := make([]Model, len(models), len(models))
 	//Println("og: ", models)
 	copy(modelsCopy, models)
 	N := len(modelsCopy)
 	for i := 0; i < N; i++ {
 		// choose index uniformly in [i, N-1]
-		r := i + rand.Intn(N-i)
+		r := i + random_int(N-i, mutex)
 		modelsCopy[r], modelsCopy[i] = modelsCopy[i], modelsCopy[r]
 	}
 	//fmt.Println("shuffled: ", modelsCopy)
@@ -950,13 +1007,13 @@ func (thisPerson *Person) get_states(cycle Cycle) []State {
 
 // Using  the final transition probabilities, pickState assigns a new state to
 // a person. It is given many states and returns one.
-func pickState(tPs []TransitionProbability) State {
+func pickState(tPs []TransitionProbability, random float64) State {
 	probs := make([]float64, len(tPs), len(tPs))
 	for i, tP := range tPs {
 		probs[i] = tP.Tp_base
 	}
 
-	chosenIndex := pick(probs)
+	chosenIndex := pick(probs, random)
 	stateId := tPs[chosenIndex].To_id
 	if stateId == 0 {
 		fmt.Println("error!! ")
@@ -977,8 +1034,7 @@ func pickState(tPs []TransitionProbability) State {
 
 // iterates over array of potential states and uses a random value to find
 // where new state is. returns new state id.
-func pick(probabilities []float64) int {
-	random := rand.Float64()
+func pick(probabilities []float64, random float64) int {
 	sum := float64(0.0)
 	for i, prob := range probabilities { //for i := 0; i < len(probabilities); i++ {
 		sum += prob
@@ -1135,15 +1191,32 @@ type RandomController_t struct {
 func (randomController *RandomController_t) initialize() {
 	rand.Seed(1)
 	randomController.accessCounter = 0
-	randomController.list = make([]float64, 1000000, 1000000)
+	randomController.list = make([]float64, 100000000, 100000000)
 	for i := 0; i < len(randomController.list); i++ {
 		randomController.list[i] = rand.Float64()
 	}
 }
 
-func (randomController *RandomController_t) next() float64 {
+func (randomController *RandomController_t) next(mutex *sync.Mutex) float64 {
 	i := randomController.accessCounter
 	toReturn := randomController.list[i]
+
+	mutex.Lock()
 	randomController.accessCounter++
+	mutex.Unlock()
+
 	return toReturn
+}
+
+func (randomController *RandomController_t) getCounter(mutex *sync.Mutex) int {
+
+	mutex.Lock()
+	count := randomController.accessCounter
+	mutex.Unlock()
+
+	return count
+}
+
+func (randomController *RandomController_t) get(randId int) float64 {
+	return randomController.list[randId]
 }
