@@ -22,13 +22,19 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/cheggaaa/pb"
 	"github.com/davecheney/profile"
+	"github.com/mgutz/ansi"
 	// "runtime/pprof"
 	"strconv"
 	"time"
 )
 
+var bar *pb.ProgressBar
+
 func main() {
+
+	show_greeting()
 
 	flag.IntVar(&numberOfPeopleStarting, "people", 22400, "number of people to run")
 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
@@ -78,46 +84,51 @@ func main() {
 
 	// create people will generate individuals and add their data to the master
 	// records
-	Inputs = createInitialPeople(Inputs)
 
-	//Inputs = initializeGlobalStatePopulations(Inputs)
+	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+	concurrencyBy := "person-within-cycle"
 
-	interventionIsOn := false
+	runPSA := true
 
-	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
-	//pause()
+	switch runPSA {
 
-	// TODO fix this hack
-	//Interaction 250 = unin to high fructose (gets lowered from 0.7 to 0.56 (=80%))
+	case true:
 
-	interventionFactor := 0.80 // This is the factor (or %) that you want to lower the high fructose TP by.
-	adjustedTpBase := interventionFactor * Inputs.TransitionProbabilities[250].Tp_base
-	if interventionIsOn {
-		Inputs.TransitionProbabilities[250].Tp_base = adjustedTpBase
-		Inputs.TransitionProbabilities[251].Tp_base = 1.00 - adjustedTpBase
-		// TODO: Re-implement intervention not using adjust_transitions because adjust_transitions now requires a person [Issue: https://github.com/alexgoodell/go-mdism/issues/24]
-		// unitFructoseState := get_state_by_id(&Inputs, 37)
-		// tPs := unitFructoseState.get_destination_probabilites(&Inputs)
-		// newTps = adjust_transitions(&Inputs, tPs, interventionAsInteraction, cycle, person, false)
+		for _, eachIntervention := range Inputs.Interventions {
+			interventionInitiate(Inputs, eachIntervention)
+
+			//clear results from last run
+			Inputs.MasterRecords = []MasterRecord{}
+			initializeMasterRecords()
+
+			//build people
+			Inputs.People = []Person{}
+			createInitialPeople(Inputs)
+
+			runModel(concurrencyBy, eachIntervention.Name)
+		}
+
+	case false:
+
+		runModel(concurrencyBy, "Base case")
+
 	}
-
-	// for _, newTp := range newTps {
-	// 	Inputs.TransitionProbabilities[newTp.Id] = newTp
-	// }
 
 	// table tests here
 
-	concurrencyBy := "person-within-cycle"
-
-	runModel(concurrencyBy)
-
 }
 
-func runModel(concurrencyBy string) {
+func runModel(concurrencyBy string, interventionName string) {
 
-	rand.Seed(1)
+	msg := "Running " + interventionName + " simulation..."
+	msg = ansi.Color(msg, "red+bh")
 
-	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+	fmt.Println("")
+	fmt.Println(msg)
+	fmt.Println("")
+	count := len(Inputs.Models) * (len(Inputs.Cycles) - 1)
+	bar = pb.StartNew(count)
+
 	beginTime = time.Now()
 
 	//create pointer to a new local set of inputs for each independent thread
@@ -157,12 +168,6 @@ func runModel(concurrencyBy string) {
 			// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
 			//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
 			//times if there was more than 1 interaction.
-			if cycle.Id > 2 {
-				Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
-				Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
-				Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
-				Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
-			}
 
 			for _, person := range Inputs.People { // 	foreach person
 				go runOneCycleForOnePerson(cycle, person, generalChan)
@@ -179,6 +184,7 @@ func runModel(concurrencyBy string) {
 
 	removeUnborns()
 
+	fmt.Println("")
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
 	formatOutputs()
@@ -198,6 +204,33 @@ func runModel(concurrencyBy string) {
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
+}
+
+func initializeMasterRecords() {
+	// ####################### Master Records & Accessor
+
+	length := numberOfPeople * (len(Inputs.Cycles) + 1) * len(Inputs.Models)
+	Inputs.MasterRecords = make([]MasterRecord, length, length)
+
+	i := 0
+	Query.Master_record_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
+	for c, _ := range Query.Master_record_id_by_cycle_and_person_and_model {
+		//People
+		Query.Master_record_id_by_cycle_and_person_and_model[c] = make([][]int, numberOfPeople, numberOfPeople)
+		for p, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c] {
+			Query.Master_record_id_by_cycle_and_person_and_model[c][p] = make([]int, len(Inputs.Models), len(Inputs.Models))
+			for m, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c][p] {
+				var masterRecord MasterRecord
+				masterRecord.Cycle_id = c
+				masterRecord.Person_id = p
+				masterRecord.Model_id = m
+				masterRecord.Has_entered_simulation = false
+				Inputs.MasterRecords[i] = masterRecord
+				Query.Master_record_id_by_cycle_and_person_and_model[c][p][m] = i
+				i++
+			}
+		}
+	}
 }
 
 func formatOutputs() {
@@ -300,6 +333,10 @@ func formatOutputs() {
 
 func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 
+	if person.Id == 1 {
+		bar.Increment()
+	}
+
 	// otherDeathState := getOtherDeathStateByModel(model)
 	// if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
 	// 	return
@@ -341,7 +378,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	// and accepts an array of all currents states they occupy
 	interactions := currentStateInThisModel.get_relevant_interactions(states)
 
-	var toStates []int
 	if len(interactions) > 0 { // if there are interactions
 		for _, interaction := range interactions { // foreach interaction
 			// apply the interactions to the transition probabilities
@@ -351,6 +387,13 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person) {
 	} // end if there are interactions
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
+
+	// if cycle.Id > 2 { // TODO: FIX THIS! [Issue: https://github.com/alexgoodell/go-mdism/issues/56]
+	// 	Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+	// 	Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+	// 	Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+	// 	Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
+	// }
 
 	// using  final transition probabilities, assign new state to person
 	new_state := pickState(transitionProbabilities)
@@ -521,6 +564,7 @@ func (Query *Query_t) setUp() {
 		}
 	}
 
+	// TODO: Change to TPs by race [Issue: https://github.com/alexgoodell/go-mdism/issues/57]
 	Query.TP_by_RAS = make(map[RASkey][]TPByRAS)
 	for _, ras := range Inputs.TPByRASs {
 		var key RASkey
@@ -715,6 +759,7 @@ func createNewPeople(cycle Cycle, number int) {
 // create people will generate individuals and add their data to the master
 // records
 func createInitialPeople(Inputs Input) Input {
+
 	for i := 0; i < numberOfPeopleStarting; i++ {
 		Inputs.People = append(Inputs.People, Person{i})
 	}

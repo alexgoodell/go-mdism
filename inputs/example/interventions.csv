@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-Id,Name,Fructose_adjustment
-1,Control,1
-2,Low intervention,0.8
-3,High intervention,0
-=======
 Id,Name
 0,control
 1,reduction by 0.2
 2,reduction by 0.5
->>>>>>> b06f79dcadf7842002bf4cb025c8ab0b507c39fd
+

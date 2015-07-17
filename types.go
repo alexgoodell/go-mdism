@@ -24,9 +24,8 @@ type LifeExpectancy struct {
 }
 
 type Intervention struct {
-	Id                  int
-	Name                string
-	Fructose_adjustment float64
+	Id   int
+	Name string
 }
 
 type MasterRecord struct {
@@ -97,7 +96,7 @@ type RASkey struct {
 type Query_t struct {
 	State_id_by_cycle_and_person_and_model         [][][]int
 	States_ids_by_cycle_and_person                 [][]int
-	Tps_id_by_from_state                           [][]int
+	Tps_id_by_from_state                           [][]int // TODO: Change to Tp_ids_by [Issue: https://github.com/alexgoodell/go-mdism/issues/58]
 	interaction_id_by_in_state_and_from_state      map[InteractionKey][]int
 	State_populations_by_cycle                     [][]int
 	Model_id_by_state                              []int
@@ -133,19 +132,21 @@ type Input struct {
 	LifeExpectancies        []LifeExpectancy
 	TPByRASs                []TPByRAS
 	Interventions           []Intervention
+	InterventionValues      []InterventionValue
 }
 
 type TPByRAS struct {
-	Id            int
-	Model_id      int
-	Model_name    string
-	To_state_id   int
-	To_state_name string
-	Sex_state_id  int
-	Race_state_id int
-	Age_state_id  int
-	Probability   float64
-	PSA_id        int
+	Id               int
+	Model_id         int
+	Model_name       string
+	To_state_id      int
+	To_state_name    string
+	No_disease_state bool
+	Sex_state_id     int
+	Race_state_id    int
+	Age_state_id     int
+	Probability      float64
+	PSA_id           int
 }
 
 // ##################### Output structs ################ //
@@ -160,6 +161,19 @@ type TPByRAS struct {
 	Model_id   int
 }
 */
+
+type PsaInput struct {
+	Id           int
+	Variable     string
+	Input_file   string
+	Distribution string
+	Min          float64
+	Max          float64
+	Mean         float64
+	SD           float64
+	Alpha        float64
+	Beta         float64
+}
 
 type OutputByCycleState struct {
 	Id         int
@@ -187,4 +201,15 @@ type OutputByCycle struct {
 	CHD_death_event      int
 	HCC_diagnosis_event  int
 	HCC_death_event      int
+}
+
+type InterventionValue struct {
+	Id                int
+	Intervention_id   int
+	Name              string
+	To_state_id       int
+	Sex_state_id      int
+	Race_state_id     int
+	Age_state_id      int
+	Adjustment_factor float64
 }
