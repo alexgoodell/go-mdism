@@ -31,6 +31,7 @@ import (
 )
 
 var interventionId int
+var randomController RandomController_t
 
 func main() {
 
@@ -78,9 +79,6 @@ func main() {
 
 	initializeInputs(inputsPath)
 
-	//set up Query
-	Query.setUp()
-
 	// create people will generate individuals and add their data to the master
 	// records
 
@@ -95,6 +93,11 @@ func main() {
 	case true:
 
 		for _, eachIntervention := range Inputs.Interventions {
+
+			//set up Query
+			Query.setUp()
+
+			randomController.initialize()
 
 			interventionId = eachIntervention.Id
 			interventionInitiate(Inputs, eachIntervention)
@@ -1122,4 +1125,25 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 	}
 
 	return tpsToReturn
+}
+
+type RandomController_t struct {
+	list          []float64 // this is a slice of random variables
+	accessCounter int       //this is a counter for how many times a random number was generated
+}
+
+func (randomController *RandomController_t) initialize() {
+	rand.Seed(1)
+	randomController.accessCounter = 0
+	randomController.list = make([]float64, 1000000, 1000000)
+	for i := 0; i < len(randomController.list); i++ {
+		randomController.list[i] = rand.Float64()
+	}
+}
+
+func (randomController *RandomController_t) next() float64 {
+	i := randomController.accessCounter
+	toReturn := randomController.list[i]
+	randomController.accessCounter++
+	return toReturn
 }
