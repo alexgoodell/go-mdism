@@ -166,32 +166,6 @@ func initializeInputs(inputsPath string) {
 		Inputs.DisabilityWeights[i] = *ptr.(*DisabilityWeight)
 	}
 
-	fmt.Println(Inputs.DisabilityWeights)
-
-	// ####################### Master Records & Accessor
-
-	length := numberOfPeople * (len(Inputs.Cycles) + 1) * len(Inputs.Models)
-	Inputs.MasterRecords = make([]MasterRecord, length, length)
-
-	i := 0
-	Query.Master_record_id_by_cycle_and_person_and_model = make([][][]int, len(Inputs.Cycles)+1, len(Inputs.Cycles)+1)
-	for c, _ := range Query.Master_record_id_by_cycle_and_person_and_model {
-		//People
-		Query.Master_record_id_by_cycle_and_person_and_model[c] = make([][]int, numberOfPeople, numberOfPeople)
-		for p, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c] {
-			Query.Master_record_id_by_cycle_and_person_and_model[c][p] = make([]int, len(Inputs.Models), len(Inputs.Models))
-			for m, _ := range Query.Master_record_id_by_cycle_and_person_and_model[c][p] {
-				var masterRecord MasterRecord
-				masterRecord.Cycle_id = c
-				masterRecord.Person_id = p
-				masterRecord.Model_id = m
-				masterRecord.Has_entered_simulation = false
-				Inputs.MasterRecords[i] = masterRecord
-				Query.Master_record_id_by_cycle_and_person_and_model[c][p][m] = i
-				i++
-			}
-		}
-	}
 }
 
 // Exports sets of data to CSVs. I particular, it will print any array of structs

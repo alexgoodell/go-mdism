@@ -1,124 +1,5 @@
 package main
 
-import ()
-
-type PsaInput struct {
-	Id           int
-	Variable     string
-	Input_file   string
-	Distribution string
-	Min          float64
-	Max          float64
-	Mean         float64
-	SD           float64
-	Alpha        float64
-	Beta         float64
-}
-
-type TransitionProbability struct {
-	Id      int
-	From_id int
-	To_id   int
-	Tp_base float64
-	PSA_id  int
-}
-
-type Cost struct {
-	Id       int
-	State_id int
-	Costs    float64
-	PSA_id   int
-}
-
-type Interaction struct {
-	Id                int
-	In_state_id       int
-	From_state_id     int
-	To_state_id       int
-	Adjustment        float64
-	Effected_model_id int
-	PSA_id            int
-}
-
-type DisabilityWeight struct {
-	Id                int
-	State_id          int
-	Disability_weight float64
-	PSA_id            int
-}
-
-type RegressionRate struct {
-	Id              int
-	From_state      int
-	To_state        int
-	Age_low         int
-	Age_high        int
-	Regression_rate float64
-	Psa_id          int
-}
-
-type TPByRAS struct {
-	Id            int
-	Model_id      int
-	Model_name    string
-	From_state_id int
-	To_state_id   int
-	To_state_name string
-	Sex_state_id  int
-	Race_state_id int
-	Age_state_id  int
-	Probability   float64
-	PSA_id        int
-}
-
-type InterventionValue struct {
-	Id                int
-	Intervention_id   int
-	Name              string
-	To_state_id       int
-	Sex_state_id      int
-	Race_state_id     int
-	Age_state_id      int
-	Adjustment_factor float64
-}
-
-type Intervention struct {
-	Id   int
-	Name string
-}
-
-type Input struct {
-	TransitionProbabilities []TransitionProbability
-	Interactions            []Interaction
-	Costs                   []Cost
-	DisabilityWeights       []DisabilityWeight
-	TPByRASs                []TPByRAS
-	PsaInputs               []PsaInput
-	RegressionRates         []RegressionRate
-	Interventions           []Intervention
-	InterventionValues      []InterventionValue
-}
-
-var Inputs Input
-
-func main() {
-	Inputs.TransitionProbabilities = make([]TransitionProbability, 10, 10)
-	Inputs.Costs = make([]Cost, 10, 10)
-	Inputs.DisabilityWeights = make([]DisabilityWeight, 10, 10)
-	Inputs.Interactions = make([]Interaction, 10, 10)
-	Inputs.TPByRASs = make([]TPByRAS, 10, 10)
-	Inputs.RegressionRates = make([]RegressionRate, 10, 10)
-	Inputs.Interventions = make([]Intervention, 10, 10)
-	Inputs.InterventionValues = make([]InterventionValue, 10, 10)
-
-	for _, eachIntervention := range Inputs.Interventions {
-		interventionInitiate(Inputs, eachIntervention)
-
-		//func runModel et cetera...
-
-	}
-}
-
 //Run the complete model for each intervention:
 //We receive all inputs and we get which specific intervention is being modeled.
 func interventionInitiate(Inputs Input, Intervention Intervention) {
@@ -143,7 +24,7 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 					if eachInterventionValue.To_state_id == eachTPByRas.To_state_id && eachInterventionValue.Age_state_id == eachTPByRas.Age_state_id && eachInterventionValue.Sex_state_id == eachTPByRas.Sex_state_id && eachInterventionValue.Race_state_id == eachTPByRas.Race_state_id {
 						//Multiply the RAS value by the factor of reduction
 						//The InterventionValue file only has the to_state Id for high risk due to sugar consumption, so it will adjust each of these probabilities down.
-						eachTPByRas.Probability = eachTPByRas.Probability * eachInterventionValue.Adjustment_factor
+						Inputs.TPByRASs[eachTPByRas.Id].Probability = eachTPByRas.Probability * eachInterventionValue.Adjustment_factor
 						//Since we want the total TP of high risk & low risk to equal 1, we search for the RASinput that matches the one we just changed, but with the other to_state
 						//Go through the whole ras file again
 						for _, eachRasLowRiskTP := range Inputs.TPByRASs {
@@ -166,7 +47,7 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 			if eachInterventionValue.Intervention_id == 2 {
 				for _, eachTPByRas := range Inputs.TPByRASs {
 					if eachInterventionValue.To_state_id == eachTPByRas.To_state_id && eachInterventionValue.Age_state_id == eachTPByRas.Age_state_id && eachInterventionValue.Sex_state_id == eachTPByRas.Sex_state_id && eachInterventionValue.Race_state_id == eachTPByRas.Race_state_id {
-						eachTPByRas.Probability = eachTPByRas.Probability * eachInterventionValue.Adjustment_factor
+						Inputs.TPByRASs[eachTPByRas.Id].Probability = eachTPByRas.Probability * eachInterventionValue.Adjustment_factor
 						//rasTPHighRiskId := eachTPByRas.Id
 						//Inputs.TPByRASs[rasTPHighRiskId+546].Probability = 1.00 - eachTPByRas.Probability //Get the corresponding low-risk state. HARDCODE = Wrong
 						for _, eachRasLowRiskTP := range Inputs.TPByRASs {

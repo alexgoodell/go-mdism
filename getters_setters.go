@@ -141,6 +141,7 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 	return interactionIdsToReturn
 }
 
+// TODO: change to getTpsByRAS [Issue: https://github.com/alexgoodell/go-mdism/issues/54]
 func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
 	var key RASkey
 	key.Age_state_id = ageState.Id
@@ -148,6 +149,8 @@ func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State
 	key.Sex_state_id = sexState.Id
 	key.Model_id = model.Id
 	RASs := Query.TP_by_RAS[key]
+
+	// TODO: add checker function to make sure you're actually returning something! [Issue: https://github.com/alexgoodell/go-mdism/issues/55]
 
 	// if ras.Model_id != model.Id || ras.Age+22 != ageState.Id || ras.Race_state_id != raceState.Id || ras.Sex_state_id != sexState.Id {
 	// 	fmt.Println("cannot find by RAS")

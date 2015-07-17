@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/leesper/go_rng" //imported as rng
 	"math/rand"
 	"time"
+
+	"github.com/leesper/go_rng" //imported as rng
 )
 
 type PsaInput struct {
@@ -17,6 +18,7 @@ type PsaInput struct {
 	SD           float64
 	Alpha        float64
 	Beta         float64
+	Value        float64
 }
 
 type TransitionProbability struct {
@@ -134,6 +136,13 @@ func generateNewValue(psaInput PsaInput) float64 {
 	return valueToReturn
 }
 
+func generateAllPsaValues(psaInputs PsaInput) PsaInput {
+	for i := 0; i < len(psaInputs); i++ {
+		psaInputPtr = &psaInput[i]
+		psaInputPtr.Value = generateNewValue(psaInput)
+	}
+}
+
 func runPsa(Inputs Input) {
 	for i := 0; i < len(Inputs.PsaInputs); i++ {
 		psaInput := Inputs.PsaInputs[i]
@@ -149,8 +158,7 @@ func runPsa(Inputs Input) {
 					//Need to make sure that each variable that has the same PSA_id
 					// gets the same newValue (not generate a new one for each).
 					//Make this a 'for' statement instead? For each time they equal each other? ALEX
-					newValue := generateNewValue(psaInput)
-					transitionProbability.Tp_base = newValue
+					transitionProbability.Tp_base = psaInput.Value
 				}
 			}
 
@@ -162,7 +170,8 @@ func runPsa(Inputs Input) {
 			for fromState := 0; fromState < 43; fromState++ { //Do this for all relevant from states.
 				// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 				// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
-				sumThisFromState := make([]float64, 150, 150)           // Need to make this len(Inputs.States) as well.
+				sumThisFromState := make([]float64, 150, 150) // Need to make this len(Inputs.States) as well.
+				// use tps := Query.Tps_id_by_from_state[fromState]
 				for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 					if eachTP.From_id == fromState && eachTP.From_id != eachTP.To_id {
 						// If the from ID equals the from state we are assessing right now and the TP is not for staying in the same state
@@ -204,7 +213,7 @@ func runPsa(Inputs Input) {
 		case "interactions":
 
 			for p := 0; p < len(Inputs.Interactions); p++ {
-				interactions := Inputs.Interactions[p]
+				interactions := &Inputs.Interactions[p]
 				if interactions.PSA_id == psaInput.Id && interactions.PSA_id != 0 {
 					newValue := generateNewValue(psaInput)
 					interactions.Adjustment = newValue
@@ -229,6 +238,26 @@ func runPsa(Inputs Input) {
 					newValue := generateNewValue(psaInput)
 					tpByRas.Probability = newValue
 				}
+			}
+
+			for ras := range Inputs.TPByRASs {
+				ageState := Query.getStateById(ras.Age_state_id)
+				//
+				//
+				//
+				sumThisModel := 0
+				relevantRASs = Query.getTPsByRas(ageState, etc)
+				for relevantRAS := range relevantRASs {
+					if relevantRAS.No_disease_state_id != relevantRAS.To_state_id {
+						sumThisModel += eachTP.Probability
+					}
+				}
+				for relevantRAS := range relevantRASs {
+					if relevantRAS.No_disease_state_id == relevantRAS.To_state_id {
+						relevantRAS.Probability = 1.0 - sumThisModel
+					}
+				}
+
 			}
 
 			// I realise these things are hard coded now, but how would we set these ranges otherwise?
