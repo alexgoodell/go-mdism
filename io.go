@@ -8,7 +8,7 @@ import (
 )
 
 func initializeInputs(inputsPath string) {
-
+	//TODO: ALEX: Why do some have LEptr, and others only ptr? This does not cause trouble?
 	// ####################### Interventions #######################
 
 	// initialize inputs, needed for fromCsv function
@@ -164,6 +164,21 @@ func initializeInputs(inputsPath string) {
 	ptrs = fromCsv(filename, Inputs.DisabilityWeights[0], dwPtrs)
 	for i, ptr := range dwPtrs {
 		Inputs.DisabilityWeights[i] = *ptr.(*DisabilityWeight)
+	}
+
+	// ####################### Interventions #######################
+
+	// initialize inputs, needed for fromCsv function
+	filename = "inputs/" + inputsPath + "/interventionvalues.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+	Inputs.InterventionValues = make([]InterventionValue, numberOfRecords, numberOfRecords)
+	var Ivptrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		Ivptrs = append(Ivptrs, new(InterventionValue))
+	}
+	Ivptrs = fromCsv(filename, Inputs.InterventionValues[0], Ivptrs)
+	for i, ptr := range Ivptrs {
+		Inputs.InterventionValues[i] = *ptr.(*InterventionValue)
 	}
 
 }
