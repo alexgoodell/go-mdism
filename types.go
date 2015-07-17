@@ -176,15 +176,16 @@ type PsaInput struct {
 }
 
 type OutputByCycleState struct {
-	Id         int
-	YLLs       float64
-	YLDs       float64
-	DALYs      float64
-	Costs      float64
-	Cycle_id   int
-	State_id   int
-	Population int
-	State_name string
+	Id              int
+	YLLs            float64
+	YLDs            float64
+	DALYs           float64
+	Costs           float64
+	Cycle_id        int
+	State_id        int
+	Population      int
+	State_name      string
+	Intervention_id int
 }
 
 type Output struct {

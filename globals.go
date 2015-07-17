@@ -1,6 +1,10 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"github.com/cheggaaa/pb"
+)
 
 var beginTime = time.Now() //TODO: Test this [Issue: https://github.com/alexgoodell/go-mdism/issues/32]
 
@@ -26,3 +30,5 @@ var reportingMode string
 
 var Inputs Input
 var Outputs Output
+
+var bar *pb.ProgressBar
