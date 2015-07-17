@@ -101,7 +101,7 @@ func main() {
 			Query.setUp()
 
 			interventionId = eachIntervention.Id
-			interventionInitiate(Inputs, eachIntervention)
+			//interventionInitiate(Inputs, eachIntervention)
 
 			//clear results from last run
 			Inputs.MasterRecords = []MasterRecord{}
@@ -442,15 +442,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 		}
 
 	}
-<<<<<<< HEAD
-
-=======
-	// old way
->>>>>>> 5ff32721673ada9821aa6156898e9a715e8ad9bc
-	// Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
-	// Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
-	// Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
-	// Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
