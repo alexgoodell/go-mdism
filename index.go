@@ -416,6 +416,35 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 		} // end foreach interaction
 	} // end if there are interactions
 
+	// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
+	// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
+	//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
+	//times if there was more than 1 interaction.
+	if cycle.Id > 2 {
+		y := float64(cycle.Id - 2)
+
+		for q := 0; q < len(transitionProbabilities); q++ {
+			switch transitionProbabilities[q].Id {
+
+			case 115:
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * math.Pow(0.985, y)
+			case 122:
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * math.Pow(0.979, y)
+			case 114:
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base*math.Pow(0.985, y)
+			case 121:
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base*math.Pow(0.979, y)
+
+			}
+		}
+
+	}
+
+	Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+	Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+	Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+	Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
+
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
 	// if cycle.Id > 2 { // TODO: FIX THIS! [Issue: https://github.com/alexgoodell/go-mdism/issues/56]
@@ -544,7 +573,7 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 // This represents running the full model for one person
 func runFullModelForOnePerson(person Person, generalChan chan string) {
 	for _, cycle := range Inputs.Cycles {
-		shuffled := shuffle(Inputs.Models)
+		shuffled := Inputs.Models //needs shuffle
 		for _, model := range shuffled {
 			//runCyclePersonModel(cycle, model, person)
 			_ = cycle
@@ -556,7 +585,7 @@ func runFullModelForOnePerson(person Person, generalChan chan string) {
 }
 
 func runOneCycleForOnePerson(cycle Cycle, person Person, generalChan chan string, mutex *sync.Mutex) {
-	shuffled := shuffle(Inputs.Models)
+	shuffled := shuffle(Inputs.Models, mutex)
 	for _, model := range shuffled { // foreach model
 		// cannot be made concurrent, because if they die in one model
 		runCyclePersonModel(cycle, model, person, mutex)
@@ -743,14 +772,20 @@ func (Query *Query_t) setUp() {
 }
 */
 
-func shuffle(models []Model) []Model {
+func random_int(max int, mutex *sync.Mutex) int {
+	random := randomController.next(mutex)
+	random = random * float64(max)
+	return int(random)
+}
+
+func shuffle(models []Model, mutex *sync.Mutex) []Model {
 	modelsCopy := make([]Model, len(models), len(models))
 	//Println("og: ", models)
 	copy(modelsCopy, models)
 	N := len(modelsCopy)
 	for i := 0; i < N; i++ {
 		// choose index uniformly in [i, N-1]
-		r := i + rand.Intn(N-i)
+		r := i + random_int(N-i, mutex)
 		modelsCopy[r], modelsCopy[i] = modelsCopy[i], modelsCopy[r]
 	}
 	//fmt.Println("shuffled: ", modelsCopy)
