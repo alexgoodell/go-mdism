@@ -367,10 +367,10 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 		bar.Increment()
 	}
 
-	// otherDeathState := getOtherDeathStateByModel(model)
-	// if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
-	// 	return
-	// }
+	otherDeathState := getOtherDeathStateByModel(model)
+	if Query.State_id_by_cycle_and_person_and_model[cycle.Id+1][person.Id][model.Id] == otherDeathState.Id {
+		return
+	}
 
 	// get the current state of the person in this model (should be
 	// the uninitialized state for cycle 0)
