@@ -27,6 +27,7 @@ import (
 	"github.com/davecheney/profile"
 	"github.com/mgutz/ansi"
 	// "runtime/pprof"
+	"hash/fnv"
 	"strconv"
 	"time"
 )
@@ -99,8 +100,6 @@ func main() {
 			//set up Query
 			Query.setUp()
 
-			randomController.initialize()
-
 			interventionId = eachIntervention.Id
 			interventionInitiate(Inputs, eachIntervention)
 
@@ -111,6 +110,11 @@ func main() {
 			//build people
 			Inputs.People = []Person{}
 			Inputs = createInitialPeople(Inputs)
+
+			if eachIntervention.Id == 0 {
+				randomController.initialize() // needs to be made after people are created
+			}
+			randomController.resetCounters()
 
 			fmt.Println("Using this many people: ", len(Inputs.People))
 
@@ -204,7 +208,8 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		}
 	} // end case
 
-	fmt.Println("Used random this many times: ", randomController.getCounter(mutex))
+	fmt.Println("Used shuffle random this many times: ", randomController.getShuffleCounter(mutex))
+	fmt.Println("Used CPM random this many times: ", randomController.getCPMCounter(mutex))
 
 	removeUnborns()
 
@@ -359,9 +364,7 @@ func formatOutputs() {
 
 func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mutex) {
 
-	count++
-
-	random := randomController.next(mutex)
+	random := randomController.nextCPM(mutex, cycle.Id, person.Id, model.Id)
 
 	if person.Id == 1 {
 		bar.Increment()
@@ -439,11 +442,11 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 		}
 
 	}
-
-	Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
-	Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
-	Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
-	Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
+	// old way
+	// Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
+	// Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
+	// Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
+	// Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
@@ -572,20 +575,20 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 
 // This represents running the full model for one person
 func runFullModelForOnePerson(person Person, generalChan chan string) {
-	for _, cycle := range Inputs.Cycles {
-		shuffled := Inputs.Models //needs shuffle
-		for _, model := range shuffled {
-			//runCyclePersonModel(cycle, model, person)
-			_ = cycle
-			_ = person
-			_ = model
-		}
-	}
-	generalChan <- "Done"
+	// for _, cycle := range Inputs.Cycles {
+	// 	shuffled := Inputs.Models //needs shuffle
+	// 	for _, model := range shuffled {
+	// 		//runCyclePersonModel(cycle, model, person)
+	// 		_ = cycle
+	// 		_ = person
+	// 		_ = model
+	// 	}
+	// }
+	// generalChan <- "Done"
 }
 
 func runOneCycleForOnePerson(cycle Cycle, person Person, generalChan chan string, mutex *sync.Mutex) {
-	shuffled := shuffle(Inputs.Models, mutex)
+	shuffled := shuffle(Inputs.Models, mutex, person.Id)
 	for _, model := range shuffled { // foreach model
 		// cannot be made concurrent, because if they die in one model
 		runCyclePersonModel(cycle, model, person, mutex)
@@ -772,20 +775,20 @@ func (Query *Query_t) setUp() {
 }
 */
 
-func random_int(max int, mutex *sync.Mutex) int {
-	random := randomController.next(mutex)
+func random_int(max int, mutex *sync.Mutex, personId int) int {
+	random := randomController.nextShuffle(mutex, personId)
 	random = random * float64(max)
 	return int(random)
 }
 
-func shuffle(models []Model, mutex *sync.Mutex) []Model {
+func shuffle(models []Model, mutex *sync.Mutex, personId int) []Model {
 	modelsCopy := make([]Model, len(models), len(models))
 	//Println("og: ", models)
 	copy(modelsCopy, models)
 	N := len(modelsCopy)
 	for i := 0; i < N; i++ {
 		// choose index uniformly in [i, N-1]
-		r := i + random_int(N-i, mutex)
+		r := i + random_int(N-i, mutex, personId)
 		modelsCopy[r], modelsCopy[i] = modelsCopy[i], modelsCopy[r]
 	}
 	//fmt.Println("shuffled: ", modelsCopy)
@@ -1184,39 +1187,88 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 }
 
 type RandomController_t struct {
-	list          []float64 // this is a slice of random variables
-	accessCounter int       //this is a counter for how many times a random number was generated
+	randomListShuffle    []float64     // this is a slice of random variables
+	randomListCPM        [][][]float64 // this is a slice of random variables
+	accessCounterCPM     int           //this is a counter for how many times a random number was generated
+	accessCounterShuffle int
 }
 
 func (randomController *RandomController_t) initialize() {
+
 	rand.Seed(1)
-	randomController.accessCounter = 0
-	randomController.list = make([]float64, 100000000, 100000000)
-	for i := 0; i < len(randomController.list); i++ {
-		randomController.list[i] = rand.Float64()
+
+	randomController.randomListCPM = make([][][]float64, len(Inputs.Cycles), len(Inputs.Cycles))
+	for c := range Inputs.Cycles {
+		randomController.randomListCPM[c] = make([][]float64, numberOfPeople, numberOfPeople)
+		for p := 0; p < numberOfPeople; p++ {
+			randomController.randomListCPM[c][p] = make([]float64, len(Inputs.Models), len(Inputs.Models))
+			for m := range Inputs.Models {
+				randomController.randomListCPM[c][p][m] = rand.Float64()
+			}
+		}
 	}
+
+	randomController.randomListShuffle = make([]float64, numberOfPeople, numberOfPeople)
+	for p := 0; p < numberOfPeople; p++ {
+		randomController.randomListShuffle[p] = rand.Float64()
+	}
+
+	randomController.accessCounterCPM = 0
+	randomController.accessCounterShuffle = 0
 }
 
-func (randomController *RandomController_t) next(mutex *sync.Mutex) float64 {
-	i := randomController.accessCounter
-	toReturn := randomController.list[i]
+func (randomController *RandomController_t) resetCounters() {
+	randomController.accessCounterCPM = 0
+	randomController.accessCounterShuffle = 0
+}
+
+func (randomController *RandomController_t) nextShuffle(mutex *sync.Mutex, person_id int) float64 {
 
 	mutex.Lock()
-	randomController.accessCounter++
+	randomController.accessCounterShuffle++
 	mutex.Unlock()
 
-	return toReturn
+	return randomController.randomListShuffle[person_id]
 }
 
-func (randomController *RandomController_t) getCounter(mutex *sync.Mutex) int {
+func (randomController *RandomController_t) nextCPM(mutex *sync.Mutex, cycleId int, personId int, modelId int) float64 {
 
 	mutex.Lock()
-	count := randomController.accessCounter
+	randomController.accessCounterCPM++
+	mutex.Unlock()
+
+	//fmt.Println(len(randomController.randomListCPM[0]))
+	//fmt.Println(cycleId, personId, modelId, ":")
+	//os.Exit(1)
+	//fmt.Println(randomController.randomListCPM[cycleId][personId][modelId])
+
+	return randomController.randomListCPM[cycleId][personId][modelId]
+}
+
+func (randomController *RandomController_t) getShuffleCounter(mutex *sync.Mutex) int {
+
+	mutex.Lock()
+	count := randomController.accessCounterShuffle
 	mutex.Unlock()
 
 	return count
 }
 
-func (randomController *RandomController_t) get(randId int) float64 {
-	return randomController.list[randId]
+func (randomController *RandomController_t) getCPMCounter(mutex *sync.Mutex) int {
+
+	mutex.Lock()
+	count := randomController.accessCounterCPM
+	mutex.Unlock()
+
+	return count
+}
+
+func hash(s string) int64 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+
+	p := int64(h.Sum32())
+	// fmt.Println(s, ":", p)
+	// pause()
+	return p
 }
