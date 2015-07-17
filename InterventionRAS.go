@@ -7,7 +7,7 @@ import (
 
 //Run the complete model for each intervention:
 //We receive all inputs and we get which specific intervention is being modeled.
-func interventionInitiate(Inputs Input, Intervention Intervention) {
+func interventionInitiate(Intervention Intervention) {
 
 	//Find the name of the current intervention.
 	currentInterventionName := Intervention.Name
@@ -18,7 +18,7 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 	case "control":
 		//= without intervention, no action.
 
-		// TODO: Give Alex the new InterventionValue file and tell him to change the two lines that adjust the low risk TP here.
+		// TODO: Give Alex the new InterventionValue file and tell him to change the two lines that adjust the low risk TP here. [Issue: https://github.com/alexgoodell/go-mdism/issues/59]
 		// Also, tel Alex to change the first if statement to the names instead of the numbers 1 and 2
 		// Also, make a check that exits when nothing gets changed.
 
@@ -58,9 +58,9 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 
 							if Inputs.TPByRASs[eachRasLowRiskTPId].To_state_id != eachTPByRas.To_state_id && eachTPByRas.Age_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Age_state_id && eachTPByRas.Sex_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Sex_state_id && eachTPByRas.Race_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Race_state_id && eachTPByRas.Model_id == Inputs.TPByRASs[eachRasLowRiskTPId].Model_id {
 								//So now we change this probability by 1.00 - the value we set for the high risk probability
-								//fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 								Inputs.TPByRASs[eachRasLowRiskTPId].Probability = 1.00 - Inputs.TPByRASs[eachTPByRas.Id].Probability
-								//fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 							}
 						}
 					}
@@ -82,8 +82,9 @@ func interventionInitiate(Inputs Input, Intervention Intervention) {
 						for _, eachRasLowRiskTP := range Inputs.TPByRASs {
 							eachRasLowRiskTPId := eachRasLowRiskTP.Id
 							if Inputs.TPByRASs[eachRasLowRiskTPId].To_state_id != eachTPByRas.To_state_id && eachTPByRas.Age_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Age_state_id && eachTPByRas.Sex_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Sex_state_id && eachTPByRas.Race_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Race_state_id && eachTPByRas.Model_id == Inputs.TPByRASs[eachRasLowRiskTPId].Model_id {
+								fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 								Inputs.TPByRASs[eachRasLowRiskTPId].Probability = 1.00 - Inputs.TPByRASs[eachTPByRas.Id].Probability
-								//fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 							}
 						}
 					}
