@@ -30,7 +30,7 @@ import (
 	"time"
 )
 
-var bar *pb.ProgressBar
+var interventionId int
 
 func main() {
 
@@ -42,7 +42,6 @@ func main() {
 	flag.IntVar(&numberOfPeopleEnteringPerYear, "entering", 416, "number of people that will enter the run(s)")
 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
-	flag.StringVar(&reportingMode, "reporting_mode", "individual", "either individual or psa")
 	flag.Parse()
 
 	if isProfile != "false" {
@@ -88,13 +87,16 @@ func main() {
 	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
 	concurrencyBy := "person-within-cycle"
 
-	runPSA := true
+	isRunIntervention := true
+	reportingMode = "individual"
 
-	switch runPSA {
+	switch isRunIntervention {
 
 	case true:
 
 		for _, eachIntervention := range Inputs.Interventions {
+
+			interventionId = eachIntervention.Id
 			interventionInitiate(Inputs, eachIntervention)
 
 			//clear results from last run
@@ -103,7 +105,9 @@ func main() {
 
 			//build people
 			Inputs.People = []Person{}
-			createInitialPeople(Inputs)
+			Inputs = createInitialPeople(Inputs)
+
+			fmt.Println("Using this many people: ", len(Inputs.People))
 
 			runModel(concurrencyBy, eachIntervention.Name)
 		}
@@ -126,8 +130,10 @@ func runModel(concurrencyBy string, interventionName string) {
 	fmt.Println("")
 	fmt.Println(msg)
 	fmt.Println("")
-	count := len(Inputs.Models) * (len(Inputs.Cycles) - 1)
+	count := len(Inputs.Models) * (len(Inputs.Cycles))
 	bar = pb.StartNew(count)
+	bar.ShowCounters = false
+	bar.ShowTimeLeft = false
 
 	beginTime = time.Now()
 
@@ -192,7 +198,9 @@ func runModel(concurrencyBy string, interventionName string) {
 	if reportingMode == "individual" {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
-		toCsv(output_dir+"/output_by_cycle_and_state_full.csv", Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
+
+		filename := "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
+		toCsv(output_dir+filename, Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
 	}
 
 	if reportingMode == "psa" {
@@ -200,7 +208,7 @@ func runModel(concurrencyBy string, interventionName string) {
 
 	}
 
-	toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+	//toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
