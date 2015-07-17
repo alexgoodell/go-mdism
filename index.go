@@ -101,7 +101,7 @@ func main() {
 			Query.setUp()
 
 			interventionId = eachIntervention.Id
-			//interventionInitiate(Inputs, eachIntervention)
+			interventionInitiate(eachIntervention)
 
 			//clear results from last run
 			Inputs.MasterRecords = []MasterRecord{}
