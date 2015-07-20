@@ -8,12 +8,28 @@ import (
 )
 
 func initializeInputs(inputsPath string) {
-	//TODO: ALEX: Why do some have LEptr, and others only ptr? This does not cause trouble?
+	// TODO: ALEX: Why do some have LEptr, and others only ptr? This does not cause trouble? [Issue: https://github.com/alexgoodell/go-mdism/issues/61]
+
+	// ####################### Psa Inputs #######################
+
+	filename := "inputs/" + inputsPath + "/psa.csv"
+	numberOfRecords := getNumberOfRecords(filename)
+
+	Inputs.PsaInputs = make([]PsaInput, numberOfRecords, numberOfRecords)
+	var PsaPtrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		PsaPtrs = append(PsaPtrs, new(PsaInput))
+	}
+	PsaPtrs = fromCsv(filename, Inputs.PsaInputs[0], PsaPtrs)
+	for i, ptr := range PsaPtrs {
+		Inputs.PsaInputs[i] = *ptr.(*PsaInput)
+	}
+
 	// ####################### Interventions #######################
 
 	// initialize inputs, needed for fromCsv function
-	filename := "inputs/" + inputsPath + "/interventions.csv"
-	numberOfRecords := getNumberOfRecords(filename)
+	filename = "inputs/" + inputsPath + "/interventions.csv"
+	numberOfRecords = getNumberOfRecords(filename)
 	Inputs.Interventions = make([]Intervention, numberOfRecords, numberOfRecords)
 	var Iptrs []interface{}
 	for i := 0; i < numberOfRecords; i++ {

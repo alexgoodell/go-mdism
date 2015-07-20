@@ -80,6 +80,9 @@ func main() {
 	fmt.Println("and ", inputsPath, " as inputs")
 
 	initializeInputs(inputsPath)
+	Query.setUp()
+	generateAllPsaValues()
+	runPsa()
 
 	// create people will generate individuals and add their data to the master
 	// records
@@ -97,8 +100,8 @@ func main() {
 
 		for _, eachIntervention := range Inputs.Interventions {
 
-			interventionId = eachIntervention.Id
-			interventionInitiate(eachIntervention)
+			//interventionId = eachIntervention.Id
+			//interventionInitiate(eachIntervention)
 
 			//set up Query
 			Query.setUp()

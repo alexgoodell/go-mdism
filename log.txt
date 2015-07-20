@@ -1,0 +1,453 @@
+go build
+./go-mdism
+[1;94m
+
+                             _______                         
+.--------.--------.--------.|     __|.--.--.-----.---.-.----.
+|        |        |        ||__     ||  |  |  _  |  _  |   _|
+|__|__|__|__|__|__|__|__|__||_______||_____|___  |___._|__|  
+                                           |_____|                   
+[0m
+using  8  cores
+and  22400 initial individuals
+and  11232 individuals entering
+and  1 iterations
+and  example  as inputs
+Beginning import process from  inputs/example/psa.csv
+Beginning import process from  inputs/example/interventions.csv
+complete
+Beginning import process from  inputs/example/life-expectancies.csv
+complete
+Beginning import process from  inputs/example/models.csv
+complete
+inputs/example/states.csv
+Beginning import process from  inputs/example/states.csv
+Beginning import process from  inputs/example/transition-probabilities.csv
+Beginning import process from  inputs/example/interactions.csv
+Beginning import process from  inputs/example/cycles.csv
+Beginning import process from  inputs/example/ras.csv
+Beginning import process from  inputs/example/costs.csv
+Beginning import process from  inputs/example/disability-weights.csv
+Beginning import process from  inputs/example/interventionvalues.csv
+Generating PSA values...complete.
+Setting PSA into inputs... ------------------------------------------------ 
+
+psa: =======================
+{Id:15 Variable:Baseline TP NAFLD: non-NAFLD -> steatosis Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.0083756325836727}
+tp =========================
+&{Id:23 From_id:2 To_id:3 Tp_base:0.01 PSA_id:15}old was  0.01
+new is  0.0083756325836727
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:16 Variable:Baseline TP NAFLD: non-NAFLD -> NASH Input_file:transition-probabilities Distribution:beta Min:0.000201 Max:0.00045 Mean:0.0003 SD:6.225e-05 Alpha:23.21816422 Beta:77370.66256 Value:0.00028657449719651025}
+tp =========================
+&{Id:24 From_id:2 To_id:4 Tp_base:0.0003 PSA_id:16}old was  0.0003
+new is  0.00028657449719651025
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:17 Variable:Baseline TP NAFLD: each NAFLD state -> natural death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.012898316636544388}
+tp =========================
+&{Id:28 From_id:2 To_id:8 Tp_base:0.01 PSA_id:17}old was  0.01
+new is  0.012898316636544388
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:17 Variable:Baseline TP NAFLD: each NAFLD state -> natural death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.012898316636544388}
+tp =========================
+&{Id:38 From_id:3 To_id:8 Tp_base:0.01 PSA_id:17}old was  0.01
+new is  0.012898316636544388
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:17 Variable:Baseline TP NAFLD: each NAFLD state -> natural death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.012898316636544388}
+tp =========================
+&{Id:48 From_id:4 To_id:8 Tp_base:0.01 PSA_id:17}old was  0.01
+new is  0.012898316636544388
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:17 Variable:Baseline TP NAFLD: each NAFLD state -> natural death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.012898316636544388}
+tp =========================
+&{Id:58 From_id:5 To_id:8 Tp_base:0.01 PSA_id:17}old was  0.01
+new is  0.012898316636544388
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:18 Variable:Baseline TP NAFLD: steatosis -> non-NAFLD Input_file:transition-probabilities Distribution:beta Min:0.0134 Max:0.03 Mean:0.02 SD:0.00415 Alpha:22.74092321 Beta:1114.305237 Value:0.020666895072543264}
+tp =========================
+&{Id:32 From_id:3 To_id:2 Tp_base:0.02 PSA_id:18}old was  0.02
+new is  0.020666895072543264
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:19 Variable:Baseline TP NAFLD: steatosis -> NASH Input_file:transition-probabilities Distribution:beta Min:0.00402 Max:0.009 Mean:0.006 SD:0.001245 Alpha:23.08007926 Beta:3823.599797 Value:0.005570994370497183}
+tp =========================
+&{Id:34 From_id:3 To_id:4 Tp_base:0.006 PSA_id:19}old was  0.006
+new is  0.005570994370497183
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:20 Variable:Baseline TP NAFLD: steatosis -> cirrhosis Input_file:transition-probabilities Distribution:beta Min:0.000134 Max:0.0003 Mean:0.0002 SD:4.15e-05 Alpha:23.22058676 Beta:116079.7132 Value:0.00017202421393375765}
+tp =========================
+&{Id:35 From_id:3 To_id:5 Tp_base:0.0002 PSA_id:20}old was  0.0002
+new is  0.00017202421393375765
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:21 Variable:Baseline TP NAFLD: NASH -> non-NAFLD Input_file:transition-probabilities Distribution:beta Min:0.00067 Max:0.0015 Mean:0.001 SD:0.0002075 Alpha:23.20120642 Beta:23178.00521 Value:0.0012417280416525606}
+tp =========================
+&{Id:42 From_id:4 To_id:2 Tp_base:0.001 PSA_id:21}old was  0.001
+new is  0.0012417280416525606
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:22 Variable:Baseline TP NAFLD: NASH -> steatosis Input_file:transition-probabilities Distribution:beta Min:0.0134 Max:0.03 Mean:0.02 SD:0.00415 Alpha:22.74092321 Beta:1114.305237 Value:0.0178821989664092}
+tp =========================
+&{Id:43 From_id:4 To_id:3 Tp_base:0.02 PSA_id:22}old was  0.02
+new is  0.0178821989664092
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:23 Variable:Baseline TP NAFLD: NASH -> cirrhosis Input_file:transition-probabilities Distribution:beta Min:0.00134 Max:0.003 Mean:0.002 SD:0.000415 Alpha:23.17698098 Beta:11565.31351 Value:0.001904400981202878}
+tp =========================
+&{Id:45 From_id:4 To_id:5 Tp_base:0.002 PSA_id:23}old was  0.002
+new is  0.001904400981202878
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:24 Variable:Baseline TP NAFLD: NASH -> HCC Input_file:transition-probabilities Distribution:beta Min:6.7e-05 Max:0.00015 Mean:0.0001 SD:2.075e-05 Alpha:23.2230093 Beta:232206.87 Value:0.00010767728227988506}
+tp =========================
+&{Id:46 From_id:4 To_id:6 Tp_base:0.0001 PSA_id:24}old was  0.0001
+new is  0.00010767728227988506
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:25 Variable:Baseline TP NAFLD: NASH -> Liver death Input_file:transition-probabilities Distribution:beta Min:0.002546 Max:0.0057 Mean:0.0038 SD:0.0007885 Alpha:23.13337521 Beta:6064.596942 Value:0.004098356464062007}
+tp =========================
+&{Id:47 From_id:4 To_id:7 Tp_base:0.0038 PSA_id:25}old was  0.0038
+new is  0.004098356464062007
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:26 Variable:Baseline TP NAFLD: cirrhosis -> HCC Input_file:transition-probabilities Distribution:beta Min:0.0134 Max:0.03 Mean:0.02 SD:0.00415 Alpha:22.74092321 Beta:1114.305237 Value:0.018647991116383822}
+tp =========================
+&{Id:56 From_id:5 To_id:6 Tp_base:0.02 PSA_id:26}old was  0.02
+new is  0.018647991116383822
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:27 Variable:Baseline TP NAFLD: cirrhosis -> Liver death Input_file:transition-probabilities Distribution:beta Min:0.02278 Max:0.051 Mean:0.034 SD:0.007055 Alpha:22.40176717 Beta:636.4737377 Value:0.032311246433667604}
+tp =========================
+&{Id:57 From_id:5 To_id:7 Tp_base:0.034 PSA_id:27}old was  0.034
+new is  0.032311246433667604
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:28 Variable:Baseline TP NAFLD: HCC -> Liver death Input_file:transition-probabilities Distribution:beta Min:0.335 Max:0.75 Mean:0.5 SD:0.10375 Alpha:11.11271592 Beta:11.11271592 Value:0.29331709608753453}
+tp =========================
+&{Id:67 From_id:6 To_id:7 Tp_base:0.5 PSA_id:28}old was  0.5
+new is  0.29331709608753453
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:29 Variable:Baseline TP CHD: Non-CHD -> CHD Input_file:transition-probabilities Distribution:beta Min:0.0028475 Max:0.006375 Mean:0.00425 SD:0.000881875 Alpha:23.12247376 Beta:5417.459588 Value:0.0038150553613977467}
+tp =========================
+&{Id:115 From_id:12 To_id:13 Tp_base:0.0045 PSA_id:29}old was  0.0045
+new is  0.0038150553613977467
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:30 Variable:Baseline TP CHD: CHD -> CHD death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.013922658412319018}
+tp =========================
+&{Id:122 From_id:13 To_id:14 Tp_base:0.01 PSA_id:30}old was  0.01
+new is  0.013922658412319018
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:31 Variable:Baseline TP T2D: non-T2D -> T2D Input_file:transition-probabilities Distribution:beta Min:0.00335 Max:0.0075 Mean:0.005 SD:0.0010375 Alpha:23.10430469 Beta:4597.756633 Value:0.0051147545205323655}
+tp =========================
+&{Id:151 From_id:18 To_id:19 Tp_base:0.0045 PSA_id:31}old was  0.0045
+new is  0.0051147545205323655
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:32 Variable:Baseline TP T2D: T2D -> T2D death Input_file:transition-probabilities Distribution:beta Min:0.0067 Max:0.015 Mean:0.01 SD:0.002075 Alpha:22.98317753 Beta:2275.334575 Value:0.010319245560468834}
+tp =========================
+&{Id:158 From_id:19 To_id:20 Tp_base:0.01 PSA_id:32}old was  0.01
+new is  0.010319245560468834
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:33 Variable:Baseline transition BMI: Healthy -> overweight Input_file:transition-probabilities Distribution:beta Min:0.0335 Max:0.075 Mean:0.05 SD:0.010375 Alpha:22.01416026 Beta:418.2690449 Value:0.04719617498894307}
+tp =========================
+&{Id:187 From_id:24 To_id:25 Tp_base:0.05 PSA_id:33}old was  0.05
+new is  0.04719617498894307
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:34 Variable:Baseline transition BMI: Healthy -> Obese Input_file:transition-probabilities Distribution:beta Min:0.00402 Max:0.009 Mean:0.006 SD:0.001245 Alpha:23.08007926 Beta:3823.599797 Value:0.0040280744305623934}
+tp =========================
+&{Id:188 From_id:24 To_id:26 Tp_base:0.006 PSA_id:34}old was  0.006
+new is  0.0040280744305623934
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:35 Variable:Baseline transition BMI: Overweight -> Healthy Input_file:transition-probabilities Distribution:beta Min:0.0335 Max:0.075 Mean:0.05 SD:0.010375 Alpha:22.01416026 Beta:418.2690449 Value:0.04891956373592866}
+tp =========================
+&{Id:192 From_id:25 To_id:24 Tp_base:0.05 PSA_id:35}old was  0.05
+new is  0.04891956373592866
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:36 Variable:Baseline transition BMI: Overweight -> Obese Input_file:transition-probabilities Distribution:beta Min:0.01206 Max:0.027 Mean:0.018 SD:0.003735 Alpha:22.78937407 Beta:1243.286963 Value:0.016080335324250024}
+tp =========================
+&{Id:194 From_id:25 To_id:26 Tp_base:0.02 PSA_id:36}old was  0.02
+new is  0.016080335324250024
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:37 Variable:Baseline transition BMI: Obese-> Healthy Input_file:transition-probabilities Distribution:beta Min:0.00402 Max:0.009 Mean:0.006 SD:0.001245 Alpha:23.08007926 Beta:3823.599797 Value:0.006502060795911853}
+tp =========================
+&{Id:198 From_id:26 To_id:24 Tp_base:0.006 PSA_id:37}old was  0.006
+new is  0.006502060795911853
+ ------------------------------------------------ 
+
+psa: =======================
+{Id:38 Variable:Baseline transition BMI: Obese -> overweight Input_file:transition-probabilities Distribution:beta Min:0.02345 Max:0.0525 Mean:0.035 SD:0.0072625 Alpha:22.37754173 Beta:616.9807935 Value:0.02952001667906088}
+tp =========================
+&{Id:199 From_id:26 To_id:25 Tp_base:0.035 PSA_id:38}old was  0.035
+new is  0.02952001667906088
+== State  0  ====
+Old recursive tp was:  0
+New recursive tp is:  0
+== State  1  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  2  ====
+Old recursive tp was:  0.9797
+New recursive tp is:  0.9784394762825864
+== State  3  ====
+Old recursive tp was:  0.9638
+New recursive tp is:  0.9606917697064814
+== State  4  ====
+Old recursive tp was:  0.9631
+New recursive tp is:  0.961867321627849
+== State  5  ====
+Old recursive tp was:  0.936
+New recursive tp is:  0.9361424458134042
+== State  6  ====
+Old recursive tp was:  0.5
+New recursive tp is:  0.7066829039124655
+== State  7  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  8  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  9  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  10  ====
+Old recursive tp was:  0
+New recursive tp is:  0
+== State  11  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  12  ====
+Old recursive tp was:  0.9955
+New recursive tp is:  0.9961849446386023
+== State  13  ====
+Old recursive tp was:  0.99
+New recursive tp is:  0.986077341587681
+== State  14  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  15  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  16  ====
+Old recursive tp was:  0
+New recursive tp is:  0
+== State  17  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  18  ====
+Old recursive tp was:  0.9955
+New recursive tp is:  0.9948852454794677
+== State  19  ====
+Old recursive tp was:  0.99
+New recursive tp is:  0.9896807544395312
+== State  20  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  21  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  22  ====
+Old recursive tp was:  0
+New recursive tp is:  0
+== State  23  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  24  ====
+Old recursive tp was:  0.944
+New recursive tp is:  0.9487757505804946
+== State  25  ====
+Old recursive tp was:  0.93
+New recursive tp is:  0.9350001009398213
+== State  26  ====
+Old recursive tp was:  0.959
+New recursive tp is:  0.9639779225250272
+== State  27  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  28  ====
+Old recursive tp was:  0
+New recursive tp is:  1.1102230246251565e-16
+== State  29  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  30  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  31  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  32  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  33  ====
+Old recursive tp was:  0
+New recursive tp is:  0
+== State  34  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  35  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  36  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  37  ====
+== State  38  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  39  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  40  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  41  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  42  ====
+Old recursive tp was:  0
+New recursive tp is:  -4.440892098500626e-16
+== State  43  ====
+== State  44  ====
+== State  45  ====
+== State  46  ====
+== State  47  ====
+== State  48  ====
+== State  49  ====
+== State  50  ====
+== State  51  ====
+== State  52  ====
+== State  53  ====
+== State  54  ====
+== State  55  ====
+== State  56  ====
+== State  57  ====
+== State  58  ====
+== State  59  ====
+== State  60  ====
+== State  61  ====
+== State  62  ====
+== State  63  ====
+== State  64  ====
+== State  65  ====
+== State  66  ====
+== State  67  ====
+== State  68  ====
+== State  69  ====
+== State  70  ====
+== State  71  ====
+== State  72  ====
+== State  73  ====
+== State  74  ====
+== State  75  ====
+== State  76  ====
+== State  77  ====
+== State  78  ====
+== State  79  ====
+== State  80  ====
+== State  81  ====
+== State  82  ====
+== State  83  ====
+== State  84  ====
+== State  85  ====
+== State  86  ====
+== State  87  ====
+== State  88  ====
+== State  89  ====
+== State  90  ====
+== State  91  ====
+== State  92  ====
+== State  93  ====
+== State  94  ====
+== State  95  ====
+== State  96  ====
+== State  97  ====
+== State  98  ====
+== State  99  ====
+== State  100  ====
+== State  101  ====
+== State  102  ====
+== State  103  ====
+== State  104  ====
+== State  105  ====
+== State  106  ====
+== State  107  ====
+== State  108  ====
+== State  109  ====
+== State  110  ====
+== State  111  ====
+== State  112  ====
+== State  113  ====
+== State  114  ====
+== State  115  ====
+== State  116  ====
+== State  117  ====
+== State  118  ====
+== State  119  ====
+== State  120  ====
+== State  121  ====
+== State  122  ====
+== State  123  ====
+== State  124  ====
+== State  125  ====
+== State  126  ====
+== State  127  ====
+== State  128  ====
+== State  129  ====
+== State  130  ====
+== State  131  ====
+== State  132  ====
+== State  133  ====
+== State  134  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+== State  135  ====
+Old recursive tp was:  1
+New recursive tp is:  1
+complete.
+Intialization complete, time elapsed: 346.517533ms
+Using this many people:  22400
+
+[1;91mRunning control simulation...[0m
+
+[>---------------------------------------------------] 0.46 % [=>--------------------------------------------------] 3.70 % sum does not equal 1 !
+sum does not equal 1 !
