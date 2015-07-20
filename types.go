@@ -133,6 +133,7 @@ type Input struct {
 	TPByRASs                []TPByRAS
 	Interventions           []Intervention
 	InterventionValues      []InterventionValue
+	PsaInputs               []PsaInput
 }
 
 type TPByRAS struct {
@@ -173,6 +174,7 @@ type PsaInput struct {
 	SD           float64
 	Alpha        float64
 	Beta         float64
+	Value        float64
 }
 
 type OutputByCycleState struct {
