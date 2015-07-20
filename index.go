@@ -97,11 +97,11 @@ func main() {
 
 		for _, eachIntervention := range Inputs.Interventions {
 
-			//set up Query
-			Query.setUp()
-
 			interventionId = eachIntervention.Id
 			interventionInitiate(eachIntervention)
+
+			//set up Query
+			Query.setUp()
 
 			//clear results from last run
 			Inputs.MasterRecords = []MasterRecord{}
