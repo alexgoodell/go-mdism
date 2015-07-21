@@ -101,7 +101,7 @@ func main() {
 		for _, eachIntervention := range Inputs.Interventions {
 
 			interventionId = eachIntervention.Id
-			//interventionInitiate(eachIntervention)
+			interventionInitiate(eachIntervention)
 
 			//set up Query
 			Query.setUp()
@@ -1197,7 +1197,7 @@ type RandomController_t struct {
 
 func (randomController *RandomController_t) initialize() {
 
-	rand.Seed(1) //time.Now().UTC().UnixNano()
+	rand.Seed(time.Now().UTC().UnixNano()) //time.Now().UTC().UnixNano()
 
 	randomController.randomListCPM = make([][][]float64, len(Inputs.Cycles), len(Inputs.Cycles))
 	for c := range Inputs.Cycles {

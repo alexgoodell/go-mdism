@@ -81,8 +81,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.DisabilityWeights); p++ {
 				disabilityWeight := &Inputs.DisabilityWeights[p]
 				if disabilityWeight.PSA_id == psaInput.Id && disabilityWeight.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					disabilityWeight.Disability_weight = newValue
+					disabilityWeight.Disability_weight = psaInput.Value
 				}
 			}
 
@@ -91,8 +90,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.Costs); p++ {
 				cost := &Inputs.Costs[p]
 				if cost.PSA_id == psaInput.Id && cost.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					cost.Costs = newValue
+					cost.Costs = psaInput.Value
 				}
 			}
 
@@ -101,8 +99,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.Interactions); p++ {
 				interactions := &Inputs.Interactions[p]
 				if interactions.PSA_id == psaInput.Id && interactions.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					interactions.Adjustment = newValue
+					interactions.Adjustment = psaInput.Value
 				}
 			}
 
@@ -121,8 +118,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.TPByRASs); p++ {
 				tpByRas := &Inputs.TPByRASs[p]
 				if tpByRas.PSA_id == psaInput.Id && tpByRas.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					tpByRas.Probability = newValue
+					tpByRas.Probability = psaInput.Value
 				}
 			}
 
