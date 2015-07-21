@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/leesper/go_rng" //imported as rng
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/leesper/go_rng" //imported as rng
 )
 
 // Add this code to the 'InitializeInputs' function:
