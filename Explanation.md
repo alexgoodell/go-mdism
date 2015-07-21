@@ -201,7 +201,7 @@ The way it is coded now is that we make an extra interaction? Where we multiply 
 	I do not understand why we use localInputs here? What does that mean?
 	======================QUESTION============================
 	1257: create tPIdsToReturn which is a slice of integers.
-	1258: the value of this variable is the values of all TPs from this particular state that we get from localInputs.Querydata.Tps_id_by_from_state.
+	1258: the value of this variable is the values of all TPs from this particular state that we get from localInputs.Querydata.Tp_ids_by_from_state.
 	1259: variable TpstoReturn is made as a slice of types TransitionProbability, with the length of the amount of Tps we just found. (where you can go from that state).
 	1260: For the range of all possible Tps, set the TpsToReturn as the TransitionPossibilities specific to this id.
 	1263: If there are TpsToReturn, return them

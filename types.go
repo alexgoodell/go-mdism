@@ -106,7 +106,7 @@ type RASkey struct {
 type Query_t struct {
 	State_id_by_cycle_and_person_and_model         [][][]int
 	States_ids_by_cycle_and_person                 [][]int
-	Tps_id_by_from_state                           [][]int // TODO: Change to Tp_ids_by [Issue: https://github.com/alexgoodell/go-mdism/issues/58]
+	Tp_ids_by_from_state                           [][]int // TODO: Change to Tp_ids_by [Issue: https://github.com/alexgoodell/go-mdism/issues/58]
 	interaction_id_by_in_state_and_from_state      map[InteractionKey][]int
 	State_populations_by_cycle                     [][]int
 	Model_id_by_state                              []int
@@ -192,11 +192,11 @@ type OutputByCycleState struct {
 	Id              int
 	YLLs            float64
 	YLDs            float64
-	DALYs           float64
+	Population      int
 	Costs           float64
+	DALYs           float64
 	Cycle_id        int
 	State_id        int
-	Population      int
 	State_name      string
 	Intervention_id int
 }

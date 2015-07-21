@@ -207,7 +207,7 @@ func runPsa() {
 		//fmt.Println(sumThisFromState)
 		//fmt.Println("== State ", fromState, " ====")
 		var sumThisFromState float64 // Need to make this len(Inputs.States) as well.
-		// use tps := Query.Tps_id_by_from_state[fromState]
+		// use tps := Query.Tp_ids_by_from_state[fromState]
 		for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 			if eachTP.From_id == fromState && eachTP.To_id != fromState {
 				// If the from ID equals the from state we are assessing right now and the TP is not for staying in the same state

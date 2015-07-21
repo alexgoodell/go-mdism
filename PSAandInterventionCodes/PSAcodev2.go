@@ -171,7 +171,7 @@ func runPsa(Inputs Input) {
 				// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 				// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 				sumThisFromState := make([]float64, 150, 150) // Need to make this len(Inputs.States) as well.
-				// use tps := Query.Tps_id_by_from_state[fromState]
+				// use tps := Query.Tp_ids_by_from_state[fromState]
 				for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 					if eachTP.From_id == fromState && eachTP.From_id != eachTP.To_id {
 						// If the from ID equals the from state we are assessing right now and the TP is not for staying in the same state

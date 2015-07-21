@@ -20,7 +20,7 @@ func (model *Model) get_uninitialized_state() State {
 // destination because we're finding the chances of moving to each destination
 func (state *State) get_destination_probabilites() []TransitionProbability {
 	var tPIdsToReturn []int
-	tPIdsToReturn = Query.Tps_id_by_from_state[state.Id]
+	tPIdsToReturn = Query.Tp_ids_by_from_state[state.Id]
 	tPsToReturn := make([]TransitionProbability, len(tPIdsToReturn), len(tPIdsToReturn))
 	for i, id := range tPIdsToReturn {
 		tPsToReturn[i] = Inputs.TransitionProbabilities[id]
