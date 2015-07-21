@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/leesper/go_rng" //imported as rng
 	"math/rand"
 	"os"
 	"time"
-
-	"github.com/leesper/go_rng" //imported as rng
 )
 
 // Add this code to the 'InitializeInputs' function:
@@ -27,6 +26,13 @@ func generateNewValue(psaInput PsaInput) float64 {
 	case "normal":
 		rand.Seed(time.Now().UnixNano()) // seed the generator -> Do we need to do this again? ALEX
 		valueToReturn = psaInput.Mean + psaInput.SD*rand.NormFloat64()
+
+	case "none":
+		//Don't do anything
+
+	default:
+		fmt.Println("Cannot find PSA distribution ", psaInput.Distribution)
+		os.Exit(1)
 
 	}
 	return valueToReturn
@@ -74,8 +80,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.DisabilityWeights); p++ {
 				disabilityWeight := &Inputs.DisabilityWeights[p]
 				if disabilityWeight.PSA_id == psaInput.Id && disabilityWeight.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					disabilityWeight.Disability_weight = newValue
+					disabilityWeight.Disability_weight = psaInput.Value
 				}
 			}
 
@@ -84,8 +89,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.Costs); p++ {
 				cost := &Inputs.Costs[p]
 				if cost.PSA_id == psaInput.Id && cost.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					cost.Costs = newValue
+					cost.Costs = psaInput.Value
 				}
 			}
 
@@ -94,8 +98,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.Interactions); p++ {
 				interactions := &Inputs.Interactions[p]
 				if interactions.PSA_id == psaInput.Id && interactions.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					interactions.Adjustment = newValue
+					interactions.Adjustment = psaInput.Value
 				}
 			}
 
@@ -114,8 +117,7 @@ func runPsa() {
 			for p := 0; p < len(Inputs.TPByRASs); p++ {
 				tpByRas := &Inputs.TPByRASs[p]
 				if tpByRas.PSA_id == psaInput.Id && tpByRas.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					tpByRas.Probability = newValue
+					tpByRas.Probability = psaInput.Value
 				}
 			}
 
@@ -201,6 +203,8 @@ func runPsa() {
 		// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 		// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 
+		fmt.Println("== State ", fromState, " ====")
+		//fmt.Println(sumThisFromState)
 		//fmt.Println("== State ", fromState, " ====")
 		var sumThisFromState float64 // Need to make this len(Inputs.States) as well.
 		// use tps := Query.Tps_id_by_from_state[fromState]
@@ -220,6 +224,11 @@ func runPsa() {
 		for _, eachTP := range Inputs.TransitionProbabilities {
 			if eachTP.From_id == fromState && eachTP.To_id == fromState {
 				// If we come to the TP of this specific fromstate, and this TP is for staying in that state
+				fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
+
+				fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+
 				//fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
 

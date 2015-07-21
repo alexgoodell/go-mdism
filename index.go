@@ -1208,7 +1208,7 @@ type RandomController_t struct {
 
 func (randomController *RandomController_t) initialize() {
 
-	rand.Seed(time.Now().UTC().UnixNano())
+	rand.Seed(time.Now().UTC().UnixNano()) //time.Now().UTC().UnixNano()
 
 	randomController.randomListCPM = make([][][]float64, len(Inputs.Cycles), len(Inputs.Cycles))
 	for c := range Inputs.Cycles {
