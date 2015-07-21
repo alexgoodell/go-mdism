@@ -100,13 +100,8 @@ func main() {
 
 		for _, eachIntervention := range Inputs.Interventions {
 
-<<<<<<< HEAD
 			interventionId = eachIntervention.Id
 			interventionInitiate(eachIntervention)
-=======
-			//interventionId = eachIntervention.Id
-			//interventionInitiate(eachIntervention)
->>>>>>> 6f83c71187a9182edc420859f1f1376cc68a422e
 
 			//set up Query
 			Query.setUp()

@@ -28,6 +28,13 @@ func generateNewValue(psaInput PsaInput) float64 {
 		rand.Seed(time.Now().UnixNano()) // seed the generator -> Do we need to do this again? ALEX
 		valueToReturn = psaInput.Mean + psaInput.SD*rand.NormFloat64()
 
+	case "none":
+		//Don't do anything
+
+	default:
+		fmt.Println("Cannot find PSA distribution ", psaInput.Distribution)
+		os.Exit(1)
+
 	}
 	return valueToReturn
 }
@@ -195,7 +202,8 @@ func runPsa() {
 		// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 
 		fmt.Println("== State ", fromState, " ====")
-		var sumThisFromState float64 // Need to make this len(Inputs.States) as well.
+		sumThisFromState := 0.000000000000000000000000000 // Need to make this len(Inputs.States) as well.
+		fmt.Println(sumThisFromState)
 		// use tps := Query.Tps_id_by_from_state[fromState]
 		for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 			if eachTP.From_id == fromState && eachTP.To_id != fromState {
@@ -208,8 +216,10 @@ func runPsa() {
 			if eachTP.From_id == fromState && eachTP.To_id == fromState {
 				// If we come to the TP of this specific fromstate, and this TP is for staying in that state
 				fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				fmt.Println(sumThisFromState)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
 				fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				fmt.Println(sumThisFromState)
 				// correct the TP_base by the sum you found from the other TPs.
 			}
 		}
