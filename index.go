@@ -9,7 +9,7 @@ package main
 
 import (
 	// "encoding/json"
-	"flag"
+
 	"fmt"
 	"sync"
 	//"github.com/alexgoodell/go-mdism/modules/sugar"
@@ -21,10 +21,8 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
-	"runtime"
 
 	"github.com/cheggaaa/pb"
-	"github.com/davecheney/profile"
 	"github.com/mgutz/ansi"
 	// "runtime/pprof"
 	"hash/fnv"
@@ -35,73 +33,6 @@ import (
 var interventionId int
 var randomController RandomController_t
 
-func main() {
-
-	show_greeting()
-
-	flag.IntVar(&numberOfPeopleStarting, "people", 22400, "number of people to run")
-	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
-	// TODO: index error if number of people entering is <15000 [Issue: https://github.com/alexgoodell/go-mdism/issues/33]
-	flag.IntVar(&numberOfPeopleEnteringPerYear, "entering", 416, "number of people that will enter the run(s)")
-	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
-	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
-	flag.Parse()
-
-	if isProfile != "false" {
-		fmt.Println("Enabling profiler")
-
-		if isProfile == "cpu" {
-			cfg := profile.Config{
-				ProfilePath: ".", // store profiles in current directory
-				CPUProfile:  true,
-			}
-			defer profile.Start(&cfg).Stop()
-		} else if isProfile == "mem" {
-			cfg := profile.Config{
-				ProfilePath: ".", // store profiles in current directory
-				MemProfile:  true,
-			}
-			defer profile.Start(&cfg).Stop()
-		}
-	}
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	fmt.Println("using ", runtime.NumCPU(), " cores")
-	// Seed the random function
-
-	// TODO: remove hardcoded cycles [Issue: https://github.com/alexgoodell/go-mdism/issues/40]
-	numberOfPeopleEntering = numberOfPeopleEnteringPerYear * (26 + 1)
-	numberOfPeople = numberOfPeopleEntering + numberOfPeopleStarting
-
-	fmt.Println("and ", numberOfPeopleStarting, "initial individuals")
-	fmt.Println("and ", numberOfPeopleEntering, "individuals entering")
-	fmt.Println("and ", numberOfIterations, "iterations")
-	fmt.Println("and ", inputsPath, " as inputs")
-
-	initializeInputs(inputsPath)
-	Query.setUp()
-	generateAllPsaValues()
-	runPsa()
-
-	// create people will generate individuals and add their data to the master
-	// records
-
-	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
-
-	// table tests here
-
-	for true {
-		initializeInputs(inputsPath)
-		Query.setUp()
-		generateAllPsaValues()
-		runPsa()
-		randomLetters = randSeq(10)
-		runInterventions()
-	}
-
-}
-
 var randomLetters string
 
 func runInterventions() {
@@ -109,7 +40,6 @@ func runInterventions() {
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
-	reportingMode = "psa"
 	randId := 0
 
 	switch isRunIntervention {
@@ -237,7 +167,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 
 	formatOutputs()
 
-	if reportingMode == "individual" {
+	if runType == "single" {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -246,7 +176,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
-	if reportingMode == "psa" {
+	if runType == "psa" {
 
 		filename := output_dir + "/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
