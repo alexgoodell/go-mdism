@@ -81,6 +81,16 @@ type DisabilityWeight struct {
 	PSA_id            int
 }
 
+type RegressionRate struct {
+	Id              int
+	From_state      int
+	To_state        int
+	Age_low         int
+	Age_high        int
+	Regression_rate float64
+	Psa_id          int
+}
+
 type InteractionKey struct {
 	In_state_id   int
 	From_state_id int
@@ -133,6 +143,7 @@ type Input struct {
 	TPByRASs                []TPByRAS
 	Interventions           []Intervention
 	InterventionValues      []InterventionValue
+	RegressionRates         []RegressionRate
 	PsaInputs               []PsaInput
 }
 

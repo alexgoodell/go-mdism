@@ -39,21 +39,21 @@ func generateNewValue(psaInput PsaInput) float64 {
 }
 
 func generateAllPsaValues() {
-	fmt.Print("Generating PSA values...")
+	//fmt.Print("Generating PSA values...")
 	for i := 0; i < len(Inputs.PsaInputs); i++ {
 		psaInputPtr := &Inputs.PsaInputs[i]
 		psaInput := Inputs.PsaInputs[i]
 		psaInputPtr.Value = generateNewValue(psaInput)
 	}
-	fmt.Print("complete.")
+	//fmt.Print("complete.")
 
 }
 
 func runPsa() {
 
-	fmt.Println("here one")
-	fmt.Println()
-	fmt.Print("Setting PSA into inputs...")
+	//fmt.Println("here one")
+	//fmt.Println()
+	//fmt.Print("Setting PSA into inputs...")
 	for i := 0; i < len(Inputs.PsaInputs); i++ {
 		psaInput := Inputs.PsaInputs[i]
 		inputFile := psaInput.Input_file
@@ -102,15 +102,14 @@ func runPsa() {
 				}
 			}
 
-		// case "regression-rates":
+		case "regression-rates":
 
-		// 	for p := 0; p < len(Inputs.RegressionRates); p++ {
-		// 		regressionrate := Inputs.RegressionRates[p]
-		// 		if regressionrate.Psa_id == psaInput.Id && regressionrate.Psa_id != 0 {
-		// 			newValue := generateNewValue(psaInput)
-		// 			regressionrate.Regression_rate = newValue
-		// 		}
-		// 	}
+			for p := 0; p < len(Inputs.RegressionRates); p++ {
+				regressionrate := &Inputs.RegressionRates[p]
+				if regressionrate.Psa_id == psaInput.Id && regressionrate.Psa_id != 0 {
+					regressionrate.Regression_rate = psaInput.Value
+				}
+			}
 
 		case "ras":
 
@@ -203,7 +202,7 @@ func runPsa() {
 		// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 		// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 
-		fmt.Println("== State ", fromState, " ====")
+		//fmt.Println("== State ", fromState, " ====")
 		//fmt.Println(sumThisFromState)
 		//fmt.Println("== State ", fromState, " ====")
 		var sumThisFromState float64 // Need to make this len(Inputs.States) as well.
@@ -224,10 +223,10 @@ func runPsa() {
 		for _, eachTP := range Inputs.TransitionProbabilities {
 			if eachTP.From_id == fromState && eachTP.To_id == fromState {
 				// If we come to the TP of this specific fromstate, and this TP is for staying in that state
-				fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				//fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
 
-				fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				//fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 
 				//fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
@@ -239,6 +238,6 @@ func runPsa() {
 
 		//Some checks here? Check_sum?
 	}
-	fmt.Print("complete.")
-	fmt.Println()
+	//fmt.Print("complete.")
+	//fmt.Println()
 }

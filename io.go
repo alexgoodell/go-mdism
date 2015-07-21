@@ -39,7 +39,7 @@ func initializeInputs(inputsPath string) {
 	for i, ptr := range Iptrs {
 		Inputs.Interventions[i] = *ptr.(*Intervention)
 	}
-	fmt.Println("complete")
+	//fmt.Println("complete")
 
 	// ####################### Life Expectancy #######################
 
@@ -55,7 +55,7 @@ func initializeInputs(inputsPath string) {
 	for i, ptr := range LEptrs {
 		Inputs.LifeExpectancies[i] = *ptr.(*LifeExpectancy)
 	}
-	fmt.Println("complete")
+	//fmt.Println("complete")
 
 	// ####################### Models #######################
 
@@ -71,13 +71,13 @@ func initializeInputs(inputsPath string) {
 	for i, ptr := range ptrs {
 		Inputs.Models[i] = *ptr.(*Model)
 	}
-	fmt.Println("complete")
+	//fmt.Println("complete")
 
 	// ####################### States #######################
 
 	// initialize inputs, needed for fromCsv function
 	filename = "inputs/" + inputsPath + "/states.csv"
-	fmt.Println(filename)
+	//fmt.Println(filename)
 	numberOfRecords = getNumberOfRecords(filename)
 	Inputs.States = make([]State, numberOfRecords, numberOfRecords)
 	var statePtrs []interface{}
@@ -197,6 +197,20 @@ func initializeInputs(inputsPath string) {
 		Inputs.InterventionValues[i] = *ptr.(*InterventionValue)
 	}
 
+	// ####################### Regression Rates #######################
+
+	filename = "inputs/" + inputsPath + "/regression-rates.csv"
+	numberOfRecords = getNumberOfRecords(filename)
+	Inputs.RegressionRates = make([]RegressionRate, numberOfRecords, numberOfRecords)
+	var RRptrs []interface{}
+	for i := 0; i < numberOfRecords; i++ {
+		RRptrs = append(RRptrs, new(RegressionRate))
+	}
+	RRptrs = fromCsv(filename, Inputs.RegressionRates[0], RRptrs)
+	for i, ptr := range RRptrs {
+		Inputs.RegressionRates[i] = *ptr.(*RegressionRate)
+	}
+
 }
 
 // Exports sets of data to CSVs. I particular, it will print any array of structs
@@ -204,7 +218,7 @@ func initializeInputs(inputsPath string) {
 // It takes a filename, as well one copy of the struct, and the array of structs
 // itself.
 func toCsv(filename string, record interface{}, records interface{}) error {
-	fmt.Println("Beginning export process to ", filename)
+	fmt.Println("Beginning export to ", filename)
 	//create or open file
 	os.Create(filename)
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
@@ -237,7 +251,7 @@ func toCsv(filename string, record interface{}, records interface{}) error {
 		fmt.Println("error")
 		os.Exit(1)
 	}
-	fmt.Println("Exported to ", filename)
+	//fmt.Println("Exported to ", filename)
 	writer.Flush()
 	return err
 }
