@@ -91,14 +91,14 @@ func main() {
 
 	// table tests here
 
-	for true {
-		initializeInputs(inputsPath)
-		Query.setUp()
-		generateAllPsaValues()
-		runPsa()
-		randomLetters = randSeq(10)
-		runInterventions()
-	}
+	//for true {
+	initializeInputs(inputsPath)
+	Query.setUp()
+	generateAllPsaValues()
+	//runPsa()
+	randomLetters = randSeq(10)
+	runInterventions()
+	//}
 
 }
 
@@ -886,6 +886,7 @@ func createInitialPeople(Inputs Input) Input {
 func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
+	//fmt.Println("AdjFact from specific interaction", adjustmentFactor)
 	/*if person.Id == 20000 && cycle.Id == 10 {
 		fmt.Println(adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
 	}*/
@@ -916,6 +917,7 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 			os.Exit(1)
 		}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
+		//fmt.Println("AdjFact after natural mort regress", adjustmentFactor)
 		//if person.Id == 20000 && cycle.Id == 10 {
 		//	fmt.Println("After Regression", adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
 		//}
@@ -937,7 +939,9 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 	// it currently sums to, and make a new adjustment factor. We can then
 	// adjust every transition probability by that amount.
 	sum := get_sum(theseTPs)
+	//fmt.Println("sum of all TPs after adjusting this interaction", sum)
 	remain := sum - 1.0
+	//fmt.Println("What remains after subtracting 1.0 from the sum", remain)
 
 	var recursiveTp float64
 	for i, _ := range theseTPs {
