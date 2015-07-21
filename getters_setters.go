@@ -150,8 +150,10 @@ func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State
 	key.Model_id = model.Id
 	RASs := Query.TPs_by_RAS[key]
 
-	// TODO: add checker function to make sure you're actually returning something! [Issue: https://github.com/alexgoodell/go-mdism/issues/55]
-
+	if len(RASs) < 1 {
+		fmt.Println("No ras found")
+		os.Exit(1)
+	}
 	// if ras.Model_id != model.Id || ras.Age+22 != ageState.Id || ras.Race_state_id != raceState.Id || ras.Sex_state_id != sexState.Id {
 	// 	fmt.Println("cannot find by RAS")
 	// 	os.Exit(1)
