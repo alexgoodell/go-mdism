@@ -356,6 +356,8 @@ func formatOutputs() {
 
 	}
 
+	Outputs.OutputsByCycleStatePsa = make([]OutputByCycleState, 0, 0)
+
 	for _, outputCS := range Outputs.OutputsByCycleStateFull {
 		stateNamesForPSA := []string{
 			"Steatosis",
@@ -632,6 +634,7 @@ func (Query *Query_t) setUp() {
 	Query.Outputs_id_by_cycle_and_state = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
 
 	Outputs.OutputsByCycleStateFull = make([]OutputByCycleState, numberOfCalculatedCycles*len(Inputs.States), numberOfCalculatedCycles*len(Inputs.States))
+
 	i := 0
 	for c := 0; c < numberOfCalculatedCycles; c++ {
 		Query.Outputs_id_by_cycle_and_state[c] = make([]int, len(Inputs.States), len(Inputs.States))
@@ -696,15 +699,15 @@ func (Query *Query_t) setUp() {
 	//Cycles
 	//Query.States_ids_by_cycle_and_person = make([][]int, 1000000, 1000000)
 
-	Query.Tps_id_by_from_state = make([][]int, len(Inputs.States), len(Inputs.States))
-	for i, _ := range Query.Tps_id_by_from_state {
+	Query.Tp_ids_by_from_state = make([][]int, len(Inputs.States), len(Inputs.States))
+	for i, _ := range Query.Tp_ids_by_from_state {
 		var tPIdsToReturn []int
 		for _, transitionProbability := range Inputs.TransitionProbabilities {
 			if transitionProbability.From_id == i {
 				tPIdsToReturn = append(tPIdsToReturn, transitionProbability.Id)
 			}
 		}
-		Query.Tps_id_by_from_state[i] = tPIdsToReturn
+		Query.Tp_ids_by_from_state[i] = tPIdsToReturn
 	}
 
 	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/51]
