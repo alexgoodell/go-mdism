@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/leesper/go_rng" //imported as rng
@@ -78,33 +77,33 @@ func runPsa() {
 
 		case "disability-weights":
 
-			for p := 0; p < len(Inputs.DisabilityWeights); p++ {
-				disabilityWeight := &Inputs.DisabilityWeights[p]
-				if disabilityWeight.PSA_id == psaInput.Id && disabilityWeight.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					disabilityWeight.Disability_weight = newValue
-				}
-			}
+			// for p := 0; p < len(Inputs.DisabilityWeights); p++ {
+			// 	disabilityWeight := &Inputs.DisabilityWeights[p]
+			// 	if disabilityWeight.PSA_id == psaInput.Id && disabilityWeight.PSA_id != 0 {
+			// 		newValue := generateNewValue(psaInput)
+			// 		disabilityWeight.Disability_weight = newValue
+			// 	}
+			// }
 
 		case "costs":
 
-			for p := 0; p < len(Inputs.Costs); p++ {
-				cost := &Inputs.Costs[p]
-				if cost.PSA_id == psaInput.Id && cost.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					cost.Costs = newValue
-				}
-			}
+			// for p := 0; p < len(Inputs.Costs); p++ {
+			// 	cost := &Inputs.Costs[p]
+			// 	if cost.PSA_id == psaInput.Id && cost.PSA_id != 0 {
+			// 		newValue := generateNewValue(psaInput)
+			// 		cost.Costs = newValue
+			// 	}
+			// }
 
 		case "interactions":
 
-			for p := 0; p < len(Inputs.Interactions); p++ {
-				interactions := &Inputs.Interactions[p]
-				if interactions.PSA_id == psaInput.Id && interactions.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					interactions.Adjustment = newValue
-				}
-			}
+			// for p := 0; p < len(Inputs.Interactions); p++ {
+			// 	interactions := &Inputs.Interactions[p]
+			// 	if interactions.PSA_id == psaInput.Id && interactions.PSA_id != 0 {
+			// 		newValue := generateNewValue(psaInput)
+			// 		interactions.Adjustment = newValue
+			// 	}
+			// }
 
 		// case "regression-rates":
 
@@ -118,42 +117,42 @@ func runPsa() {
 
 		case "ras":
 
-			for p := 0; p < len(Inputs.TPByRASs); p++ {
-				tpByRas := &Inputs.TPByRASs[p]
-				if tpByRas.PSA_id == psaInput.Id && tpByRas.PSA_id != 0 {
-					newValue := generateNewValue(psaInput)
-					tpByRas.Probability = newValue
-				}
-			}
+			// for p := 0; p < len(Inputs.TPByRASs); p++ {
+			// 	tpByRas := &Inputs.TPByRASs[p]
+			// 	if tpByRas.PSA_id == psaInput.Id && tpByRas.PSA_id != 0 {
+			// 		newValue := generateNewValue(psaInput)
+			// 		tpByRas.Probability = newValue
+			// 	}
+			// }
 
-			for _, ras := range Inputs.TPByRASs {
-				raceState := Inputs.States[ras.Race_state_id]
-				ageState := Inputs.States[ras.Age_state_id]
-				sexState := Inputs.States[ras.Sex_state_id]
-				model := Inputs.Models[ras.Model_id]
+			// for _, ras := range Inputs.TPByRASs {
+			// 	raceState := Inputs.States[ras.Race_state_id]
+			// 	ageState := Inputs.States[ras.Age_state_id]
+			// 	sexState := Inputs.States[ras.Sex_state_id]
+			// 	model := Inputs.Models[ras.Model_id]
 
-				sumThisModel := 0.0
+			// 	sumThisModel := 0.0
 
-				relevantRASs := Query.getTpByRAS(raceState, ageState, sexState, model)
+			// 	relevantRASs := Query.getTpByRAS(raceState, ageState, sexState, model)
 
-				for _, relevantRAS := range relevantRASs {
-					if relevantRAS.No_disease_state {
-						sumThisModel += relevantRAS.Probability
-					}
-				}
-				for _, relevantRAS := range relevantRASs {
-					if !relevantRAS.No_disease_state {
-						//find actual RAS input to change
-						relRASPtr := &Inputs.TPByRASs[relevantRAS.Id]
-						if relRASPtr.Id != relevantRAS.Id {
-							fmt.Println("problem finding ras")
-							os.Exit(1)
-						}
-						relRASPtr.Probability = 1.0 - sumThisModel
-					}
-				}
+			// 	for _, relevantRAS := range relevantRASs {
+			// 		if relevantRAS.No_disease_state {
+			// 			sumThisModel += relevantRAS.Probability
+			// 		}
+			// 	}
+			// 	for _, relevantRAS := range relevantRASs {
+			// 		if !relevantRAS.No_disease_state {
+			// 			//find actual RAS input to change
+			// 			relRASPtr := &Inputs.TPByRASs[relevantRAS.Id]
+			// 			if relRASPtr.Id != relevantRAS.Id {
+			// 				fmt.Println("problem finding ras")
+			// 				os.Exit(1)
+			// 			}
+			// 			relRASPtr.Probability = 1.0 - sumThisModel
+			// 		}
+			// 	}
 
-			}
+			// }
 
 			// // I realise these things are hard coded now, but how would we set these ranges otherwise?
 			// for noDiseaseState := 0; noDiseaseState < 45; noDiseaseState++ { //In the ras file, No_disease_state_id == id for the non-disease state.
@@ -200,15 +199,22 @@ func runPsa() {
 		for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
 			if eachTP.From_id == fromState && eachTP.To_id != fromState {
 				// If the from ID equals the from state we are assessing right now and the TP is not for staying in the same state
+				fmt.Println("tp id: ", eachTP.Id, " tp base: ", eachTP.Tp_base)
 				sumThisFromState += eachTP.Tp_base
 				// Add the TPbase of this specific TP to the sum (of all of the TPs from this state)
 			}
 		} //Now that we have all the sums per each state in a slice, we are going to subtract this from the remaining.
+
+		if equalFloat(sumThisFromState, 1, 0.000000001) {
+			sumThisFromState = 1
+		}
+
 		for _, eachTP := range Inputs.TransitionProbabilities {
 			if eachTP.From_id == fromState && eachTP.To_id == fromState {
 				// If we come to the TP of this specific fromstate, and this TP is for staying in that state
 				fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
+
 				fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				// correct the TP_base by the sum you found from the other TPs.
 			}
