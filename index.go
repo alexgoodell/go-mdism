@@ -91,7 +91,7 @@ func main() {
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
-	reportingMode = "individual"
+	reportingMode = "psa"
 	randId := 0
 
 	switch isRunIntervention {
@@ -100,8 +100,8 @@ func main() {
 
 		for _, eachIntervention := range Inputs.Interventions {
 
-			//interventionId = eachIntervention.Id
-			//interventionInitiate(eachIntervention)
+			interventionId = eachIntervention.Id
+			interventionInitiate(eachIntervention)
 
 			//set up Query
 			Query.setUp()
@@ -230,14 +230,25 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 	}
 
 	if reportingMode == "psa" {
-		toCsv(output_dir+"/output_by_cycle_and_state_psa.csv", Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
-
+		randomLetters := randSeq(10)
+		filename := output_dir + "/output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + randomLetters + ".csv"
+		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
 	}
 
-	//toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+	toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func initializeMasterRecords() {

@@ -45,7 +45,6 @@ func generateAllPsaValues() {
 
 func runPsa() {
 
-	rand.Seed(time.Now().UTC().UnixNano())
 	fmt.Println("here one")
 	fmt.Println()
 	fmt.Print("Setting PSA into inputs...")
