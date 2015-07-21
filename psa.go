@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
-
 	"github.com/leesper/go_rng" //imported as rng
+	"math/rand"
+	"os"
+	"time"
 )
 
 // Add this code to the 'InitializeInputs' function:
@@ -201,7 +201,7 @@ func runPsa() {
 		// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 
 		fmt.Println("== State ", fromState, " ====")
-		sumThisFromState := 0.000000000000000000000000000 // Need to make this len(Inputs.States) as well.
+		sumThisFromState := 0.00 // Need to make this len(Inputs.States) as well.
 		fmt.Println(sumThisFromState)
 		// use tps := Query.Tps_id_by_from_state[fromState]
 		for _, eachTP := range Inputs.TransitionProbabilities { //For each of the TPs
