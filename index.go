@@ -1136,6 +1136,8 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 }
 
 func removeUnborns() {
+
+	print("Removing unborn ... ")
 	i := 0
 	masterRecordsToReturn := make([]MasterRecord, len(Inputs.MasterRecords), len(Inputs.MasterRecords))
 	for p, _ := range Inputs.MasterRecords {
@@ -1145,6 +1147,7 @@ func removeUnborns() {
 		}
 	}
 	Inputs.MasterRecords = masterRecordsToReturn[:i]
+	printComplete()
 }
 
 func getTransitionProbByRAS(currentStateInThisModel State, states []State, person Person, cycle Cycle) []TransitionProbability {
@@ -1270,4 +1273,13 @@ func hash(s string) int64 {
 	// fmt.Println(s, ":", p)
 	// pause()
 	return p
+}
+
+func print(msg string) {
+	fmt.Println()
+	fmt.Print(msg)
+}
+
+func printComplete() {
+	fmt.Print("complete")
 }
