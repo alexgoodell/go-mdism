@@ -92,10 +92,17 @@ func main() {
 	// table tests here
 
 	for true {
+		initializeInputs(inputsPath)
+		Query.setUp()
+		generateAllPsaValues()
+		runPsa()
+		randomLetters = randSeq(10)
 		runInterventions()
 	}
 
 }
+
+var randomLetters string
 
 func runInterventions() {
 
@@ -240,11 +247,11 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 	}
 
 	if reportingMode == "psa" {
-		randomLetters := randSeq(10)
-		filename := output_dir + "/output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + randomLetters + ".csv"
-		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
-		filename = output_dir + "/output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + randomLetters + ".csv"
 
+		filename := output_dir + "/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
+		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
+
+		filename = output_dir + "/" + randomLetters + "_output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 

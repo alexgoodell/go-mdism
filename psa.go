@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/leesper/go_rng" //imported as rng
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/leesper/go_rng" //imported as rng
 )
 
 // Add this code to the 'InitializeInputs' function:
@@ -203,7 +204,7 @@ func runPsa() {
 		// I have set that at 42, but might be nicer to use len()? But then I should take len(Inputs.States) ?
 		// It is not really necessary, because we don't want him to change anything to the age model, so nothing above 42.
 
-		fmt.Println("== State ", fromState, " ====")
+		//fmt.Println("== State ", fromState, " ====")
 		//fmt.Println(sumThisFromState)
 		//fmt.Println("== State ", fromState, " ====")
 		var sumThisFromState float64 // Need to make this len(Inputs.States) as well.
@@ -224,10 +225,10 @@ func runPsa() {
 		for _, eachTP := range Inputs.TransitionProbabilities {
 			if eachTP.From_id == fromState && eachTP.To_id == fromState {
 				// If we come to the TP of this specific fromstate, and this TP is for staying in that state
-				fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				//fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
 
-				fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
+				//fmt.Println("New recursive tp is: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 
 				//fmt.Println("Old recursive tp was: ", Inputs.TransitionProbabilities[eachTP.Id].Tp_base)
 				Inputs.TransitionProbabilities[eachTP.Id].Tp_base = 1.00 - sumThisFromState
