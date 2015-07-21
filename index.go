@@ -1195,7 +1195,7 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 		ageState = Query.getStateByName("Age of 20")
 	}
 
-	RASs := Query.getTpByRAS(raceState, ageState, sexState, model)
+	RASs := Query.getTpsByRAS(raceState, ageState, sexState, model)
 
 	for _, ras := range RASs {
 		var newTp TransitionProbability

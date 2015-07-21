@@ -142,7 +142,7 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 }
 
 // TODO: change to getTpsByRAS [Issue: https://github.com/alexgoodell/go-mdism/issues/54]
-func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
+func (Query *Query_t) getTpsByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
 	var key RASkey
 	key.Age_state_id = ageState.Id
 	key.Race_state_id = raceState.Id

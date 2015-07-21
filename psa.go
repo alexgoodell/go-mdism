@@ -168,7 +168,7 @@ func runPsa() {
 
 		sumThisModel := 0.0
 
-		relevantRASs := Query.getTpByRAS(raceState, ageState, sexState, model)
+		relevantRASs := Query.getTpsByRAS(raceState, ageState, sexState, model)
 
 		for _, relevantRAS := range relevantRASs {
 			if !relevantRAS.No_disease_state {
