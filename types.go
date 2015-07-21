@@ -105,7 +105,7 @@ type Query_t struct {
 	Disability_weight_by_state_id                  []float64
 	Master_record_id_by_cycle_and_person_and_model [][][]int
 	Life_expectancy_by_sex_and_age                 map[SexAge]float64
-	TP_by_RAS                                      map[RASkey][]TPByRAS
+	TPs_by_RAS                                     map[RASkey][]TPByRAS
 	Unintialized_state_by_model                    []int
 	Outputs_id_by_cycle_and_state                  [][]int
 

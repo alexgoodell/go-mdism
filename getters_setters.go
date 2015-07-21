@@ -148,7 +148,7 @@ func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State
 	key.Race_state_id = raceState.Id
 	key.Sex_state_id = sexState.Id
 	key.Model_id = model.Id
-	RASs := Query.TP_by_RAS[key]
+	RASs := Query.TPs_by_RAS[key]
 
 	// TODO: add checker function to make sure you're actually returning something! [Issue: https://github.com/alexgoodell/go-mdism/issues/55]
 

@@ -660,14 +660,14 @@ func (Query *Query_t) setUp() {
 	}
 
 	// TODO: Change to TPs by race [Issue: https://github.com/alexgoodell/go-mdism/issues/57]
-	Query.TP_by_RAS = make(map[RASkey][]TPByRAS)
+	Query.TPs_by_RAS = make(map[RASkey][]TPByRAS)
 	for _, ras := range Inputs.TPByRASs {
 		var key RASkey
 		key.Age_state_id = ras.Age_state_id
 		key.Race_state_id = ras.Race_state_id
 		key.Sex_state_id = ras.Sex_state_id
 		key.Model_id = ras.Model_id
-		Query.TP_by_RAS[key] = append(Query.TP_by_RAS[key], ras)
+		Query.TPs_by_RAS[key] = append(Query.TPs_by_RAS[key], ras)
 	}
 
 	Query.Life_expectancy_by_sex_and_age = make(map[SexAge]float64)
