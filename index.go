@@ -211,13 +211,13 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		}
 	} // end case
 
-	fmt.Println("Used shuffle random this many times: ", randomController.getShuffleCounter(mutex))
-	fmt.Println("Used CPM random this many times: ", randomController.getCPMCounter(mutex))
-
 	removeUnborns()
 
 	fmt.Println("")
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
+
+	fmt.Println("Used shuffle random this many times: ", randomController.getShuffleCounter(mutex))
+	fmt.Println("Used CPM random this many times: ", randomController.getCPMCounter(mutex))
 
 	formatOutputs()
 
@@ -940,6 +940,7 @@ func check_sum(theseTPs []TransitionProbability) {
 
 	if !equalFloat(sum, 1.0, 0.00000001) {
 		fmt.Println("sum does not equal 1 !")
+		fmt.Printf("%+v", theseTPs)
 		os.Exit(1)
 	}
 }
