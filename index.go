@@ -88,6 +88,17 @@ func main() {
 	// records
 
 	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+
+	// table tests here
+
+	for true {
+		runInterventions()
+	}
+
+}
+
+func runInterventions() {
+
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
@@ -134,8 +145,6 @@ func main() {
 		//runModel(concurrencyBy, "Base case")
 
 	}
-
-	// table tests here
 
 }
 
@@ -227,15 +236,17 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 
 		filename := "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(output_dir+filename, Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
+		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
 	if reportingMode == "psa" {
 		randomLetters := randSeq(10)
 		filename := output_dir + "/output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + randomLetters + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
-	}
+		filename = output_dir + "/output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + randomLetters + ".csv"
 
-	toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+		toCsv(filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+	}
 
 	fmt.Println("Time elapsed, including data export:", fmt.Sprint(time.Since(beginTime)))
 
