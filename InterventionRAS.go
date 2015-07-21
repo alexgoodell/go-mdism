@@ -58,9 +58,9 @@ func interventionInitiate(Intervention Intervention) {
 
 							if Inputs.TPByRASs[eachRasLowRiskTPId].To_state_id != eachTPByRas.To_state_id && eachTPByRas.Age_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Age_state_id && eachTPByRas.Sex_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Sex_state_id && eachTPByRas.Race_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Race_state_id && eachTPByRas.Model_id == Inputs.TPByRASs[eachRasLowRiskTPId].Model_id {
 								//So now we change this probability by 1.00 - the value we set for the high risk probability
-								fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								//fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 								Inputs.TPByRASs[eachRasLowRiskTPId].Probability = 1.00 - Inputs.TPByRASs[eachTPByRas.Id].Probability
-								fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								//fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 							}
 						}
 					}
@@ -82,9 +82,9 @@ func interventionInitiate(Intervention Intervention) {
 						for _, eachRasLowRiskTP := range Inputs.TPByRASs {
 							eachRasLowRiskTPId := eachRasLowRiskTP.Id
 							if Inputs.TPByRASs[eachRasLowRiskTPId].To_state_id != eachTPByRas.To_state_id && eachTPByRas.Age_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Age_state_id && eachTPByRas.Sex_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Sex_state_id && eachTPByRas.Race_state_id == Inputs.TPByRASs[eachRasLowRiskTPId].Race_state_id && eachTPByRas.Model_id == Inputs.TPByRASs[eachRasLowRiskTPId].Model_id {
-								fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								//fmt.Println("After match2, before adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 								Inputs.TPByRASs[eachRasLowRiskTPId].Probability = 1.00 - Inputs.TPByRASs[eachTPByRas.Id].Probability
-								fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
+								//fmt.Println("After match2, after adjustment low risk: ", Inputs.TPByRASs[eachRasLowRiskTPId].Probability)
 							}
 						}
 					}
