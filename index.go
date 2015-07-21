@@ -439,20 +439,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
-	// get any interactions that will effect the transtion from
-	// the persons current states based on all states that they are
-	// in - it is a method of their current state in this model,
-	// and accepts an array of all currents states they occupy
-	interactions := currentStateInThisModel.get_relevant_interactions(states)
-
-	if len(interactions) > 0 { // if there are interactions
-		for _, interaction := range interactions { // foreach interaction
-			// apply the interactions to the transition probabilities
-			newTransitionProbabilities := adjust_transitions(transitionProbabilities, interaction, cycle, person)
-			transitionProbabilities = newTransitionProbabilities
-		} // end foreach interaction
-	} // end if there are interactions
-
 	// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
 	// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
 	//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
@@ -476,6 +462,20 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 		}
 
 	}
+
+	// get any interactions that will effect the transtion from
+	// the persons current states based on all states that they are
+	// in - it is a method of their current state in this model,
+	// and accepts an array of all currents states they occupy
+	interactions := currentStateInThisModel.get_relevant_interactions(states)
+
+	if len(interactions) > 0 { // if there are interactions
+		for _, interaction := range interactions { // foreach interaction
+			// apply the interactions to the transition probabilities
+			newTransitionProbabilities := adjust_transitions(transitionProbabilities, interaction, cycle, person)
+			transitionProbabilities = newTransitionProbabilities
+		} // end foreach interaction
+	} // end if there are interactions
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
@@ -704,15 +704,15 @@ func (Query *Query_t) setUp() {
 	}
 
 	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/51]
-	Query.interaction_id_by_in_state_and_from_state = make(map[InteractionKey][]int)
+	Query.interaction_ids_by_in_state_and_from_state = make(map[InteractionKey][]int)
 	for _, interaction := range Inputs.Interactions {
 		var interactionKey InteractionKey
 		interactionKey.From_state_id = interaction.From_state_id
 		interactionKey.In_state_id = interaction.In_state_id
-		Query.interaction_id_by_in_state_and_from_state[interactionKey] = append(Query.interaction_id_by_in_state_and_from_state[interactionKey], interaction.Id)
+		Query.interaction_ids_by_in_state_and_from_state[interactionKey] = append(Query.interaction_ids_by_in_state_and_from_state[interactionKey], interaction.Id)
 	}
 
-	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
+	//fmt.Println(Query.interaction_ids_by_in_state_and_from_state)
 
 	Query.Model_id_by_state = make([]int, len(Inputs.States), len(Inputs.States))
 

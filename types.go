@@ -97,7 +97,7 @@ type Query_t struct {
 	State_id_by_cycle_and_person_and_model         [][][]int
 	States_ids_by_cycle_and_person                 [][]int
 	Tp_ids_by_from_state                           [][]int // TODO: Change to Tp_ids_by [Issue: https://github.com/alexgoodell/go-mdism/issues/58]
-	interaction_id_by_in_state_and_from_state      map[InteractionKey][]int
+	interaction_ids_by_in_state_and_from_state     map[InteractionKey][]int
 	State_populations_by_cycle                     [][]int
 	Model_id_by_state                              []int
 	Other_death_state_by_model                     []int

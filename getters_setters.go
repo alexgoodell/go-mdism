@@ -125,7 +125,7 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 	var interactionIdsToReturn []int
 	key.In_state_id = inState.Id
 	key.From_state_id = fromState.Id
-	interactionIds := Query.interaction_id_by_in_state_and_from_state[key]
+	interactionIds := Query.interaction_ids_by_in_state_and_from_state[key]
 	for _, interactionId := range interactionIds {
 		interaction := &Inputs.Interactions[interactionId]
 		if interaction.From_state_id == fromState.Id && interaction.In_state_id == inState.Id {
