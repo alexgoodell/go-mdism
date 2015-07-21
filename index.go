@@ -229,8 +229,6 @@ func initializeMasterRecords() {
 func formatOutputs() {
 
 	for _, masterRecord := range Inputs.MasterRecords {
-		//TODO: Remove state populations set up, output by cycle state is replacing [Issue: https://github.com/alexgoodell/go-mdism/issues/47]
-		Query.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 
 		var oldStateId int
 		if masterRecord.Cycle_id > 0 {
@@ -304,25 +302,6 @@ func formatOutputs() {
 			}
 		}
 	}
-
-	// for s, statePopulation := range GlobalStatePopulations {
-	// 	GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
-	// }
-
-	// for PSA reporting
-
-	// Steatosis_prev       int
-	// NASH_prev            int
-	// Cirrhosis_prev       int
-	// HCC_prev             int
-	// Liver_death_prev     int
-	// Natural_death_prev   int
-	// CHD_prev             int
-	// CHD_death_prev       int
-	// T2DM_prev            int
-	// T2DM_death_prev      int
-	// Overweight_prev      int
-	// Obese_prev           int
 
 }
 
@@ -633,7 +612,6 @@ func (Query *Query_t) setUp() {
 		Query.Tp_ids_by_from_state[i] = tPIdsToReturn
 	}
 
-	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/51]
 	Query.interaction_ids_by_in_state_and_from_state = make(map[InteractionKey][]int)
 	for _, interaction := range Inputs.Interactions {
 		var interactionKey InteractionKey
@@ -648,15 +626,6 @@ func (Query *Query_t) setUp() {
 
 	for _, state := range Inputs.States {
 		Query.Model_id_by_state[state.Id] = state.Model_id
-	}
-
-	/* TODO  Fix the cycle system. We actually end up storing len(Cycles)+1 cycles,
-	because we start on 0 and calculate the cycle ahead of us, so if we have
-	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
-
-	Query.State_populations_by_cycle = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
-	for c := 0; c < numberOfCalculatedCycles; c++ {
-		Query.State_populations_by_cycle[c] = make([]int, len(Inputs.States), len(Inputs.States))
 	}
 
 	// ############## Other death state by model id ##################
