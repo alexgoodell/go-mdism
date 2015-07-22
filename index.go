@@ -109,7 +109,7 @@ func runInterventions() {
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
-	reportingMode = "psa"
+	reportingMode = "individual"
 	randId := 0
 
 	switch isRunIntervention {
@@ -241,9 +241,10 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
-		filename := "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
+		filename := "/other" + "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(output_dir+filename, Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
-		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+		filename = "/events" + "/output_by_cycle_" + strconv.Itoa(interventionId) + ".csv"
+		toCsv(output_dir+filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
 	if reportingMode == "psa" {
@@ -910,11 +911,11 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 
 		timeEffectByToState := make([]float64, 15, 15)
 		if actualAge >= 20 && actualAge <= 30 {
-			timeEffectByToState[8] = 1.000 //natural deaths
+			timeEffectByToState[8] = Inputs.RegressionRates[2].Regression_rate //natural deaths
 		} else if actualAge > 30 && actualAge <= 55 {
-			timeEffectByToState[8] = 0.980
+			timeEffectByToState[8] = Inputs.RegressionRates[3].Regression_rate
 		} else if actualAge > 55 {
-			timeEffectByToState[8] = 0.970
+			timeEffectByToState[8] = Inputs.RegressionRates[4].Regression_rate
 		} else {
 			fmt.Println("Cannot determine regression rate of natural mortality ", timeEffectByToState[8])
 			os.Exit(1)

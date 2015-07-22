@@ -83,7 +83,6 @@ type DisabilityWeight struct {
 
 type RegressionRate struct {
 	Id              int
-	From_state      int
 	To_state        int
 	Age_low         int
 	Age_high        int
