@@ -125,7 +125,7 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 	var interactionIdsToReturn []int
 	key.In_state_id = inState.Id
 	key.From_state_id = fromState.Id
-	interactionIds := Query.interaction_id_by_in_state_and_from_state[key]
+	interactionIds := Query.interaction_ids_by_in_state_and_from_state[key]
 	for _, interactionId := range interactionIds {
 		interaction := &Inputs.Interactions[interactionId]
 		if interaction.From_state_id == fromState.Id && interaction.In_state_id == inState.Id {
@@ -142,16 +142,18 @@ func (Query *Query_t) getInteractionIds(inState State, fromState State) []int {
 }
 
 // TODO: change to getTpsByRAS [Issue: https://github.com/alexgoodell/go-mdism/issues/54]
-func (Query *Query_t) getTpByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
+func (Query *Query_t) getTpsByRAS(raceState State, ageState State, sexState State, model Model) []TPByRAS {
 	var key RASkey
 	key.Age_state_id = ageState.Id
 	key.Race_state_id = raceState.Id
 	key.Sex_state_id = sexState.Id
 	key.Model_id = model.Id
-	RASs := Query.TP_by_RAS[key]
+	RASs := Query.TPs_by_RAS[key]
 
-	// TODO: add checker function to make sure you're actually returning something! [Issue: https://github.com/alexgoodell/go-mdism/issues/55]
-
+	if len(RASs) < 1 {
+		fmt.Println("No ras found")
+		os.Exit(1)
+	}
 	// if ras.Model_id != model.Id || ras.Age+22 != ageState.Id || ras.Race_state_id != raceState.Id || ras.Sex_state_id != sexState.Id {
 	// 	fmt.Println("cannot find by RAS")
 	// 	os.Exit(1)

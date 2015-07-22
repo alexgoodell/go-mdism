@@ -9,23 +9,21 @@ package main
 
 import (
 	// "encoding/json"
-	"flag"
+
 	"fmt"
 	"sync"
 	//"github.com/alexgoodell/go-mdism/modules/sugar"
 	//"io"
 	// 	"net/http"
 	"encoding/csv"
+	"github.com/cheggaaa/pb"
+	"github.com/davecheney/profile"
+	"github.com/mgutz/ansi"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"reflect"
-	"runtime"
-
-	"github.com/cheggaaa/pb"
-	"github.com/davecheney/profile"
-	//"github.com/mgutz/ansi"
 	// "runtime/pprof"
 	"hash/fnv"
 	"strconv"
@@ -109,7 +107,9 @@ func runInterventions() {
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
+
 	reportingMode = "individual"
+
 	randId := 0
 
 	switch isRunIntervention {
@@ -237,7 +237,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 
 	formatOutputs()
 
-	if reportingMode == "individual" {
+	if runType == "single" {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
@@ -247,7 +247,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		toCsv(output_dir+filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
-	if reportingMode == "psa" {
+	if runType == "psa" {
 
 		filename := output_dir + "/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
@@ -300,8 +300,6 @@ func initializeMasterRecords() {
 func formatOutputs() {
 
 	for _, masterRecord := range Inputs.MasterRecords {
-		//TODO: Remove state populations set up, output by cycle state is replacing [Issue: https://github.com/alexgoodell/go-mdism/issues/47]
-		Query.State_populations_by_cycle[masterRecord.Cycle_id][masterRecord.State_id] += 1
 
 		var oldStateId int
 		if masterRecord.Cycle_id > 0 {
@@ -375,25 +373,6 @@ func formatOutputs() {
 			}
 		}
 	}
-
-	// for s, statePopulation := range GlobalStatePopulations {
-	// 	GlobalStatePopulations[s].Population = Query.State_populations_by_cycle[statePopulation.Cycle_id][statePopulation.State_id]
-	// }
-
-	// for PSA reporting
-
-	// Steatosis_prev       int
-	// NASH_prev            int
-	// Cirrhosis_prev       int
-	// HCC_prev             int
-	// Liver_death_prev     int
-	// Natural_death_prev   int
-	// CHD_prev             int
-	// CHD_death_prev       int
-	// T2DM_prev            int
-	// T2DM_death_prev      int
-	// Overweight_prev      int
-	// Obese_prev           int
 
 }
 
@@ -475,13 +454,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 	} // end if there are interactions
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
-
-	// if cycle.Id > 2 { // TODO: FIX THIS! [Issue: https://github.com/alexgoodell/go-mdism/issues/56]
-	// 	Inputs.TransitionProbabilities[115].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * 0.985
-	// 	Inputs.TransitionProbabilities[122].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * 0.979
-	// 	Inputs.TransitionProbabilities[114].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base
-	// 	Inputs.TransitionProbabilities[121].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base
-	// }
 
 	// using  final transition probabilities, assign new state to person
 	new_state := pickState(transitionProbabilities, random)
@@ -657,14 +629,14 @@ func (Query *Query_t) setUp() {
 	}
 
 	// TODO: Change to TPs by race [Issue: https://github.com/alexgoodell/go-mdism/issues/57]
-	Query.TP_by_RAS = make(map[RASkey][]TPByRAS)
+	Query.TPs_by_RAS = make(map[RASkey][]TPByRAS)
 	for _, ras := range Inputs.TPByRASs {
 		var key RASkey
 		key.Age_state_id = ras.Age_state_id
 		key.Race_state_id = ras.Race_state_id
 		key.Sex_state_id = ras.Sex_state_id
 		key.Model_id = ras.Model_id
-		Query.TP_by_RAS[key] = append(Query.TP_by_RAS[key], ras)
+		Query.TPs_by_RAS[key] = append(Query.TPs_by_RAS[key], ras)
 	}
 
 	Query.Life_expectancy_by_sex_and_age = make(map[SexAge]float64)
@@ -707,30 +679,20 @@ func (Query *Query_t) setUp() {
 		Query.Tp_ids_by_from_state[i] = tPIdsToReturn
 	}
 
-	// TODO: Change name to interaction ids [Issue: https://github.com/alexgoodell/go-mdism/issues/51]
-	Query.interaction_id_by_in_state_and_from_state = make(map[InteractionKey][]int)
+	Query.interaction_ids_by_in_state_and_from_state = make(map[InteractionKey][]int)
 	for _, interaction := range Inputs.Interactions {
 		var interactionKey InteractionKey
 		interactionKey.From_state_id = interaction.From_state_id
 		interactionKey.In_state_id = interaction.In_state_id
-		Query.interaction_id_by_in_state_and_from_state[interactionKey] = append(Query.interaction_id_by_in_state_and_from_state[interactionKey], interaction.Id)
+		Query.interaction_ids_by_in_state_and_from_state[interactionKey] = append(Query.interaction_ids_by_in_state_and_from_state[interactionKey], interaction.Id)
 	}
 
-	//fmt.Println(Query.interaction_id_by_in_state_and_from_state)
+	//fmt.Println(Query.interaction_ids_by_in_state_and_from_state)
 
 	Query.Model_id_by_state = make([]int, len(Inputs.States), len(Inputs.States))
 
 	for _, state := range Inputs.States {
 		Query.Model_id_by_state[state.Id] = state.Model_id
-	}
-
-	/* TODO  Fix the cycle system. We actually end up storing len(Cycles)+1 cycles,
-	because we start on 0 and calculate the cycle ahead of us, so if we have
-	up to cycle 19 in the inputs, we will calculate 0-19, as well as cycle 20 */
-
-	Query.State_populations_by_cycle = make([][]int, numberOfCalculatedCycles, numberOfCalculatedCycles)
-	for c := 0; c < numberOfCalculatedCycles; c++ {
-		Query.State_populations_by_cycle[c] = make([]int, len(Inputs.States), len(Inputs.States))
 	}
 
 	// ############## Other death state by model id ##################
@@ -1208,7 +1170,7 @@ func getTransitionProbByRAS(currentStateInThisModel State, states []State, perso
 		ageState = Query.getStateByName("Age of 20")
 	}
 
-	RASs := Query.getTpByRAS(raceState, ageState, sexState, model)
+	RASs := Query.getTpsByRAS(raceState, ageState, sexState, model)
 
 	for _, ras := range RASs {
 		var newTp TransitionProbability

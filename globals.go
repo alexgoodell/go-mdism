@@ -26,7 +26,7 @@ var numberOfPeopleEntering int
 
 var inputsPath string
 var isProfile string
-var reportingMode string
+var runType string
 
 var Inputs Input
 var Outputs Output

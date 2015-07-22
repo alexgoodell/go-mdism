@@ -12,20 +12,20 @@ import (
 // Add this code to the 'InitializeInputs' function:
 // ####################### PSA inputs #######################
 
-func generateNewValue(psaInput PsaInput) float64 {
+func generateNewValue(psaInput PsaInput, betaGen *rng.BetaGenerator, gammaGen *rng.GammaGenerator) float64 {
 	var valueToReturn float64
 	switch psaInput.Distribution {
 
 	case "beta":
-		betaGen := rng.NewBetaGenerator(time.Now().UnixNano()) // seed the generator
+
 		valueToReturn = betaGen.Beta(psaInput.Alpha, psaInput.Beta)
 
 	case "gamma":
-		gammaGen := rng.NewGammaGenerator(time.Now().UnixNano()) // seed the generator
+
 		valueToReturn = gammaGen.Gamma(psaInput.Alpha, psaInput.Beta)
 
 	case "normal":
-		rand.Seed(time.Now().UnixNano()) // seed the generator -> Do we need to do this again? ALEX
+
 		valueToReturn = psaInput.Mean + psaInput.SD*rand.NormFloat64()
 
 	case "none":
@@ -40,11 +40,18 @@ func generateNewValue(psaInput PsaInput) float64 {
 }
 
 func generateAllPsaValues() {
+
 	//fmt.Print("Generating PSA values...")
+
+	betaGen := rng.NewBetaGenerator(time.Now().UnixNano())   // seed the generator
+	gammaGen := rng.NewGammaGenerator(time.Now().UnixNano()) // seed the generator
+	rand.Seed(time.Now().UnixNano())                         // seed the generator -> Do we need to do this again? ALEX
+
+	fmt.Print("Generating PSA values...")
 	for i := 0; i < len(Inputs.PsaInputs); i++ {
 		psaInputPtr := &Inputs.PsaInputs[i]
 		psaInput := Inputs.PsaInputs[i]
-		psaInputPtr.Value = generateNewValue(psaInput)
+		psaInputPtr.Value = generateNewValue(psaInput, betaGen, gammaGen)
 	}
 	//fmt.Print("complete.")
 
@@ -167,7 +174,7 @@ func runPsa() {
 
 		sumThisModel := 0.0
 
-		relevantRASs := Query.getTpByRAS(raceState, ageState, sexState, model)
+		relevantRASs := Query.getTpsByRAS(raceState, ageState, sexState, model)
 
 		for _, relevantRAS := range relevantRASs {
 			if !relevantRAS.No_disease_state {
