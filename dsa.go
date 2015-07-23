@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
 
-	"github.com/leesper/go_rng" //imported as rng
+	//imported as rng
 )
 
 func runNewDsaValue(variableCount int, withinVariableCount int) {
 	//I want to keep track of how many iterations he has done, and how many with the same variable as DSA.
 
+	fmt.Println("variableCount: ", variableCount)
+	fmt.Println("withinVariableCount: ", withinVariableCount)
 	switch withinVariableCount {
 	case 1:
 		//fmt.Print("Generating DSA values...")

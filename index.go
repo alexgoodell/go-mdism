@@ -16,6 +16,7 @@ import (
 	//"io"
 	// 	"net/http"
 	"encoding/csv"
+
 	"github.com/cheggaaa/pb"
 	//"github.com/davecheney/profile"
 	//"github.com/mgutz/ansi"
@@ -247,7 +248,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		toCsv(output_dir+filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
-	if runType == "psa" {
+	if runType == "psa" || runType == "dsa" {
 
 		filename := output_dir + "/otherPSA/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
