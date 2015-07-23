@@ -16,14 +16,14 @@ import (
 	//"io"
 	// 	"net/http"
 	"encoding/csv"
+	"github.com/cheggaaa/pb"
+	//"github.com/davecheney/profile"
+	//"github.com/mgutz/ansi"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"reflect"
-
-	"github.com/cheggaaa/pb"
-	"github.com/mgutz/ansi"
 	// "runtime/pprof"
 	"hash/fnv"
 	"strconv"
@@ -33,6 +33,73 @@ import (
 var interventionId int
 var randomController RandomController_t
 
+// func main() {
+
+// 	show_greeting()
+
+// 	flag.IntVar(&numberOfPeopleStarting, "people", 22400, "number of people to run")
+// 	flag.IntVar(&numberOfIterations, "iterations", 1, "number times to run")
+// 	// TODO: index error if number of people entering is <15000 [Issue: https://github.com/alexgoodell/go-mdism/issues/33]
+// 	flag.IntVar(&numberOfPeopleEnteringPerYear, "entering", 416, "number of people that will enter the run(s)")
+// 	flag.StringVar(&inputsPath, "inputs", "example", "folder that stores input csvs")
+// 	flag.StringVar(&isProfile, "profile", "false", "cpu, mem, or false")
+// 	flag.Parse()
+
+// 	if isProfile != "false" {
+// 		fmt.Println("Enabling profiler")
+
+// 		if isProfile == "cpu" {
+// 			cfg := profile.Config{
+// 				ProfilePath: ".", // store profiles in current directory
+// 				CPUProfile:  true,
+// 			}
+// 			defer profile.Start(&cfg).Stop()
+// 		} else if isProfile == "mem" {
+// 			cfg := profile.Config{
+// 				ProfilePath: ".", // store profiles in current directory
+// 				MemProfile:  true,
+// 			}
+// 			defer profile.Start(&cfg).Stop()
+// 		}
+// 	}
+
+// 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+// 	//fmt.Println("using ", runtime.NumCPU(), " cores")
+// 	// Seed the random function
+
+// 	// TODO: remove hardcoded cycles [Issue: https://github.com/alexgoodell/go-mdism/issues/40]
+// 	numberOfPeopleEntering = numberOfPeopleEnteringPerYear * (26 + 1)
+// 	numberOfPeople = numberOfPeopleEntering + numberOfPeopleStarting
+
+// 	fmt.Println("and ", numberOfPeopleStarting, "initial individuals")
+// 	fmt.Println("and ", numberOfPeopleEntering, "individuals entering")
+// 	fmt.Println("and ", numberOfIterations, "iterations")
+// 	//fmt.Println("and ", inputsPath, " as inputs")
+
+// 	initializeInputs(inputsPath)
+// 	Query.setUp()
+// 	generateAllPsaValues()
+// 	//runPsa()
+
+// 	// create people will generate individuals and add their data to the master
+// 	// records
+
+// 	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+
+// 	// table tests here
+
+// 	//for true {
+// 	initializeInputs(inputsPath)
+// 	Query.setUp()
+// 	generateAllPsaValues()
+// 	//runPsa()
+// 	randomLetters = randSeq(10)
+// 	runInterventions()
+// 	//}
+
+// }
+
 var randomLetters string
 
 func runInterventions() {
@@ -40,6 +107,9 @@ func runInterventions() {
 	concurrencyBy := "person-within-cycle"
 
 	isRunIntervention := true
+
+	//reportingMode = "individual"
+
 	randId := 0
 
 	switch isRunIntervention {
@@ -67,13 +137,13 @@ func runInterventions() {
 			}
 			randomController.resetCounters()
 
-			fmt.Println("Using this many people: ", len(Inputs.People))
+			//fmt.Println("Using this many people: ", len(Inputs.People))
 
 			count = 0
 
 			runModel(concurrencyBy, eachIntervention.Name, randId)
 
-			fmt.Println("count is", count)
+			//fmt.Println("count is", count)
 
 		}
 
@@ -92,7 +162,7 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 	var mutex = &sync.Mutex{}
 
 	msg := "Running " + interventionName + " simulation..."
-	msg = ansi.Color(msg, "red+bh")
+	//msg = ansi.Color(msg, "red+bh")
 
 	fmt.Println("")
 	fmt.Println(msg)
@@ -162,8 +232,8 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 	fmt.Println("")
 	fmt.Println("Time elapsed, excluding data import and export:", fmt.Sprint(time.Since(beginTime)))
 
-	fmt.Println("Used shuffle random this many times: ", randomController.getShuffleCounter(mutex))
-	fmt.Println("Used CPM random this many times: ", randomController.getCPMCounter(mutex))
+	//fmt.Println("Used shuffle random this many times: ", randomController.getShuffleCounter(mutex))
+	//fmt.Println("Used CPM random this many times: ", randomController.getCPMCounter(mutex))
 
 	formatOutputs()
 
@@ -171,17 +241,18 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		// toCsv(output_dir+"/master.csv", Inputs.MasterRecords[0], Inputs.MasterRecords)
 		//toCsv("output"+"/state_populations.csv", GlobalStatePopulations[0], GlobalStatePopulations)
 
-		filename := "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
+		filename := "/other" + "/output_by_cycle_and_state_full_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(output_dir+filename, Outputs.OutputsByCycleStateFull[0], Outputs.OutputsByCycleStateFull)
-		toCsv(output_dir+"/output_by_cycle.csv", Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+		filename = "/events" + "/output_by_cycle_" + strconv.Itoa(interventionId) + ".csv"
+		toCsv(output_dir+filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
 	if runType == "psa" {
 
-		filename := output_dir + "/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
+		filename := output_dir + "/otherPSA/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
 
-		filename = output_dir + "/" + randomLetters + "_output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
+		filename = output_dir + "/eventsPSA/" + randomLetters + "_output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
@@ -348,10 +419,6 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 
 	check_sum(transitionProbabilities) // will throw error if sum isn't 1
 
-	// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
-	// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
-	//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
-	//times if there was more than 1 interaction.
 	if cycle.Id > 2 {
 		y := float64(cycle.Id - 2)
 
@@ -359,13 +426,13 @@ func runCyclePersonModel(cycle Cycle, model Model, person Person, mutex *sync.Mu
 			switch transitionProbabilities[q].Id {
 
 			case 115:
-				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * math.Pow(0.985, y)
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[115].Tp_base * math.Pow(Inputs.RegressionRates[0].Regression_rate, y)
 			case 122:
-				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * math.Pow(0.979, y)
+				transitionProbabilities[q].Tp_base = Inputs.TransitionProbabilities[122].Tp_base * math.Pow(Inputs.RegressionRates[1].Regression_rate, y)
 			case 114:
-				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base*math.Pow(0.985, y)
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[115].Tp_base*math.Pow(Inputs.RegressionRates[0].Regression_rate, y)
 			case 121:
-				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base*math.Pow(0.979, y)
+				transitionProbabilities[q].Tp_base = 1 - Inputs.TransitionProbabilities[122].Tp_base*math.Pow(Inputs.RegressionRates[1].Regression_rate, y)
 
 			}
 		}
@@ -785,9 +852,15 @@ func createInitialPeople(Inputs Input) Input {
 func adjust_transitions(theseTPs []TransitionProbability, interaction Interaction, cycle Cycle, person Person) []TransitionProbability {
 
 	adjustmentFactor := interaction.Adjustment
+	//fmt.Println("AdjFact from specific interaction", adjustmentFactor)
 	/*if person.Id == 20000 && cycle.Id == 10 {
 		fmt.Println(adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
 	}*/
+	// Alex: please check this; I have added the regression of the baseline TP's of CHD incidence and mortality.
+	// I did this by adjusting the initial baseline TP by the set factor for each concomitant cycle.
+	//Moved them here, to be calculated per cycle, because in CyclePersonModel, they would get discounted multiple
+	//times if there was more than 1 interaction.
+
 	// TODO Implement hooks
 	// this adjusts a few transition probabilities which have a projected change over time
 	if cycle.Id > 2 && interaction.To_state_id == 8 {
@@ -800,16 +873,17 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 
 		timeEffectByToState := make([]float64, 15, 15)
 		if actualAge >= 20 && actualAge <= 30 {
-			timeEffectByToState[8] = 1.000 //natural deaths
+			timeEffectByToState[8] = Inputs.RegressionRates[2].Regression_rate //natural deaths
 		} else if actualAge > 30 && actualAge <= 55 {
-			timeEffectByToState[8] = 0.980
+			timeEffectByToState[8] = Inputs.RegressionRates[3].Regression_rate
 		} else if actualAge > 55 {
-			timeEffectByToState[8] = 0.970
+			timeEffectByToState[8] = Inputs.RegressionRates[4].Regression_rate
 		} else {
 			fmt.Println("Cannot determine regression rate of natural mortality ", timeEffectByToState[8])
 			os.Exit(1)
 		}
 		adjustmentFactor = adjustmentFactor * math.Pow(timeEffectByToState[interaction.To_state_id], float64(cycle.Id-2))
+		//fmt.Println("AdjFact after natural mort regress", adjustmentFactor)
 		//if person.Id == 20000 && cycle.Id == 10 {
 		//	fmt.Println("After Regression", adjustmentFactor, interaction.To_state_id, interaction.In_state_id)
 		//}
@@ -831,7 +905,9 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 	// it currently sums to, and make a new adjustment factor. We can then
 	// adjust every transition probability by that amount.
 	sum := get_sum(theseTPs)
+	//fmt.Println("sum of all TPs after adjusting this interaction", sum)
 	remain := sum - 1.0
+	//fmt.Println("What remains after subtracting 1.0 from the sum", remain)
 
 	var recursiveTp float64
 	for i, _ := range theseTPs {
@@ -990,7 +1066,7 @@ func getNumberOfRecords(filename string) int {
 // adapted from http://stackoverflow.com/questions/20768511/unmarshal-csv-record-into-struct-in-go
 func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []interface{} {
 
-	fmt.Println("Beginning import process from ", filename)
+	//fmt.Println("Beginning import process from ", filename)
 
 	//open file
 	csvFile, err := os.Open(filename)
@@ -1061,7 +1137,7 @@ func fromCsv(filename string, record interface{}, recordPtrs []interface{}) []in
 
 func removeUnborns() {
 
-	print("Removing unborn ... ")
+	//print("Removing unborn ... ")
 	i := 0
 	masterRecordsToReturn := make([]MasterRecord, len(Inputs.MasterRecords), len(Inputs.MasterRecords))
 	for p, _ := range Inputs.MasterRecords {
@@ -1071,7 +1147,7 @@ func removeUnborns() {
 		}
 	}
 	Inputs.MasterRecords = masterRecordsToReturn[:i]
-	printComplete()
+	//printComplete()
 }
 
 func getTransitionProbByRAS(currentStateInThisModel State, states []State, person Person, cycle Cycle) []TransitionProbability {

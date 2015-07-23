@@ -40,6 +40,9 @@ func generateNewValue(psaInput PsaInput, betaGen *rng.BetaGenerator, gammaGen *r
 }
 
 func generateAllPsaValues() {
+
+	//fmt.Print("Generating PSA values...")
+
 	betaGen := rng.NewBetaGenerator(time.Now().UnixNano())   // seed the generator
 	gammaGen := rng.NewGammaGenerator(time.Now().UnixNano()) // seed the generator
 	rand.Seed(time.Now().UnixNano())                         // seed the generator -> Do we need to do this again? ALEX
@@ -50,15 +53,15 @@ func generateAllPsaValues() {
 		psaInput := Inputs.PsaInputs[i]
 		psaInputPtr.Value = generateNewValue(psaInput, betaGen, gammaGen)
 	}
-	fmt.Print("complete.")
+	//fmt.Print("complete.")
 
 }
 
 func runPsa() {
 
-	fmt.Println("here one")
-	fmt.Println()
-	fmt.Print("Setting PSA into inputs...")
+	//fmt.Println("here one")
+	//fmt.Println()
+	//fmt.Print("Setting PSA into inputs...")
 	for i := 0; i < len(Inputs.PsaInputs); i++ {
 		psaInput := Inputs.PsaInputs[i]
 		inputFile := psaInput.Input_file
@@ -107,15 +110,14 @@ func runPsa() {
 				}
 			}
 
-		// case "regression-rates":
+		case "regression-rates":
 
-		// 	for p := 0; p < len(Inputs.RegressionRates); p++ {
-		// 		regressionrate := Inputs.RegressionRates[p]
-		// 		if regressionrate.Psa_id == psaInput.Id && regressionrate.Psa_id != 0 {
-		// 			newValue := generateNewValue(psaInput)
-		// 			regressionrate.Regression_rate = newValue
-		// 		}
-		// 	}
+			for p := 0; p < len(Inputs.RegressionRates); p++ {
+				regressionrate := &Inputs.RegressionRates[p]
+				if regressionrate.Psa_id == psaInput.Id && regressionrate.Psa_id != 0 {
+					regressionrate.Regression_rate = psaInput.Value
+				}
+			}
 
 		case "ras":
 
@@ -244,6 +246,6 @@ func runPsa() {
 
 		//Some checks here? Check_sum?
 	}
-	fmt.Print("complete.")
-	fmt.Println()
+	//fmt.Print("complete.")
+	//fmt.Println()
 }
