@@ -144,6 +144,7 @@ type Input struct {
 	InterventionValues      []InterventionValue
 	RegressionRates         []RegressionRate
 	PsaInputs               []PsaInput
+	DsaInputs               []DsaInput
 }
 
 type TPByRAS struct {
@@ -184,6 +185,19 @@ type PsaInput struct {
 	SD           float64
 	Alpha        float64
 	Beta         float64
+	Value        float64
+}
+
+type DsaInput struct {
+	Id           int
+	Variable     string
+	Input_file   string
+	Distribution string
+	Run1         float64
+	Run2         float64
+	Run3         float64
+	Run4         float64
+	Run5         float64
 	Value        float64
 }
 

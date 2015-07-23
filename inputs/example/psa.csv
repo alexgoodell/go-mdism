@@ -1,11 +1,11 @@
 Id,Variable,Input_file,Distribution,Min,Max,Mean,SD,Alpha,Beta,Value
 0,Not varied in PSA,All,none,0,0,0,0,0,0,0
-1,DALY value for T2D,disability-weights,beta,0.0165,0.066,0.033,0.012375,6.843444444,200.5336599,0
-2,DALY value for CHD,disability-weights,beta,0.043,0.095,0.066,0.013,24.00798817,339.7494083,0
-3,DALY value for Obesity,disability-weights,beta,0.001,0.022,0.012,0.00525,5.149795918,423.9998639,0
-4,DALY value for NASH,disability-weights,beta,0.08,0.22,0.15,0.035,15.4622449,87.61938776,0
-5,DALY value for Cirrhosis,disability-weights,beta,0.127,0.273,0.194,0.0365,22.57546219,93.79289961,0
-6,DALY value for HCC,disability-weights,beta,0.199,0.411,0.294,0.053,21.4303916,51.46209683,0
+1,DALY value for T2D,disability-weights,beta,0.0264,0.0462,0.033,0.00495,42.94477778,1258.412125,0
+2,DALY value for CHD,disability-weights,beta,0.0528,0.0924,0.066,0.0099,41.44511111,586.5111178,0
+3,DALY value for Obesity,disability-weights,beta,0.0096,0.0168,0.012,0.0018,43.89911111,3614.360148,0
+4,DALY value for NASH,disability-weights,beta,0.12,0.21,0.15,0.0225,37.62777778,213.2240741,0
+5,DALY value for Cirrhosis,disability-weights,beta,0.1552,0.2716,0.194,0.0291,35.62822222,148.0224078,0
+6,DALY value for HCC,disability-weights,beta,0.2352,0.4116,0.294,0.0441,31.08377778,74.64335752,0
 7,Yearly direct costs for Steatosis,costs,gamma,67,268,134,50.25,7.111111111,18.84375,0
 8,Yearly direct costs for NASH,costs,gamma,133.5,534,267,100.125,7.111111111,37.546875,0
 9,Yearly direct costs for Cirrhosis,costs,gamma,1430.5,5722,2861,1072.875,7.111111111,402.328125,0
@@ -14,30 +14,30 @@ Id,Variable,Input_file,Distribution,Min,Max,Mean,SD,Alpha,Beta,Value
 12,Yearly direct costs for T2D,costs,gamma,4085,16340,8170,3063.75,7.111111111,1148.90625,0
 13,Yearly direct costs for Overweight,costs,gamma,171.5,686,343,128.625,7.111111111,48.234375,0
 14,Yearly direct costs for Obesity,costs,gamma,458,1832,916,343.5,7.111111111,128.8125,0
-15,Baseline TP NAFLD: non-NAFLD -> steatosis,transition-probabilities,beta,0.0067,0.015,0.01,0.002075,22.98317753,2275.334575,0
-16,Baseline TP NAFLD: non-NAFLD -> NASH,transition-probabilities,beta,0.000201,0.00045,0.0003,0.00006225,23.21816422,77370.66256,0
-17,Baseline TP NAFLD: each NAFLD state -> natural death,transition-probabilities,beta,0.0067,0.015,0.01,0.002075,22.98317753,2275.334575,0
-18,Baseline TP NAFLD: steatosis -> non-NAFLD,transition-probabilities,beta,0.0134,0.03,0.02,0.00415,22.74092321,1114.305237,0
-19,Baseline TP NAFLD: steatosis -> NASH,transition-probabilities,beta,0.00402,0.009,0.006,0.001245,23.08007926,3823.599797,0
-20,Baseline TP NAFLD: steatosis -> cirrhosis,transition-probabilities,beta,0.000134,0.0003,0.0002,0.0000415,23.22058676,116079.7132,0
-21,Baseline TP NAFLD: NASH -> non-NAFLD,transition-probabilities,beta,0.00067,0.0015,0.001,0.0002075,23.20120642,23178.00521,0
-22,Baseline TP NAFLD: NASH -> steatosis,transition-probabilities,beta,0.0134,0.03,0.02,0.00415,22.74092321,1114.305237,0
-23,Baseline TP NAFLD: NASH -> cirrhosis,transition-probabilities,beta,0.00134,0.003,0.002,0.000415,23.17698098,11565.31351,0
-24,Baseline TP NAFLD: NASH -> HCC,transition-probabilities,beta,0.000067,0.00015,0.0001,0.00002075,23.2230093,232206.87,0
-25,Baseline TP NAFLD: NASH -> Liver death,transition-probabilities,beta,0.002546,0.0057,0.0038,0.0007885,23.13337521,6064.596942,0
-26,Baseline TP NAFLD: cirrhosis -> HCC,transition-probabilities,beta,0.0134,0.03,0.02,0.00415,22.74092321,1114.305237,0
-27,Baseline TP NAFLD: cirrhosis -> Liver death,transition-probabilities,beta,0.02278,0.051,0.034,0.007055,22.40176717,636.4737377,0
-28,Baseline TP NAFLD: HCC -> Liver death,transition-probabilities,beta,0.335,0.75,0.5,0.10375,11.11271592,11.11271592,0
-29,Baseline TP CHD: Non-CHD -> CHD,transition-probabilities,beta,0.0028475,0.006375,0.00425,0.000881875,23.12247376,5417.459588,0
-30,Baseline TP CHD: CHD -> CHD death,transition-probabilities,beta,0.0067,0.015,0.01,0.002075,22.98317753,2275.334575,0
-31,Baseline TP T2D: non-T2D -> T2D,transition-probabilities,beta,0.00335,0.0075,0.005,0.0010375,23.10430469,4597.756633,0
-32,Baseline TP T2D: T2D -> T2D death,transition-probabilities,beta,0.0067,0.015,0.01,0.002075,22.98317753,2275.334575,0
-33,Baseline transition BMI: Healthy -> overweight,transition-probabilities,beta,0.0335,0.075,0.05,0.010375,22.01416026,418.2690449,0
-34,Baseline transition BMI: Healthy -> Obese,transition-probabilities,beta,0.00402,0.009,0.006,0.001245,23.08007926,3823.599797,0
-35,Baseline transition BMI: Overweight -> Healthy,transition-probabilities,beta,0.0335,0.075,0.05,0.010375,22.01416026,418.2690449,0
-36,Baseline transition BMI: Overweight -> Obese,transition-probabilities,beta,0.01206,0.027,0.018,0.003735,22.78937407,1243.286963,0
-37,Baseline transition BMI: Obese-> Healthy,transition-probabilities,beta,0.00402,0.009,0.006,0.001245,23.08007926,3823.599797,0
-38,Baseline transition BMI: Obese -> overweight,transition-probabilities,beta,0.02345,0.0525,0.035,0.0072625,22.37754173,616.9807935,0
+15,Baseline TP NAFLD: non-NAFLD -> steatosis,transition-probabilities,beta,0.008,0.014,0.01,0.0015,43.99,4355.01,0
+16,Baseline TP NAFLD: non-NAFLD -> NASH,transition-probabilities,beta,0.00024,0.00042,0.0003,0.000045,44.43081111,148058.2729,0
+17,Baseline TP NAFLD: each NAFLD state -> natural death,transition-probabilities,beta,0.008,0.014,0.01,0.0015,43.99,4355.01,0
+18,Baseline TP NAFLD: steatosis -> non-NAFLD,transition-probabilities,beta,0.016,0.028,0.02,0.003,43.53555556,2133.242222,0
+19,Baseline TP NAFLD: steatosis -> NASH,transition-probabilities,beta,0.0048,0.0084,0.006,0.0009,44.17177778,7317.791185,0
+20,Baseline TP NAFLD: steatosis -> cirrhosis,transition-probabilities,beta,0.00016,0.00028,0.0002,0.00003,44.43535556,222132.3424,0
+21,Baseline TP NAFLD: NASH -> non-NAFLD,transition-probabilities,beta,0.0008,0.0014,0.001,0.00015,44.399,44354.601,0
+22,Baseline TP NAFLD: NASH -> steatosis,transition-probabilities,beta,0.016,0.028,0.02,0.003,43.53555556,2133.242222,0
+23,Baseline TP NAFLD: NASH -> cirrhosis,transition-probabilities,beta,0.0016,0.0028,0.002,0.0003,44.35355556,22132.42422,0
+24,Baseline TP NAFLD: NASH -> HCC,transition-probabilities,beta,0.00008,0.00014,0.0001,0.000015,44.4399,444354.5601,0
+25,Baseline TP NAFLD: NASH -> Liver death,transition-probabilities,beta,0.00304,0.00532,0.0038,0.00057,44.27175556,11606.19023,0
+26,Baseline TP NAFLD: cirrhosis -> HCC,transition-probabilities,beta,0.016,0.028,0.02,0.003,43.53555556,2133.242222,0
+27,Baseline TP NAFLD: cirrhosis -> Liver death,transition-probabilities,beta,0.0272,0.0476,0.034,0.0051,42.89933333,1218.845765,0
+28,Baseline TP NAFLD: HCC -> Liver death,transition-probabilities,beta,0.4,0.7,0.5,0.075,21.72222222,21.72222222,0
+29,Baseline TP CHD: Non-CHD -> CHD,transition-probabilities,beta,0.0034,0.00595,0.00425,0.0006375,44.25130556,10367.82059,0
+30,Baseline TP CHD: CHD -> CHD death,transition-probabilities,beta,0.008,0.014,0.01,0.0015,43.99,4355.01,0
+31,Baseline TP T2D: non-T2D -> T2D,transition-probabilities,beta,0.004,0.007,0.005,0.00075,44.21722222,8799.227222,0
+32,Baseline TP T2D: T2D -> T2D death,transition-probabilities,beta,0.008,0.014,0.01,0.0015,43.99,4355.01,0
+33,Baseline transition BMI: Healthy -> overweight,transition-probabilities,beta,0.04,0.07,0.05,0.0075,42.17222222,801.2722222,0
+34,Baseline transition BMI: Healthy -> Obese,transition-probabilities,beta,0.0048,0.0084,0.006,0.0009,44.17177778,7317.791185,0
+35,Baseline transition BMI: Overweight -> Healthy,transition-probabilities,beta,0.04,0.07,0.05,0.0075,42.17222222,801.2722222,0
+36,Baseline transition BMI: Overweight -> Obese,transition-probabilities,beta,0.0144,0.0252,0.018,0.0027,43.62644444,2380.064914,0
+37,Baseline transition BMI: Obese-> Healthy,transition-probabilities,beta,0.0048,0.0084,0.006,0.0009,44.17177778,7317.791185,0
+38,Baseline transition BMI: Obese -> overweight,transition-probabilities,beta,0.028,0.049,0.035,0.00525,42.85388889,1181.542937,0
 39,Effect ethnicity NH-Black on all NAFLD transitions,interactions,gamma,0.7,1,0.93,0.075,153.76,0.006048387,0
 40,Effect ethnicity Hispanic on all NAFLD transitions,interactions,gamma,1.22,2.22,1.67,0.25,44.6224,0.03742515,0
 41,Effect BMI Overweight on all NAFLD transitions,interactions,gamma,1.595,3.38,2.19,0.44625,24.08417485,0.090931079,0
@@ -57,21 +57,21 @@ Id,Variable,Input_file,Distribution,Min,Max,Mean,SD,Alpha,Beta,Value
 55,Natural death rate regression rate/year (20-30),regression-rates,normal,0.98,1,1,0.005,0,0,0
 56,Natural death rate regression rate/year (30-55),regression-rates,normal,0.96,1,0.98,0.01,0,0,0
 57,Natural death rate regression rate/year (55+),regression-rates,normal,0.94,1,0.97,0.015,0,0,0
-58,Steatosis prevalence year 0 in Hispanic population,ras,beta,0.268335,0.60075,0.4005,0.08310375,13.52314639,20.24251252,0
-59,Steatosis prevalence year 0 in NHW population,ras,beta,0.17889,0.4005,0.267,0.0554025,16.75724154,46.00396274,0
-60,Steatosis prevalence year 0 in NHB population,ras,beta,0.143112,0.3204,0.2136,0.044322,18.05087961,66.45698371,0
-61,NASH prevalence year 0 in Hispanic population,ras,beta,0.03015,0.0675,0.045,0.0093375,22.13528741,469.7599885,0
-62,NASH prevalence year 0 in NHW population,ras,beta,0.0201,0.045,0.03,0.006225,22.49866889,727.4569609,0
-63,NASH prevalence year 0 in NHB population,ras,beta,0.01608,0.036,0.024,0.00498,22.64402148,920.8568737,0
-64,Cirrhosis prevalence year 0 in Hispanic population,ras,beta,0.003015,0.00675,0.0045,0.00093375,23.1164174,5113.865228,0
-65,Cirrhosis prevalence year 0 in NHW population,ras,beta,0.00201,0.0045,0.003,0.0006225,23.15275555,7694.432429,0
-66,Cirrhosis prevalence year 0 in NHB population,ras,beta,0.001608,0.0036,0.0024,0.000498,23.16729081,9629.870547,0
-67,HCC prevalence year 0 in Hispanic population,ras,beta,0.000243145,0.000544355,0.000362903,7.53E-05,23.21664037,63951.56551,0
-68,HCC prevalence year 0 in NHW population,ras,beta,0.000162096,0.000362903,0.000241935,5.02E-05,23.21957087,95951.19863,0
-69,HCC prevalence year 0 in NHB population,ras,beta,0.000129677,0.000290322,0.000193548,4.02E-05,23.22074306,119950.8584,0
-70,Base-case percentage above sugar cut-off Hispanic MALE,ras,beta,0.42612,0.954,0.636,0.13197,7.818057193,4.474485563,0
-71,Base-case percentage above sugar cut-off NHW MALE,ras,beta,0.42612,0.954,0.636,0.13197,7.818057193,4.474485563,0
-72,Base-case percentage above sugar cut-off NHB MALE,ras,beta,0.44153,0.9885,0.659,0.1367425,7.26087226,3.757143309,0
-73,Base-case percentage above sugar cut-off Hispanic FEMALE,ras,beta,0.31624,0.708,0.472,0.09794,11.79102802,13.18996354,0
-74,Base-case percentage above sugar cut-off NHW FEMALE,ras,beta,0.33969,0.7605,0.507,0.1052025,10.9431379,10.64096052,0
-75,Base-case percentage above sugar cut-off NHB FEMALE,ras,beta,0.39061,0.8745,0.583,0.1209725,9.102005081,6.510353548,0
+58,Steatosis prevalence year 0 in Hispanic population,ras,beta,0.3204,0.5607,0.4005,0.060075,26.24394444,39.28400673,0
+59,Steatosis prevalence year 0 in NHW population,ras,beta,0.2136,0.3738,0.267,0.04005,32.31077778,88.7033712,0
+60,Steatosis prevalence year 0 in NHB population,ras,beta,0.17088,0.29904,0.2136,0.03204,34.73751111,127.8912862,0
+61,NASH prevalence year 0 in Hispanic population,ras,beta,0.036,0.063,0.045,0.00675,42.39944444,899.8104321,0
+62,NASH prevalence year 0 in NHW population,ras,beta,0.024,0.042,0.03,0.0045,43.08111111,1392.955926,0
+63,NASH prevalence year 0 in NHB population,ras,beta,0.0192,0.0336,0.024,0.0036,43.35377778,1763.05363,0
+64,Cirrhosis prevalence year 0 in Hispanic population,ras,beta,0.0036,0.0063,0.0045,0.000675,44.23994444,9786.858821,0
+65,Cirrhosis prevalence year 0 in NHW population,ras,beta,0.0024,0.0042,0.003,0.00045,44.30811111,14725.06226,0
+66,Cirrhosis prevalence year 0 in NHB population,ras,beta,0.00192,0.00336,0.0024,0.00036,44.33537778,18428.7387,0
+67,HCC prevalence year 0 in Hispanic population,ras,beta,0.000290322,0.000508064,0.000362903,5.44E-05,44.42795252,122379.3396,0
+68,HCC prevalence year 0 in NHW population,ras,beta,0.000193548,0.000338709,0.000241935,3.63E-05,44.43344984,183614.1932,0
+69,HCC prevalence year 0 in NHB population,ras,beta,0.000154838,0.000270967,0.000193548,2.90E-05,44.43564876,229540.2088,0
+70,Base-case percentage above sugar cut-off Hispanic MALE,ras,beta,0.5088,0.8904,0.636,0.0954,15.54177778,8.894979734,0
+71,Base-case percentage above sugar cut-off NHW MALE,ras,beta,0.5088,0.8904,0.636,0.0954,15.54177778,8.894979734,0
+72,Base-case percentage above sugar cut-off NHB MALE,ras,beta,0.5272,0.9226,0.659,0.09885,14.49655556,7.501252571,0
+73,Base-case percentage above sugar cut-off Hispanic FEMALE,ras,beta,0.3776,0.6608,0.472,0.0708,22.99466667,25.72284746,0
+74,Base-case percentage above sugar cut-off NHW FEMALE,ras,beta,0.4056,0.7098,0.507,0.07605,21.40411111,20.81307057,0
+75,Base-case percentage above sugar cut-off NHB FEMALE,ras,beta,0.4664,0.8162,0.583,0.08745,17.95033333,12.83926072,0
