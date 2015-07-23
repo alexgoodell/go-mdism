@@ -248,12 +248,21 @@ func runModel(concurrencyBy string, interventionName string, randId int) {
 		toCsv(output_dir+filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
-	if runType == "psa" || runType == "dsa" {
+	if runType == "psa" {
 
 		filename := output_dir + "/otherPSA/" + randomLetters + "_output_by_cycle_and_state_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
 
 		filename = output_dir + "/eventsPSA/" + randomLetters + "_output_by_cycle_psa_interv_" + strconv.Itoa(interventionId) + ".csv"
+		toCsv(filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
+	}
+
+	if runType == "dsa" {
+
+		filename := output_dir + "/otherDSA/" + "output_by_cycle_and_state_dsa_interv_" + strconv.Itoa(interventionId) + "_" + strconv.Itoa(VariableCount) + "_" + strconv.Itoa(WithinVariableCount) + ".csv"
+		toCsv(filename, Outputs.OutputsByCycleStatePsa[0], Outputs.OutputsByCycleStatePsa)
+
+		filename = output_dir + "/eventsDSA/" + "output_by_cycle_dsa_interv_" + strconv.Itoa(interventionId) + "_" + strconv.Itoa(VariableCount) + "_" + strconv.Itoa(WithinVariableCount) + ".csv"
 		toCsv(filename, Outputs.OutputsByCycle[0], Outputs.OutputsByCycle)
 	}
 
@@ -917,6 +926,13 @@ func adjust_transitions(theseTPs []TransitionProbability, interaction Interactio
 		if tp.From_id == tp.To_id {
 			tp.Tp_base -= remain
 			recursiveTp = tp.Tp_base
+			if tp.Tp_base < 0 && (runType == "psa" || runType == "dsa") {
+				tp.Tp_base = 0
+				fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+				fmt.Println("Warning: Tp was under 0. Interaction: ", interaction.Id)
+				fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+				fmt.Println("Corrected to zero")
+			}
 			if tp.Tp_base < 0 {
 				fmt.Println("Error: Tp under 0. Interaction: ", interaction.Id)
 				os.Exit(1)
