@@ -105,12 +105,17 @@ func startRunWithPsa() {
 
 }
 
+var VariableCount int
+var WithinVariableCount int
+
 func startRunWithDsa() {
 	runType = "dsa"
 	initialize()
 
 	for i := 0; i < 76; i++ {
 		for p := 1; p < 6; p++ {
+			VariableCount = i
+			WithinVariableCount = p
 			initializeInputs(inputsPath)
 			Query.setUp()
 			runNewDsaValue(i, p)
