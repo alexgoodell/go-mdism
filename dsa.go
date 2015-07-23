@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
-
-	"github.com/leesper/go_rng" //imported as rng
 )
 
 func runNewDsaValue(variableCount int, withinVariableCount int) {
 	//I want to keep track of how many iterations he has done, and how many with the same variable as DSA.
+
+	for i := 0; i < len(Inputs.DsaInputs); i++ {
+		Inputs.DsaInputs[i].Value = 0.0
+	}
 
 	switch withinVariableCount {
 	case 1:
