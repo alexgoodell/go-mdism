@@ -54,6 +54,16 @@ func main() {
 				startRunWithPsa()
 			},
 		},
+		{
+			Name:    "dsa",
+			Aliases: []string{"a"},
+			Usage:   "Run a DSA",
+			Flags:   globalFlags,
+			Action: func(c *cli.Context) {
+				processFlags(c)
+				startRunWithDsa()
+			},
+		},
 	}
 
 	app.Run(os.Args)
@@ -94,6 +104,30 @@ func startRunWithPsa() {
 	}
 
 }
+
+func startRunWithDsa() {
+	runType = "dsa"
+	initialize()
+
+	for i := 0; i < 76; i++ {
+		for p := 1; p < 6; p++ {
+			initializeInputs(inputsPath)
+			Query.setUp()
+			runNewDsaValue(i, p)
+			runDsa()
+			randomLetters = randSeq(10)
+			runInterventions()
+		}
+	}
+
+	// create people will generate individuals and add their data to the master
+	// records
+
+	fmt.Println("Intialization complete, time elapsed:", fmt.Sprint(time.Since(beginTime)))
+
+	// table tests here
+}
+
 func initialize() {
 
 	show_greeting()

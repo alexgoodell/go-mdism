@@ -12,6 +12,9 @@ func runNewDsaValue(variableCount int, withinVariableCount int) {
 		Inputs.DsaInputs[i].Value = 0.0
 	}
 
+	fmt.Println("variableCount: ", variableCount)
+	fmt.Println("withinVariableCount: ", withinVariableCount)
+
 	switch withinVariableCount {
 	case 1:
 		//fmt.Print("Generating DSA values...")
