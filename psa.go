@@ -18,7 +18,7 @@ func generateNewValue(psaInput PsaInput, betaGen *rng.BetaGenerator, gammaGen *r
 
 	case "beta":
 
-		valueToReturn = betaGen.Beta(psaInput.Alpha, psaInput.Beta)
+		valueToReturn = betaGen.Beta(psaInput.Alpha, psaInput.Beta)*(psaInput.Max-psaInput.Min) + psaInput.Min
 
 	case "gamma":
 

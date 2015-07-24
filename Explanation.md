@@ -1,9 +1,31 @@
 Explanation of each line of code
--> Line 2
+-> cli.go -> Line 1
 Open package main => standard for all go codes
 
 Import all the relevant packages, these include functions that
 somebody else already coded and are therefore ready to use.
+
+-> line 14 -> function main
+This is where the main function start. When the main function ends, the GO program exits.
+16: I think this is where the app function is started. I do not really understand these lines but I do not think they are very relevant either.
+=============QUESTION============================================
+22: You can set 'flags', when you type those after the go-mdism (after go build) in the terminal, you can set these values (so you don't have to change the code). There are currently only 3.
+
+30: here it says which actions the app function has to take.
+31: show greeting
+	-> greeting.go
+	This program is really only a fancy graphic
+32: print 2 things, why one with fmt and the other not? I do not understand this thing
+======================QUESTION====================================
+
+36: This is where the simulation options are listed
+
+38: The first one is a single run, with a name and it processes the flags you put up before.
+Then it startsRunWithSingle, which is another function
+	
+
+
+
 
 -> Line 27
 28: Make a variable called begintime, which is set at the time the program commences
