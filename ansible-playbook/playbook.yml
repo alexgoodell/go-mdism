@@ -1,5 +1,5 @@
 ---
-- hosts: tag_Name_ansible
+- hosts: tag_Name_slave
   remote_user: ubuntu
   environment:
     GOPATH: '/home/ubuntu/go'
