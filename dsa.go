@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	//imported as rng
 )
 
 func runNewDsaValue(variableCount int, withinVariableCount int) {
@@ -16,6 +14,7 @@ func runNewDsaValue(variableCount int, withinVariableCount int) {
 
 	fmt.Println("variableCount: ", variableCount)
 	fmt.Println("withinVariableCount: ", withinVariableCount)
+
 	switch withinVariableCount {
 	case 1:
 		//fmt.Print("Generating DSA values...")
