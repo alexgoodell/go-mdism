@@ -10,6 +10,10 @@ import (
 func runNewDsaValue(variableCount int, withinVariableCount int) {
 	//I want to keep track of how many iterations he has done, and how many with the same variable as DSA.
 
+	for i := 0; i < len(Inputs.DsaInputs); i++ {
+		Inputs.DsaInputs[i].Value = 0.0
+	}
+
 	fmt.Println("variableCount: ", variableCount)
 	fmt.Println("withinVariableCount: ", withinVariableCount)
 	switch withinVariableCount {
@@ -46,6 +50,8 @@ func runDsa() {
 		if dsaInput.Value != 0 { //I only want to replace the one I just changed.
 			// These values must all be reset to 0 after each iteration, is that the case at the moment?
 
+			fmt.Println("dsaInput:", dsaInput.Value)
+
 			switch inputFile {
 
 			case "transition-probabilities":
@@ -62,7 +68,6 @@ func runDsa() {
 
 				//Making sure everything adds to one
 				// occurs outside of the PsaInputs loop
-
 			case "disability-weights":
 
 				for p := 0; p < len(Inputs.DisabilityWeights); p++ {

@@ -1,0 +1,63 @@
+---
+- hosts: tag_Name_ansible
+  remote_user: ubuntu
+  environment:
+    GOPATH: '/home/ubuntu/go'
+  tasks:
+  - name: Install fish
+    apt: pkg=fish state=installed update_cache=true
+  - name: Install git
+    apt: pkg=git state=installed update_cache=true
+  - name: Install Go
+    apt: pkg=golang state=installed update_cache=true
+  - name: Install NFS tools
+    apt: pkg=nfs-common state=installed update_cache=true
+  - name: Add gopath
+    lineinfile: dest=/home/ubuntu/.profile
+              line='export GOPATH=$HOME/go'
+              state=present
+  # notify: Source profile 
+  - name: Install profile tools
+    shell: 'go get github.com/davecheney/profile'
+
+  - name: Install nitro
+    shell: 'go get github.com/spf13/nitro'
+
+  - name: Install PB
+    shell: 'go get github.com/cheggaaa/pb'
+
+  - name: Install CLI
+    shell: 'go get github.com/codegangsta/cli'
+
+  - name: Install RNG
+    shell: 'go get github.com/leesper/go_rng'
+  - name: Clone repo
+    git: repo=https://github.com/alexgoodell/go-mdism.git
+         dest=/home/ubuntu/go-mdism
+         clone=yes
+         force=yes
+
+  - name: Compile package
+    shell: 'cd /home/ubuntu/go-mdism && go build'
+
+  - name: Run PSA
+    shell: 'cd /home/ubuntu/go-mdism && ./go-mdism psa'
+    register: hello
+
+  - debug: msg="{{ hello.stdout }}"
+
+
+
+
+
+
+
+
+
+  handlers:
+    - name: Start Nginx
+      service: name=nginx state=started
+
+
+
+# NFS apt-get install nfs-kernel-server portmap
