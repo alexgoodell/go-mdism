@@ -5,8 +5,5 @@ Id,Name
 3,BMI
 4,Ethnicity
 5,Sex
-6,Physicial activity
-7,Fructose
-8,Trans Fat
-9,N3-PUFA
-10,Age
+6,Fructose
+7,Age
