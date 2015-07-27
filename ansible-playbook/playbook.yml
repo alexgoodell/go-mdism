@@ -1,4 +1,40 @@
 ---
+- hosts: tag_Name_master
+  remote_user: ubuntu
+  tasks:
+  - name: Install nfs-kernel-server
+    apt: pkg=nfs-kernel-server state=installed update_cache=true
+  - name: Install portmap
+    apt: pkg=portmap state=installed update_cache=true
+  - name: Install fish
+    apt: pkg=fish state=installed update_cache=true
+  - name: Install zip
+    apt: pkg=zip state=installed update_cache=true
+  - name: Install apache
+    apt: pkg=apache2 state=installed update_cache=true
+  - name: Copying sleep program
+    copy: src=/Applications/XAMPP/xamppfiles/htdocs/ghd_model_go/gocode/src/github.com/alexgoodell/go-mdism/ansible-playbook/sleep.sh dest=/home/ubuntu/sleep.sh owner=ubuntu group=ubuntu mode=0644
+  - name: Create results directory
+    file: path=/home/ubuntu/results state=directory mode=0755
+  - name: Change file permissions of /home/ubuntu/results
+    shell: 'chmod -R 777 /home/ubuntu/results'
+  - name: Add /home/ubuntu/results to exports
+    lineinfile: dest=/etc/exports
+                line='/home/ubuntu/results        *(rw,sync,no_subtree_check,insecure)'
+                state=present
+
+  - name: Add otherPSA folder to results folder
+    shell: 'mkdir /home/ubuntu/results/otherPSA'
+  - name: Add eventsPSA folder to results folder
+    shell: 'mkdir /home/ubuntu/results/eventsPSA'
+  - name: Start the NFS server 
+    shell: 'exportfs -a'
+  - name: Start the NFS server another way
+    shell: 'service nfs-kernel-server restart'
+  - name: Start the Apache server 
+    shell: 'service apache2 start'
+
+
 - hosts: tag_Name_slave
   remote_user: ubuntu
   environment:
@@ -37,27 +73,27 @@
          clone=yes
          force=yes
 
+  - name: Change file permissions of go-mdism/tmp
+    shell: 'chmod -R 777 /home/ubuntu/go-mdism/tmp/'
+
   - name: Compile package
     shell: 'cd /home/ubuntu/go-mdism && go build'
 
+  - name: Mount 54.85.140.187
+    shell: 'mount 54.85.140.187:/home/ubuntu/results /home/ubuntu/go-mdism/tmp'
+
   - name: Run PSA
     shell: 'cd /home/ubuntu/go-mdism && ./go-mdism psa'
-    register: hello
+    # register: hello
 
-  - debug: msg="{{ hello.stdout }}"
-
-
-
-
-
-
-
-
-
-  handlers:
-    - name: Start Nginx
-      service: name=nginx state=started
+- hosts: tag_Name_master
+  remote_user: ubuntu
+  tasks:
+  - name: Change file permissions of go-mdism/sleep
+    shell: 'chmod 777 /home/ubuntu/sleep.sh'
+  - name: Start zip/sleep program
+    shell: 'cd /home/ubuntu && ./sleep.sh&'
 
 
 
-# NFS apt-get install nfs-kernel-server portmap
+
