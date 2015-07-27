@@ -49,6 +49,8 @@ func runDsa() {
 		if dsaInput.Value != 0 { //I only want to replace the one I just changed.
 			// These values must all be reset to 0 after each iteration, is that the case at the moment?
 
+			fmt.Println("dsaInput:", dsaInput.Value)
+
 			switch inputFile {
 
 			case "transition-probabilities":
@@ -65,7 +67,6 @@ func runDsa() {
 
 				//Making sure everything adds to one
 				// occurs outside of the PsaInputs loop
-
 			case "disability-weights":
 
 				for p := 0; p < len(Inputs.DisabilityWeights); p++ {

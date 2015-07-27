@@ -1,0 +1,99 @@
+---
+- hosts: tag_Name_master
+  remote_user: ubuntu
+  tasks:
+  - name: Install nfs-kernel-server
+    apt: pkg=nfs-kernel-server state=installed update_cache=true
+  - name: Install portmap
+    apt: pkg=portmap state=installed update_cache=true
+  - name: Install fish
+    apt: pkg=fish state=installed update_cache=true
+  - name: Install zip
+    apt: pkg=zip state=installed update_cache=true
+  - name: Install apache
+    apt: pkg=apache2 state=installed update_cache=true
+  - name: Copying sleep program
+    copy: src=/Applications/XAMPP/xamppfiles/htdocs/ghd_model_go/gocode/src/github.com/alexgoodell/go-mdism/ansible-playbook/sleep.sh dest=/home/ubuntu/sleep.sh owner=ubuntu group=ubuntu mode=0644
+  - name: Create results directory
+    file: path=/home/ubuntu/results state=directory mode=0755
+  - name: Change file permissions of /home/ubuntu/results
+    shell: 'chmod -R 777 /home/ubuntu/results'
+  - name: Add /home/ubuntu/results to exports
+    lineinfile: dest=/etc/exports
+                line='/home/ubuntu/results        *(rw,sync,no_subtree_check,insecure)'
+                state=present
+
+  - name: Add otherPSA folder to results folder
+    shell: 'mkdir /home/ubuntu/results/otherPSA'
+  - name: Add eventsPSA folder to results folder
+    shell: 'mkdir /home/ubuntu/results/eventsPSA'
+  - name: Start the NFS server 
+    shell: 'exportfs -a'
+  - name: Start the NFS server another way
+    shell: 'service nfs-kernel-server restart'
+  - name: Start the Apache server 
+    shell: 'service apache2 start'
+
+
+- hosts: tag_Name_slave
+  remote_user: ubuntu
+  environment:
+    GOPATH: '/home/ubuntu/go'
+  tasks:
+  - name: Install fish
+    apt: pkg=fish state=installed update_cache=true
+  - name: Install git
+    apt: pkg=git state=installed update_cache=true
+  - name: Install Go
+    apt: pkg=golang state=installed update_cache=true
+  - name: Install NFS tools
+    apt: pkg=nfs-common state=installed update_cache=true
+  - name: Add gopath
+    lineinfile: dest=/home/ubuntu/.profile
+              line='export GOPATH=$HOME/go'
+              state=present
+  # notify: Source profile 
+  - name: Install profile tools
+    shell: 'go get github.com/davecheney/profile'
+
+  - name: Install nitro
+    shell: 'go get github.com/spf13/nitro'
+
+  - name: Install PB
+    shell: 'go get github.com/cheggaaa/pb'
+
+  - name: Install CLI
+    shell: 'go get github.com/codegangsta/cli'
+
+  - name: Install RNG
+    shell: 'go get github.com/leesper/go_rng'
+  - name: Clone repo
+    git: repo=https://github.com/alexgoodell/go-mdism.git
+         dest=/home/ubuntu/go-mdism
+         clone=yes
+         force=yes
+
+  - name: Change file permissions of go-mdism/tmp
+    shell: 'chmod -R 777 /home/ubuntu/go-mdism/tmp/'
+
+  - name: Compile package
+    shell: 'cd /home/ubuntu/go-mdism && go build'
+
+  - name: Mount 54.85.140.187
+    shell: 'mount 54.85.140.187:/home/ubuntu/results /home/ubuntu/go-mdism/tmp'
+
+  - name: Run PSA
+    shell: 'cd /home/ubuntu/go-mdism && ./go-mdism psa'
+    # register: hello
+
+- hosts: tag_Name_master
+  remote_user: ubuntu
+  tasks:
+  - name: Change file permissions of go-mdism/sleep
+    shell: 'chmod 777 /home/ubuntu/sleep.sh'
+  - name: Start zip/sleep program
+    shell: 'cd /home/ubuntu && ./sleep.sh&'
+
+
+
+

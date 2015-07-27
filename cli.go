@@ -174,7 +174,6 @@ func initialize() {
 
 	fmt.Println("and ", numberOfPeopleStarting, "initial individuals")
 	fmt.Println("and ", numberOfPeopleEntering, "individuals entering")
-	fmt.Println("and ", numberOfIterations, "iterations")
 	fmt.Println("and ", inputsPath, " as inputs")
 
 }
