@@ -1,4 +1,8 @@
+[![DOI](https://zenodo.org/badge/36307269.svg)](https://zenodo.org/doi/10.5281/zenodo.10136674)
+
 # go-mdism
+This is the github repository for the Go-Mdism research project
+
 
 ## Profiling
 
